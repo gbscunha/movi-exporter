@@ -1,0 +1,10 @@
+# Dependencias para requisições HTTP
+requests
+python-dotenv
+loguru
+
+# Dependencias para exportação de dados (CSV/Excel)
+pandas
+openpyxl
+
+# TODO: Incluir dependencias para upload no Google Drive
