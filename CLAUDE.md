@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Movi Exporter App** is a Python automation tool that extracts and exports monthly historical vehicle data from a vehicle tracking system (currently System A) used by Movi Solutions. The goal is to eliminate manual data collection by automatically integrating with the tracking API, normalizing the data, and exporting it in structured formats (CSV/Excel) with optional Google Drive upload.
+**Movi Exporter App** is a Python automation tool that extracts and exports monthly historical vehicle data from a vehicle tracking system (currently Wialon) used by Movi Solutions. The goal is to eliminate manual data collection by automatically integrating with the tracking API, normalizing the data, and exporting it in structured formats (CSV/Excel) with optional Google Drive upload.
 
 **Note:** The architecture is designed to support multiple tracking systems in the future, if needed.
 
@@ -36,14 +36,21 @@ The codebase follows a modular architecture with clear separation of concerns:
 
 ### Client Layer (`src/clients/`)
 
-**Key Pattern**: BaseClient provides standardized HTTP GET with Bearer token authentication
+**Key Pattern**: Two base classes for different authentication models:
+- `BaseClient`: HTTP client with Bearer token (for REST APIs)
+- `StatefulClient`: HTTP client with session ID (for stateful APIs like Wialon)
 
-- `base_client.py`: Base HTTP client with `_headers()` and `get()` methods
-- `system_a_client.py`: Integration for System A tracking API (currently active)
-  - `listar_veiculos()`: Lists all vehicles
-  - `buscar_historico(veiculo_id, mes)`: Fetches monthly history by vehicle ID
+- `base_client.py`: Base HTTP clients with standardized methods
+- `wialon_client.py`: **Main client** - Integration with Wialon Hosting API
+  - Stateful authentication via `sid` (session ID)
+  - Automatic re-authentication on session expiry
+  - `authenticate()`: Login via token/login
+  - `list_vehicles()`: Lists all units via core/search_items
+  - `get_vehicle_sensors(vehicle_id)`: Gets sensor mapping via core/search_item
+  - `get_history(vehicle_id, time_from, time_to)`: Paginated history via messages/load_interval
+- `system_a_client.py`: Legacy client for System A (example)
 
-**Extensibility**: The architecture allows easy addition of new systems (SystemBClient, SystemCClient, etc.) by inheriting from `BaseClient` and implementing system-specific methods. Different systems may use different endpoint names and parameter names, but the base functionality remains standardized.
+**Extensibility**: New systems can be added by inheriting from `BaseClient` or `StatefulClient`.
 
 ### Services Layer (`src/services/`)
 
@@ -54,13 +61,27 @@ The codebase follows a modular architecture with clear separation of concerns:
   - `add_system_mapping()`: Allows adding new system mappings dynamically
   - Supports nested field paths and multiple timestamp formats
   - Preserves raw data for audit purposes
-  
-- Planned services:
-  - `exporter.py`: Generate CSV/Excel exports
-  - `uploader.py`: Upload to Google Drive
-  - `vehicle_service.py`: Main orchestration logic for monthly exports
+  - **Supports**: `system_a` and `wialon` mappings
 
-**Normalizer Design**: The normalizer uses a mapping-based approach where each system has a dictionary mapping standard field names to system-specific field names. Currently supports `system_a`, but new systems can be added via `add_system_mapping()` method.
+- `exporter.py`: ✅ **Implemented** - Export to CSV/Excel
+  - `DataExporter` class with organized folder structure by month/year
+  - `export_vehicles_to_csv/excel()`: Export vehicle list
+  - `export_history_to_csv/excel()`: Export individual vehicle history
+  - `export_consolidated_history_to_csv/excel()`: Export all vehicles in one file
+  - Adds metadata (export_date, system_source) to exported files
+
+- `vehicle_service.py`: ✅ **Implemented** - Main orchestration service
+  - `VehicleService` class coordinating full extraction flow
+  - `export_monthly_data()`: Main method for monthly extraction
+  - `list_vehicles()`: Lists available vehicles
+  - `test_connection()`: Tests Wialon API connection
+  - Handles pagination, sensor resolution, error recovery
+  - Returns detailed statistics via `ExportResult` dataclass
+
+- Planned services:
+  - `uploader.py`: Upload to Google Drive
+
+**Normalizer Design**: The normalizer uses a mapping-based approach where each system has a dictionary mapping standard field names to system-specific field names. Supports `system_a` and `wialon`. New systems can be added via `add_system_mapping()` method.
 
 ### CLI Layer (`src/cli/`)
 
@@ -71,26 +92,54 @@ The codebase follows a modular architecture with clear separation of concerns:
 All API credentials and URLs are stored in `.env`:
 
 ```
+# Wialon (main system)
+WIALON_TOKEN=your_wialon_api_token
+
+# System A (legacy/example)
 SYSTEM_A_BASE_URL=https://api.sistema-a.com
 SYSTEM_A_TOKEN=token_a
+
+# Export settings
+EXPORT_DIR=./exports
+WIALON_PAGE_SIZE=1000
 ```
 
 Never commit `.env` to version control.
 
-**Note:** If additional systems are added in the future, simply add new environment variables (SYSTEM_B_BASE_URL, SYSTEM_B_TOKEN, etc.) and update `config.py` accordingly.
+**Note:** The Wialon API is stateful and uses session-based authentication (NOT Bearer token). The `WIALON_TOKEN` is used only for initial login, after which a session ID (`sid`) is used.
 
 ## Core Workflow
 
-Current workflow for System A:
-1. Fetch list of vehicles using `SystemAClient.listar_veiculos()`
-2. For each vehicle, fetch monthly historical data using `buscar_historico(veiculo_id, mes)`
-3. Normalize data to common format using `DataNormalizer`
-   - Vehicle data: `normalize_vehicle_list(raw_data, system="system_a")`
-   - Historical data: `normalize_history(raw_data, system="system_a")`
-4. Export to CSV/Excel with standardized columns (to be implemented)
-5. Optionally upload to Google Drive (to be implemented)
+Current workflow for Wialon (via `VehicleService`):
 
-The orchestration logic will be implemented in `vehicle_service.py`.
+1. **Authentication**: Login via `token/login`, obtain session ID (`sid`)
+2. **List vehicles**: Fetch units via `core/search_items`
+3. **For each vehicle**:
+   - Fetch sensor mapping via `core/search_item` (cached)
+   - Fetch paginated history via `messages/load_interval`
+   - Transform raw Wialon messages to intermediate format
+   - Normalize data via `DataNormalizer.normalize_history(data, system="wialon")`
+   - Export to CSV/Excel via `DataExporter`
+4. **Generate consolidated file** with all vehicles (optional)
+5. **Logout**: End Wialon session
+
+**CLI Usage**:
+```bash
+# Test connection
+python -m src.cli.main test
+
+# List vehicles
+python -m src.cli.main list
+
+# Export monthly data (default: previous month)
+python -m src.cli.main export --month 12 --year 2025
+
+# Export specific vehicles
+python -m src.cli.main export --month 12 --year 2025 --vehicles 123,456
+
+# Export to Excel
+python -m src.cli.main export --month 12 --year 2025 --format xlsx
+```
 
 ### Normalized Data Format
 
@@ -123,13 +172,19 @@ The orchestration logic will be implemented in `vehicle_service.py`.
 
 ## Key Design Decisions
 
-- **Single System (Extensible Architecture)**: Currently uses System A, but architecture supports multiple systems
-  - Clients inherit from `BaseClient` for standardized HTTP operations
-  - Normalizer uses mapping-based approach for easy system addition
-  - New systems can be added without modifying existing code
-- **Bearer Token Auth**: All API requests use Bearer token authentication via `Authorization` header
+- **Wialon as Primary System**: Main integration with Wialon Hosting API
+  - Stateful authentication via session ID (`sid`), NOT Bearer token
+  - Automatic re-authentication on session expiry
+  - Paginated data fetching to avoid memory issues
+- **Extensible Architecture**: Supports multiple systems via mapping approach
+  - `BaseClient`: For REST APIs with Bearer token
+  - `StatefulClient`: For session-based APIs (like Wialon)
+  - Normalizer mappings isolate system-specific logic
+- **No Wialon Logic in Normalizer/Exporter**: 
+  - Raw data transformation happens in `VehicleService`
+  - Normalizer receives pre-processed data
 - **Monthly Granularity**: Data extraction is organized by vehicle and month
-- **Environment-based Config**: All secrets and URLs loaded from `.env` for security and flexibility
-- **Data Preservation**: Normalized data includes `raw_data` field to preserve original system response
-- **Flexible Field Mapping**: Normalizer supports nested field paths (e.g., `location.lat`) and default values
-- **Type Safety**: Uses Python type hints throughout for better IDE support and error prevention
+- **Sensor Resolution**: Wialon raw parameters (io_23, etc.) are mapped to readable names
+- **Environment-based Config**: All secrets and URLs loaded from `.env`
+- **Data Preservation**: `raw_data` field preserves original system response
+- **Type Safety**: Python type hints throughout for IDE support

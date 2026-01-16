@@ -1,180 +1,204 @@
-# 📘 **Documentação Inicial do Projeto – Movi Exporter App**
+# 📘 **Movi Exporter App**
 
 ## 📌 **Visão Geral**
 
 O **Movi Exporter App** é uma aplicação Python criada para **automatizar a extração e exportação dos dados históricos mensais dos veículos** monitorados pela empresa **Movi Solutions**.
 
-O objetivo central é permitir que a empresa extraia **os dados de cada veículo, mês a mês**, de forma automática, organizada e padronizada, eliminando completamente o processo manual atual.
+O sistema se conecta à **API Wialon Hosting**, extrai dados de telemetria (posição, velocidade, sensores), normaliza e exporta em formatos padronizados (CSV/Excel).
 
-O sistema se conecta a um **provedor de rastreamento veicular** (atualmente System A), normaliza os dados e gera arquivos de exportação (CSV/Excel), com possibilidade de enviá-los automaticamente para a nuvem (Google Drive).
-
-**Nota:** A arquitetura está preparada para suportar múltiplos sistemas de rastreamento no futuro, caso necessário.
+**Status:** ✅ **Implementação completa** - Cliente Wialon, normalização, exportação e CLI funcionais.
 
 ---
 
-## 🎯 **Objetivos do Projeto**
+## 🚀 **Início Rápido**
 
-### 🥇 **Objetivo principal**
+### Instalação
 
-**Exportar automaticamente os dados históricos dos veículos por mês**, consumindo as APIs dos dois sistemas de rastreamento e gerando arquivos organizados.
+```bash
+# Clone o repositório
+git clone <repo-url>
+cd movi_exporter_app
 
-### 🥈 Objetivos secundários
+# Crie e ative o ambiente virtual
+python3.14 -m venv venv
+source venv/bin/activate  # Linux/macOS
+# ou: venv\Scripts\activate  # Windows
 
-1. Automatizar a coleta de dados do provedor de rastreamento (System A).
-2. Normalizar a estrutura dos dados para formato padronizado.
-3. Gerar arquivos estruturados para análise (CSV/Excel).
-4. Armazenar os arquivos na nuvem (Google Drive).
-5. Oferecer uma CLI simples para execução manual do processo.
-6. Possibilitar futuramente uma interface GUI para usuários não técnicos.
-7. Manter arquitetura extensível para adicionar novos sistemas no futuro.
+# Instale dependências
+pip install -r requirements.txt
+
+# Configure variáveis de ambiente
+cp .env.example .env
+# Edite .env e adicione seu WIALON_TOKEN
+```
+
+### Uso Básico
+
+```bash
+# Testar conexão com Wialon
+python -m src.cli.main test
+
+# Listar veículos disponíveis
+python -m src.cli.main list
+
+# Exportar dados do mês anterior (padrão)
+python -m src.cli.main export
+
+# Exportar mês específico
+python -m src.cli.main export --month 12 --year 2025
+
+# Exportar veículos específicos
+python -m src.cli.main export --month 12 --year 2025 --vehicles 123,456
+
+# Exportar em Excel
+python -m src.cli.main export --format xlsx
+
+# Exportar em ambos os formatos
+python -m src.cli.main export --format both
+```
 
 ---
 
-## 🧩 **Arquitetura do Projeto (Python 3.14)**
-
-O projeto usa uma arquitetura modular, organizada e expansível, com ambiente virtual Python 3.14.
-
-### 📁 Estrutura Atual
+## 🧩 **Arquitetura do Projeto**
 
 ```
 movi_exporter_app/
-│
-├── venv/                         # Ambiente virtual Python 3.14
 ├── src/
 │   ├── core/
-│   │   ├── config.py             # Carrega variáveis do .env
-│   │   ├── logger.py             # Configuração de logs
+│   │   ├── config.py             # Configurações (carrega .env)
+│   │   └── logger.py             # Logging com loguru
 │   │
 │   ├── clients/
-│   │   ├── base_client.py        # Base para consumo de APIs
-│   │   ├── system_a_client.py    # Integração com Sistema A (atual)
+│   │   ├── base_client.py        # Classes base (REST e Stateful)
+│   │   ├── wialon_client.py      # ✅ Cliente Wialon completo
+│   │   └── system_a_client.py    # Cliente legado (exemplo)
 │   │
 │   ├── services/
-│   │   ├── normalizer.py         # ✅ Padronização dos dados
-│   │   ├── exporter.py           # Exportação CSV/Excel (futuro)
-│   │   ├── uploader.py           # Upload no Google Drive (futuro)
-│   │   └── vehicle_service.py    # Fluxo principal de exportação mensal (futuro)
+│   │   ├── normalizer.py         # ✅ Normalização de dados
+│   │   ├── exporter.py           # ✅ Exportação CSV/Excel
+│   │   ├── vehicle_service.py    # ✅ Orquestração principal
+│   │   └── uploader.py           # Upload Google Drive (futuro)
 │   │
 │   └── cli/
-│       └── main.py               # Entrada da automação via CLI
+│       └── main.py               # ✅ Interface de linha de comando
 │
-├── tests/                        # Testes unitários (futuro)
-├── .env                          # Tokens e URLs das APIs
-├── requirements.txt
+├── exports/                      # Arquivos exportados (por mês/ano)
+├── .env                          # Variáveis de ambiente (não versionado)
+├── .env.example                  # Exemplo de configuração
+├── requirements.txt              # Dependências
 └── README.md
 ```
 
 ---
 
-## 🔌 **Integração com APIs**
+## 🔌 **Integração com Wialon**
 
-O projeto se conecta ao **System A** para rastreamento de veículos.
-A arquitetura utiliza:
+O cliente Wialon (`WialonClient`) implementa:
 
-* uma **classe BaseClient**, com métodos GET padronizados e autenticação Bearer Token
-* implementação **SystemAClient** para o sistema atual
+-   **Autenticação stateful** via sessão (`sid`), não Bearer Token
+-   **Reautenticação automática** quando a sessão expira
+-   **Listagem de veículos** via `core/search_items`
+-   **Resolução de sensores** via `core/search_item` (com cache)
+-   **Busca paginada de histórico** via `messages/load_interval`
+-   **Tratamento de erros** específicos da API (error=1, error=4)
 
-O cliente permite:
+### Dados Extraídos
 
-* listar veículos
-* coletar dados históricos
-* filtrar por mês
-* filtrar por ID do veículo
-
-**Extensibilidade:** A arquitetura permite adicionar facilmente novos sistemas (SystemBClient, SystemCClient, etc.) no futuro, bastando herdar de `BaseClient` e implementar os métodos específicos.
-
----
-
-## 🔐 **Configurações via .env**
-
-Exemplo:
-
-```
-SYSTEM_A_BASE_URL=https://api.sistema-a.com
-SYSTEM_A_TOKEN=token_a
-```
-
-**Nota:** Caso novos sistemas sejam adicionados no futuro, basta incluir novas variáveis (SYSTEM_B_BASE_URL, SYSTEM_B_TOKEN, etc.)
+| Campo           | Origem Wialon        |
+| --------------- | -------------------- |
+| timestamp       | `t` (Unix timestamp) |
+| latitude        | `pos.y`              |
+| longitude       | `pos.x`              |
+| speed           | `pos.sp`             |
+| ignition        | Sensor (resolvido)   |
+| fuel_level      | Sensor (resolvido)   |
+| rpm             | Sensor (resolvido)   |
+| battery_voltage | Sensor (resolvido)   |
+| engine_hours    | Sensor (resolvido)   |
+| driver          | `drv` (binding)      |
 
 ---
 
-## 🧠 **Fluxo Principal (Core do Projeto)**
+## 🔐 **Configuração**
 
-### Fluxo de exportação mensal:
+Copie `.env.example` para `.env` e configure:
 
-1. Buscar lista de veículos do System A.
-2. Para cada veículo:
-   * Buscar dados históricos **referentes a um mês específico**.
-   * Normalizar os dados para formato padronizado.
-3. Exportar arquivo CSV/Excel por veículo e por mês.
-4. (Opcional) Enviar o arquivo para a nuvem.
+```bash
+# OBRIGATÓRIO: Token Wialon
+WIALON_TOKEN=seu_token_aqui
 
-Esse fluxo será implementado em `vehicle_service.py`.
-
-### 🔄 **Normalização de Dados**
-
-O módulo `normalizer.py` é responsável por:
-
-* **Converter dados do formato específico do sistema** para um formato padronizado universal
-* **Suportar múltiplos sistemas** através de mapeamentos configuráveis
-* **Manter dados originais** (campo `raw_data`) para referência e auditoria
-* **Normalizar timestamps** para formato ISO 8601
-* **Tratar campos ausentes** com valores padrão seguros
-
-**Formato Padronizado de Veículos:**
-```python
-{
-    "id": "ABC123",
-    "name": "Veículo 01",
-    "plate": "ABC-1234",
-    "system_source": "system_a",
-    "raw_data": {...}  # Dados originais
-}
+# OPCIONAL: Configurações de exportação
+EXPORT_DIR=./exports
+WIALON_PAGE_SIZE=1000
 ```
 
-**Formato Padronizado de Histórico:**
-```python
-{
-    "vehicle_id": "ABC123",
-    "timestamp": "2024-01-15T14:30:00",
-    "latitude": -23.5505,
-    "longitude": -46.6333,
-    "speed": 60.5,
-    "odometer": 15000.0,
-    "ignition": True,
-    "address": "Av. Paulista, 1000",
-    "system_source": "system_a",
-    "raw_data": {...}  # Dados originais
-}
+**Obtendo o Token Wialon:**
+
+1. Acesse o Wialon
+2. Vá em Gestão de Usuários > Token de Acesso
+3. Crie um novo token com permissões de leitura
+
+---
+
+## 🧠 **Fluxo de Exportação**
+
+1. **Autenticação**: Login na API Wialon, obtém session ID
+2. **Listar veículos**: Busca todas as units disponíveis
+3. **Para cada veículo**:
+    - Buscar mapa de sensores (com cache)
+    - Buscar histórico paginado do mês
+    - Transformar dados brutos para formato intermediário
+    - Normalizar via `DataNormalizer`
+    - Exportar arquivo individual (CSV/Excel)
+4. **Arquivo consolidado**: Todos os veículos em um único arquivo
+5. **Logout**: Encerra sessão Wialon
+
+### Arquivos Gerados
+
+```
+exports/
+└── 2025-12/
+    ├── historico_123456_12_2025.csv      # Individual por veículo
+    ├── historico_789012_12_2025.csv
+    ├── historico_consolidado_12_2025.csv # Todos os veículos
+    └── veiculos_12_2025.csv              # Lista de veículos
 ```
 
 ---
 
-## 🗂️ **Dependências atuais instaladas**
+## 🗂️ **Dependências**
 
 ```
-requests
-python-dotenv
-loguru
+requests          # HTTP client
+python-dotenv     # Carrega .env
+loguru            # Logging
+pandas            # Manipulação de dados
+openpyxl          # Exportação Excel
 ```
 
-(Demais dependências serão instaladas conforme implementação avança.)
+Instale com: `pip install -r requirements.txt`
 
 ---
 
-## 🧱 **Próximos passos**
+## ✅ **Status de Implementação**
 
-1. ✅ ~~Criar normalizador de dados~~
-2. Validar endpoints reais do System A
-3. Criar fluxo de "exportação por mês" (`vehicle_service.py`)
-4. Criar exporter CSV/Excel
-5. Criar uploader Google Drive
-6. Criar CLI robusta com argumentos
-7. Escrever testes unitários
-8. Opcional: Interface GUI
+| Componente                  | Status       |
+| --------------------------- | ------------ |
+| Cliente Wialon              | ✅ Completo  |
+| Autenticação Stateful       | ✅ Completo  |
+| Listagem de Veículos        | ✅ Completo  |
+| Resolução de Sensores       | ✅ Completo  |
+| Busca Paginada de Histórico | ✅ Completo  |
+| Normalização de Dados       | ✅ Completo  |
+| Exportação CSV              | ✅ Completo  |
+| Exportação Excel            | ✅ Completo  |
+| CLI Completa                | ✅ Completo  |
+| Upload Google Drive         | ⏳ Planejado |
+| Interface GUI               | ⏳ Planejado |
+| Testes Automatizados        | ⏳ Planejado |
 
 ---
 
-## 📌 **Resumo Final**
+## 📌 **Resumo**
 
-O Movi Exporter App é um sistema Python destinado a automatizar a coleta e exportação mensal dos dados dos veículos monitorados pela Movi Solutions. Ele integra o System A, normaliza dados para formato padronizado, gera arquivos e prepara os dados para armazenamento em nuvem. A arquitetura é modular e expansível, preparada para adicionar novos sistemas de rastreamento no futuro, visando manutenção fácil e evolução contínua.
+O Movi Exporter App automatiza a extração de dados de telemetria veicular da API Wialon, normalizando e exportando em formatos padronizados (CSV/Excel). A arquitetura é modular e extensível, suportando adição de novos sistemas de rastreamento no futuro.

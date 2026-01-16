@@ -10,4 +10,9 @@ tests/
 docs/
 /examples
 /exports_test
+/exports
+/prompts
+.DS_Store
 app.log
+*.log
+CLAUDE.md

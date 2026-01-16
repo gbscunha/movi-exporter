@@ -30,8 +30,27 @@ class DataNormalizer:
                 "rpm": "rpm",
                 "battery_voltage": "voltagemBateria",
                 "driver": "motorista",
-            }
-            # Preparado para adicionar system_b, system_c, etc. no futuro
+            },
+            # Wialon - Sistema de rastreamento principal
+            # Os dados já vêm pré-processados pelo WialonClient/VehicleService
+            # Este mapeamento espera dados já transformados, não dados brutos da API
+            "wialon": {
+                "vehicle_id": "vehicle_id",
+                "vehicle_name": "nm",
+                "plate": "plate",
+                "timestamp": "timestamp",
+                "latitude": "latitude",
+                "longitude": "longitude",
+                "speed": "speed",
+                "odometer": "odometer",
+                "ignition": "ignition",
+                "address": "address",
+                "fuel_level": "fuel_level",
+                "rpm": "rpm",
+                "battery_voltage": "battery_voltage",
+                "engine_hours": "engine_hours",
+                "driver": "driver",
+            },
         }
 
     def normalize_vehicle_list(
@@ -172,6 +191,9 @@ class DataNormalizer:
             ),
             "driver": self._get_field(
                 record, mapping.get("driver", "driver"), default=None
+            ),
+            "engine_hours": self._get_field(
+                record, mapping.get("engine_hours", "engine_hours"), default=None
             ),
             "system_source": system,
             "raw_data": record,  # Mantém dados originais para referência

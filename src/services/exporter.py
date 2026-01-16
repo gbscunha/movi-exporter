@@ -295,10 +295,10 @@ class DataExporter:
                     "odometer": record.get("odometer"),
                     "ignition": record.get("ignition"),
                     "address": record.get("address"),
-                    # Novos campos baseados no formato do cliente
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
                     "battery_voltage": record.get("battery_voltage"),
+                    "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
                 clean_history.append(clean_record)
@@ -381,10 +381,10 @@ class DataExporter:
                     "odometer": record.get("odometer"),
                     "ignition": record.get("ignition"),
                     "address": record.get("address"),
-                    # Novos campos baseados no formato do cliente
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
                     "battery_voltage": record.get("battery_voltage"),
+                    "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
                 clean_history.append(clean_record)
@@ -467,10 +467,10 @@ class DataExporter:
                         "odometer": record.get("odometer"),
                         "ignition": record.get("ignition"),
                         "address": record.get("address"),
-                        # Novos campos baseados no formato do cliente
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
                         "battery_voltage": record.get("battery_voltage"),
+                        "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
                     all_records.append(clean_record)
@@ -559,6 +559,7 @@ class DataExporter:
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
                         "battery_voltage": record.get("battery_voltage"),
+                        "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
                     all_records.append(clean_record)
