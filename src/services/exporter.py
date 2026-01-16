@@ -17,6 +17,48 @@ from datetime import datetime
 from src.core.logger import logger
 
 
+def _format_ignition(value: Any) -> Optional[str]:
+    """
+    Converte valor booleano de ignição para texto legível.
+
+    Args:
+        value: Valor da ignição (True/False ou None)
+
+    Returns:
+        "Ligado" se True, "Desligado" se False, None se None
+    """
+    if value is None:
+        return None
+    return "Ligado" if value else "Desligado"
+
+
+# Mapeamento de tradução de colunas (inglês → português)
+COLUMN_TRANSLATIONS = {
+    # Metadados
+    "export_date": "Data de Exportação",
+    "system_source": "Sistema de Origem",
+    # Dados de veículos
+    "id": "ID do Veículo",
+    "name": "Nome do Veículo",
+    "plate": "Placa",
+    # Dados de histórico
+    "vehicle_id": "ID do Veículo",
+    "vehicle_name": "Nome do Veículo",
+    "timestamp": "Data/Hora",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "speed": "Velocidade (km/h)",
+    "odometer": "Odômetro (km)",
+    "ignition": "Ignição",
+    "address": "Localização",
+    "fuel_level": "Nível de Combustível (%)",
+    "rpm": "RPM",
+    "battery_voltage": "Tensão da Bateria (V)",
+    "engine_hours": "Horas de Motor",
+    "driver": "Motorista",
+}
+
+
 class DataExporter:
     """
     Classe responsável por exportar dados normalizados para diferentes formatos.
@@ -60,34 +102,32 @@ class DataExporter:
     def _generate_filename(
         self,
         prefix: str,
-        vehicle_id: Optional[str] = None,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
+        vehicle_plate: Optional[str] = None,
         extension: str = "csv",
     ) -> str:
         """
         Gera nome padronizado para arquivo de exportação.
 
+        Formato: {PLACA}_Histórico_Padrão_{DD.MM.YYYY}_{HH-MM-SS}.{ext}
+        Ou para consolidados: Histórico_Consolidado_{DD.MM.YYYY}_{HH-MM-SS}.{ext}
+
         Args:
-            prefix: Prefixo do arquivo (ex: "veiculos", "historico")
-            vehicle_id: ID do veículo (opcional)
-            month: Mês (opcional)
-            year: Ano (opcional)
+            prefix: Tipo do arquivo (ex: "Histórico_Padrão", "Histórico_Consolidado", "Veículos")
+            vehicle_plate: Placa do veículo (opcional, para arquivos individuais)
             extension: Extensão do arquivo (csv ou xlsx)
 
         Returns:
-            Nome do arquivo (ex: "historico_ABC123_10_2024.csv")
+            Nome do arquivo (ex: "SYO6B89_Histórico_Padrão_15.12.2025_15-31-19.csv")
         """
-        parts = [prefix]
+        now = datetime.now()
+        date_str = now.strftime("%d.%m.%Y")
+        time_str = now.strftime("%H-%M-%S")
 
-        if vehicle_id:
-            parts.append(vehicle_id)
+        if vehicle_plate:
+            filename = f"{vehicle_plate}_{prefix}_{date_str}_{time_str}.{extension}"
+        else:
+            filename = f"{prefix}_{date_str}_{time_str}.{extension}"
 
-        if month and year:
-            parts.append(f"{month:02d}")
-            parts.append(str(year))
-
-        filename = "_".join(parts) + f".{extension}"
         return filename
 
     def _add_metadata_to_dataframe(
@@ -114,6 +154,21 @@ class DataExporter:
         df_copy.insert(1, "system_source", system_source)
 
         return df_copy
+
+    def _translate_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Traduz os nomes das colunas de inglês para português.
+
+        Args:
+            df: DataFrame com colunas em inglês
+
+        Returns:
+            DataFrame com colunas traduzidas para português
+        """
+        translated_columns = {
+            col: COLUMN_TRANSLATIONS.get(col, col) for col in df.columns
+        }
+        return df.rename(columns=translated_columns)
 
     def export_vehicles_to_csv(
         self,
@@ -163,25 +218,25 @@ class DataExporter:
             else:
                 if month and year:
                     month_dir = self._create_month_directory(month, year)
-                    filename = self._generate_filename(
-                        "veiculos", month=month, year=year, extension="csv"
-                    )
-                    file_path = month_dir / filename
                 else:
-                    filename = self._generate_filename("veiculos", extension="csv")
-                    file_path = self.base_export_dir / filename
+                    month_dir = self.base_export_dir
+                filename = self._generate_filename("Veículos", extension="csv")
+                file_path = month_dir / filename
 
             # Garante que o diretório existe
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Traduz colunas para português
+            df = self._translate_columns(df)
+
             # Exporta para CSV
             df.to_csv(file_path, index=False, encoding="utf-8-sig")
 
-            logger.success(f"✅ {len(vehicles)} veículos exportados para: {file_path}")
+            logger.success(f"{len(vehicles)} veículos exportados para: {file_path}")
             return str(file_path)
 
         except Exception as e:
-            logger.error(f"❌ Erro ao exportar veículos para CSV: {e}")
+            logger.error(f"Erro ao exportar veículos para CSV: {e}")
             raise
 
     def export_vehicles_to_excel(
@@ -232,25 +287,25 @@ class DataExporter:
             else:
                 if month and year:
                     month_dir = self._create_month_directory(month, year)
-                    filename = self._generate_filename(
-                        "veiculos", month=month, year=year, extension="xlsx"
-                    )
-                    file_path = month_dir / filename
                 else:
-                    filename = self._generate_filename("veiculos", extension="xlsx")
-                    file_path = self.base_export_dir / filename
+                    month_dir = self.base_export_dir
+                filename = self._generate_filename("Veículos", extension="xlsx")
+                file_path = month_dir / filename
 
             # Garante que o diretório existe
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Traduz colunas para português
+            df = self._translate_columns(df)
+
             # Exporta para Excel
             df.to_excel(file_path, index=False, engine="openpyxl")
 
-            logger.success(f"✅ {len(vehicles)} veículos exportados para: {file_path}")
+            logger.success(f"{len(vehicles)} veículos exportados para: {file_path}")
             return str(file_path)
 
         except Exception as e:
-            logger.error(f"❌ Erro ao exportar veículos para Excel: {e}")
+            logger.error(f"Erro ao exportar veículos para Excel: {e}")
             raise
 
     def export_history_to_csv(
@@ -260,6 +315,8 @@ class DataExporter:
         month: int,
         year: int,
         output_path: Optional[str] = None,
+        vehicle_name: Optional[str] = None,
+        vehicle_plate: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico de um veículo para arquivo CSV.
@@ -270,6 +327,8 @@ class DataExporter:
             month: Mês dos dados (1-12)
             year: Ano dos dados
             output_path: Caminho completo do arquivo de saída (opcional)
+            vehicle_name: Nome do veículo (opcional)
+            vehicle_plate: Placa do veículo (opcional)
 
         Returns:
             Caminho do arquivo criado
@@ -288,12 +347,14 @@ class DataExporter:
             for record in history:
                 clean_record = {
                     "vehicle_id": record.get("vehicle_id"),
+                    "vehicle_name": vehicle_name or record.get("vehicle_name"),
+                    "plate": vehicle_plate or record.get("plate"),
                     "timestamp": record.get("timestamp"),
                     "latitude": record.get("latitude"),
                     "longitude": record.get("longitude"),
                     "speed": record.get("speed"),
                     "odometer": record.get("odometer"),
-                    "ignition": record.get("ignition"),
+                    "ignition": _format_ignition(record.get("ignition")),
                     "address": record.get("address"),
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
@@ -314,11 +375,11 @@ class DataExporter:
                 file_path = Path(output_path)
             else:
                 month_dir = self._create_month_directory(month, year)
+                # Usa placa para nome do arquivo, ou ID como fallback
+                plate_for_filename = vehicle_plate or vehicle_id
                 filename = self._generate_filename(
-                    "historico",
-                    vehicle_id=vehicle_id,
-                    month=month,
-                    year=year,
+                    "Histórico_Padrão",
+                    vehicle_plate=plate_for_filename,
                     extension="csv",
                 )
                 file_path = month_dir / filename
@@ -326,17 +387,20 @@ class DataExporter:
             # Garante que o diretório existe
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Traduz colunas para português
+            df = self._translate_columns(df)
+
             # Exporta para CSV
             df.to_csv(file_path, index=False, encoding="utf-8-sig")
 
             logger.success(
-                f"✅ {len(history)} registros do veículo {vehicle_id} "
+                f"{len(history)} registros do veículo {vehicle_plate or vehicle_id} "
                 f"({month:02d}/{year}) exportados para: {file_path}"
             )
             return str(file_path)
 
         except Exception as e:
-            logger.error(f"❌ Erro ao exportar histórico para CSV: {e}")
+            logger.error(f"Erro ao exportar histórico para CSV: {e}")
             raise
 
     def export_history_to_excel(
@@ -346,6 +410,8 @@ class DataExporter:
         month: int,
         year: int,
         output_path: Optional[str] = None,
+        vehicle_name: Optional[str] = None,
+        vehicle_plate: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico de um veículo para arquivo Excel.
@@ -356,6 +422,8 @@ class DataExporter:
             month: Mês dos dados (1-12)
             year: Ano dos dados
             output_path: Caminho completo do arquivo de saída (opcional)
+            vehicle_name: Nome do veículo (opcional)
+            vehicle_plate: Placa do veículo (opcional)
 
         Returns:
             Caminho do arquivo criado
@@ -374,12 +442,14 @@ class DataExporter:
             for record in history:
                 clean_record = {
                     "vehicle_id": record.get("vehicle_id"),
+                    "vehicle_name": vehicle_name or record.get("vehicle_name"),
+                    "plate": vehicle_plate or record.get("plate"),
                     "timestamp": record.get("timestamp"),
                     "latitude": record.get("latitude"),
                     "longitude": record.get("longitude"),
                     "speed": record.get("speed"),
                     "odometer": record.get("odometer"),
-                    "ignition": record.get("ignition"),
+                    "ignition": _format_ignition(record.get("ignition")),
                     "address": record.get("address"),
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
@@ -400,11 +470,11 @@ class DataExporter:
                 file_path = Path(output_path)
             else:
                 month_dir = self._create_month_directory(month, year)
+                # Usa placa para nome do arquivo, ou ID como fallback
+                plate_for_filename = vehicle_plate or vehicle_id
                 filename = self._generate_filename(
-                    "historico",
-                    vehicle_id=vehicle_id,
-                    month=month,
-                    year=year,
+                    "Histórico_Padrão",
+                    vehicle_plate=plate_for_filename,
                     extension="xlsx",
                 )
                 file_path = month_dir / filename
@@ -412,17 +482,20 @@ class DataExporter:
             # Garante que o diretório existe
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Traduz colunas para português
+            df = self._translate_columns(df)
+
             # Exporta para Excel
             df.to_excel(file_path, index=False, engine="openpyxl")
 
             logger.success(
-                f"✅ {len(history)} registros do veículo {vehicle_id} "
+                f"{len(history)} registros do veículo {vehicle_plate or vehicle_id} "
                 f"({month:02d}/{year}) exportados para: {file_path}"
             )
             return str(file_path)
 
         except Exception as e:
-            logger.error(f"❌ Erro ao exportar histórico para Excel: {e}")
+            logger.error(f"Erro ao exportar histórico para Excel: {e}")
             raise
 
     def export_consolidated_history_to_csv(
@@ -431,6 +504,7 @@ class DataExporter:
         month: int,
         year: int,
         output_path: Optional[str] = None,
+        vehicles_info: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> str:
         """
         Exporta histórico consolidado de todos os veículos para um único arquivo CSV.
@@ -440,6 +514,7 @@ class DataExporter:
             month: Mês dos dados (1-12)
             year: Ano dos dados
             output_path: Caminho completo do arquivo de saída (opcional)
+            vehicles_info: Dicionário {vehicle_id: {"name": nome, "plate": placa}} (opcional)
 
         Returns:
             Caminho do arquivo criado
@@ -448,24 +523,30 @@ class DataExporter:
             logger.warning("Histórico consolidado vazio, nenhum arquivo será criado")
             return ""
 
+        vehicles_info = vehicles_info or {}
+
         try:
             # Consolida todos os registros
             all_records = []
             system_source = "unknown"
 
-            for vehicle_id, history in all_history.items():
+            for vid, history in all_history.items():
+                vehicle_data = vehicles_info.get(vid, {})
                 for record in history:
                     if system_source == "unknown":
                         system_source = record.get("system_source", "unknown")
 
                     clean_record = {
                         "vehicle_id": record.get("vehicle_id"),
+                        "vehicle_name": vehicle_data.get("name")
+                        or record.get("vehicle_name"),
+                        "plate": vehicle_data.get("plate") or record.get("plate"),
                         "timestamp": record.get("timestamp"),
                         "latitude": record.get("latitude"),
                         "longitude": record.get("longitude"),
                         "speed": record.get("speed"),
                         "odometer": record.get("odometer"),
-                        "ignition": record.get("ignition"),
+                        "ignition": _format_ignition(record.get("ignition")),
                         "address": record.get("address"),
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
@@ -494,24 +575,27 @@ class DataExporter:
             else:
                 month_dir = self._create_month_directory(month, year)
                 filename = self._generate_filename(
-                    "historico_consolidado", month=month, year=year, extension="csv"
+                    "Histórico_Consolidado", extension="csv"
                 )
                 file_path = month_dir / filename
 
             # Garante que o diretório existe
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Traduz colunas para português
+            df = self._translate_columns(df)
+
             # Exporta para CSV
             df.to_csv(file_path, index=False, encoding="utf-8-sig")
 
             logger.success(
-                f"✅ {len(all_records)} registros consolidados de "
+                f"{len(all_records)} registros consolidados de "
                 f"{len(all_history)} veículos ({month:02d}/{year}) exportados para: {file_path}"
             )
             return str(file_path)
 
         except Exception as e:
-            logger.error(f"❌ Erro ao exportar histórico consolidado para CSV: {e}")
+            logger.error(f"Erro ao exportar histórico consolidado para CSV: {e}")
             raise
 
     def export_consolidated_history_to_excel(
@@ -520,6 +604,7 @@ class DataExporter:
         month: int,
         year: int,
         output_path: Optional[str] = None,
+        vehicles_info: Optional[Dict[str, Dict[str, str]]] = None,
     ) -> str:
         """
         Exporta histórico consolidado de todos os veículos para um único arquivo Excel.
@@ -529,6 +614,7 @@ class DataExporter:
             month: Mês dos dados (1-12)
             year: Ano dos dados
             output_path: Caminho completo do arquivo de saída (opcional)
+            vehicles_info: Dicionário {vehicle_id: {"name": nome, "plate": placa}} (opcional)
 
         Returns:
             Caminho do arquivo criado
@@ -537,24 +623,30 @@ class DataExporter:
             logger.warning("Histórico consolidado vazio, nenhum arquivo será criado")
             return ""
 
+        vehicles_info = vehicles_info or {}
+
         try:
             # Consolida todos os registros
             all_records = []
             system_source = "unknown"
 
-            for vehicle_id, history in all_history.items():
+            for vid, history in all_history.items():
+                vehicle_data = vehicles_info.get(vid, {})
                 for record in history:
                     if system_source == "unknown":
                         system_source = record.get("system_source", "unknown")
 
                     clean_record = {
                         "vehicle_id": record.get("vehicle_id"),
+                        "vehicle_name": vehicle_data.get("name")
+                        or record.get("vehicle_name"),
+                        "plate": vehicle_data.get("plate") or record.get("plate"),
                         "timestamp": record.get("timestamp"),
                         "latitude": record.get("latitude"),
                         "longitude": record.get("longitude"),
                         "speed": record.get("speed"),
                         "odometer": record.get("odometer"),
-                        "ignition": record.get("ignition"),
+                        "ignition": _format_ignition(record.get("ignition")),
                         "address": record.get("address"),
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
@@ -583,24 +675,27 @@ class DataExporter:
             else:
                 month_dir = self._create_month_directory(month, year)
                 filename = self._generate_filename(
-                    "historico_consolidado", month=month, year=year, extension="xlsx"
+                    "Histórico_Consolidado", extension="xlsx"
                 )
                 file_path = month_dir / filename
 
             # Garante que o diretório existe
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Traduz colunas para português
+            df = self._translate_columns(df)
+
             # Exporta para Excel
             df.to_excel(file_path, index=False, engine="openpyxl")
 
             logger.success(
-                f"✅ {len(all_records)} registros consolidados de "
+                f"{len(all_records)} registros consolidados de "
                 f"{len(all_history)} veículos ({month:02d}/{year}) exportados para: {file_path}"
             )
             return str(file_path)
 
         except Exception as e:
-            logger.error(f"❌ Erro ao exportar histórico consolidado para Excel: {e}")
+            logger.error(f"Erro ao exportar histórico consolidado para Excel: {e}")
             raise
 
     def get_export_stats(self, month: int, year: int) -> Dict[str, Any]:

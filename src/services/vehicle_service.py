@@ -85,7 +85,7 @@ class VehicleService:
     ):
         """
         Inicializa o serviço.
-        
+
         Args:
             client: Cliente Wialon (cria um novo se não fornecido)
             normalizer: Normalizador de dados (cria um novo se não fornecido)
@@ -94,13 +94,13 @@ class VehicleService:
         """
         self.client = client or WialonClient()
         self.normalizer = normalizer or DataNormalizer()
-        
+
         export_path = export_dir or settings.EXPORT_DIR
         self.exporter = exporter or DataExporter(base_export_dir=export_path)
-        
+
         # Cache de sensores por veículo para evitar requisições repetidas
         self._sensor_cache: Dict[int, Dict[str, str]] = {}
-        
+
         logger.info("VehicleService inicializado")
     
     def get_month_timestamps(self, month: int, year: int) -> tuple[int, int]:
@@ -126,17 +126,17 @@ class VehicleService:
     def get_vehicle_sensors(self, vehicle_id: int) -> Dict[str, str]:
         """
         Obtém mapa de sensores com cache.
-        
+
         Args:
             vehicle_id: ID do veículo
-            
+
         Returns:
             Mapa de parâmetro bruto -> nome normalizado
         """
         if vehicle_id not in self._sensor_cache:
             self._sensor_cache[vehicle_id] = self.client.get_vehicle_sensors(vehicle_id)
         return self._sensor_cache[vehicle_id]
-    
+
     def transform_wialon_message(
         self,
         message: Dict[str, Any],
@@ -239,7 +239,7 @@ class VehicleService:
             "battery_voltage": battery_voltage,
             "engine_hours": engine_hours,
             "driver": message.get("drv"),  # Motorista vinculado
-            "address": None,  # Seria necessário reverse geocoding
+            "address": None,  # Requer geocodificação reversa (não implementado)
             "raw_data": message,  # Preserva dados originais
         }
 
@@ -351,10 +351,12 @@ class VehicleService:
             
             # Processa cada veículo
             all_history: Dict[str, List[Dict[str, Any]]] = {}
+            vehicles_info: Dict[str, Dict[str, str]] = {}  # Para exportação consolidada
             
             for vehicle in vehicles:
                 vehicle_id = vehicle.get("id")
                 vehicle_name = vehicle.get("nm", f"Veículo {vehicle_id}")
+                vehicle_plate = vehicle.get("_plate") or ""  # Placa extraída do profile field
                 
                 try:
                     # Processa histórico
@@ -378,14 +380,24 @@ class VehicleService:
                     # Exporta arquivo individual
                     if export_format in ("csv", "both"):
                         file_path = self.exporter.export_history_to_csv(
-                            normalized, str(vehicle_id), month, year
+                            normalized,
+                            str(vehicle_id),
+                            month,
+                            year,
+                            vehicle_name=vehicle_name,
+                            vehicle_plate=vehicle_plate,
                         )
                         if file_path:
                             result.exported_files.append(file_path)
                     
                     if export_format in ("xlsx", "both"):
                         file_path = self.exporter.export_history_to_excel(
-                            normalized, str(vehicle_id), month, year
+                            normalized,
+                            str(vehicle_id),
+                            month,
+                            year,
+                            vehicle_name=vehicle_name,
+                            vehicle_plate=vehicle_plate,
                         )
                         if file_path:
                             result.exported_files.append(file_path)
@@ -393,6 +405,10 @@ class VehicleService:
                     # Guarda para consolidado
                     if consolidated:
                         all_history[str(vehicle_id)] = normalized
+                        vehicles_info[str(vehicle_id)] = {
+                            "name": vehicle_name,
+                            "plate": vehicle_plate,
+                        }
                     
                     result.processed_vehicles += 1
                     
@@ -408,14 +424,14 @@ class VehicleService:
                 
                 if export_format in ("csv", "both"):
                     file_path = self.exporter.export_consolidated_history_to_csv(
-                        all_history, month, year
+                        all_history, month, year, vehicles_info=vehicles_info
                     )
                     if file_path:
                         result.exported_files.append(file_path)
                 
                 if export_format in ("xlsx", "both"):
                     file_path = self.exporter.export_consolidated_history_to_excel(
-                        all_history, month, year
+                        all_history, month, year, vehicles_info=vehicles_info
                     )
                     if file_path:
                         result.exported_files.append(file_path)
