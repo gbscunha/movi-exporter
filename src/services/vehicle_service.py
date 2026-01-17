@@ -18,12 +18,14 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from src.clients.protocols import TrackingClient
 from src.clients.wialon_client import WialonClient, WialonError
 from src.core.config import settings
 from src.core.logger import logger
 from src.services.exporter import DataExporter
 from src.services.normalizer import DataNormalizer
 from src.services.uploader import DriveUploader, UploadResult
+from src.services.wialon_transformer import WialonTransformer
 
 
 @dataclass
@@ -68,44 +70,32 @@ class VehicleService:
     Orquestra o fluxo completo desde a API até os arquivos exportados.
     """
 
-    # Parâmetros conhecidos para busca direta nas mensagens
-    # Mapeamento: campo normalizado -> lista de parâmetros possíveis na API
-    KNOWN_PARAMS = {
-        "ignition": ["in", "in1", "din1", "ignition", "ign"],
-        "fuel_level": ["fuel1", "fuel2", "fuel_level", "can_fuel_level", "fuel", "fls"],
-        "rpm": ["rpm", "can_rpm", "engine_rpm", "eng_rpm"],
-        "battery_voltage": [
-            "pwr_ext",
-            "pwr_int",
-            "voltage",
-            "battery",
-            "power",
-            "batt",
-        ],
-        "engine_hours": ["engine_hours", "eng_hours", "horimeter", "eh", "mh"],
-    }
-
     def __init__(
         self,
-        client: Optional[WialonClient] = None,
+        client: Optional[TrackingClient] = None,
         normalizer: Optional[DataNormalizer] = None,
         exporter: Optional[DataExporter] = None,
         export_dir: Optional[str] = None,
+        transformer: Optional[WialonTransformer] = None,
     ):
         """
         Inicializa o serviço.
 
         Args:
-            client: Cliente Wialon (cria um novo se não fornecido)
+            client: Cliente de rastreamento (cria WialonClient se não fornecido)
             normalizer: Normalizador de dados (cria um novo se não fornecido)
             exporter: Exportador de dados (cria um novo se não fornecido)
             export_dir: Diretório de exportação (usa settings se não fornecido)
+            transformer: Transformer de mensagens (cria WialonTransformer se não fornecido)
         """
-        self.client = client or WialonClient()
+        self.client: TrackingClient = client or WialonClient()
         self.normalizer = normalizer or DataNormalizer()
 
         export_path = export_dir or settings.EXPORT_DIR
         self.exporter = exporter or DataExporter(base_export_dir=export_path)
+
+        # Transformer para converter mensagens do sistema de rastreamento
+        self.transformer = transformer or WialonTransformer(self.client)
 
         # Cache de sensores por veículo para evitar requisições repetidas
         # Formato: {vehicle_id: {param_base: {"name": str, "formula": str}}}
@@ -148,130 +138,6 @@ class VehicleService:
             self._sensor_cache[vehicle_id] = self.client.get_vehicle_sensors(vehicle_id)
         return self._sensor_cache[vehicle_id]
 
-    def transform_wialon_message(
-        self,
-        message: Dict[str, Any],
-        vehicle_id: int,
-        sensor_map: Dict[str, Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """
-        Transforma mensagem bruta da Wialon para formato intermediário.
-
-        Esta é a única função que conhece a estrutura da Wialon.
-        O resultado é um dicionário com campos padronizados.
-
-        Busca dados de duas formas:
-        1. Via sensor_map (sensores configurados no Wialon, com fórmulas)
-        2. Via KNOWN_PARAMS (parâmetros conhecidos diretamente nas mensagens)
-
-        Args:
-            message: Mensagem bruta da API Wialon
-            vehicle_id: ID do veículo
-            sensor_map: Mapa de sensores do veículo
-                        Formato: {param_base: {"name": str, "formula": str}}
-
-        Returns:
-            Dicionário com dados transformados
-        """
-        # Extrai posição
-        pos = message.get("pos", {}) or {}
-
-        # Extrai parâmetros (dados de sensores)
-        params = message.get("p", {}) or {}
-
-        # Resolve sensores para valores conhecidos via sensor_map
-        ignition = None
-        fuel_level = None
-        rpm = None
-        battery_voltage = None
-        engine_hours = None
-
-        for param_key, param_value in params.items():
-            sensor_info = sensor_map.get(param_key)
-
-            if not sensor_info:
-                continue
-
-            sensor_name = sensor_info.get("name", "")
-            formula = sensor_info.get("formula", "")
-
-            # Aplica a fórmula do sensor ao valor bruto
-            calculated_value = self.client.apply_sensor_formula(param_value, formula)
-
-            if sensor_name == "ignition":
-                # Ignição: 0 = desligado, 1 = ligado
-                ignition = bool(param_value) if param_value is not None else None
-            elif sensor_name == "fuel_level":
-                fuel_level = (
-                    calculated_value if calculated_value is not None else param_value
-                )
-            elif sensor_name == "rpm":
-                rpm = calculated_value if calculated_value is not None else param_value
-            elif sensor_name == "battery_voltage":
-                battery_voltage = (
-                    calculated_value if calculated_value is not None else param_value
-                )
-            elif sensor_name == "engine_hours":
-                engine_hours = (
-                    calculated_value if calculated_value is not None else param_value
-                )
-
-        # Busca direta de parâmetros conhecidos (fallback quando não há sensor configurado)
-        # Ignição
-        if ignition is None:
-            for key in self.KNOWN_PARAMS["ignition"]:
-                if key in params and params[key] is not None:
-                    ignition = bool(params[key])
-                    break
-
-        # Nível de combustível
-        if fuel_level is None:
-            for key in self.KNOWN_PARAMS["fuel_level"]:
-                if key in params and params[key] is not None:
-                    fuel_level = params[key]
-                    break
-
-        # RPM
-        if rpm is None:
-            for key in self.KNOWN_PARAMS["rpm"]:
-                if key in params and params[key] is not None:
-                    rpm = params[key]
-                    break
-
-        # Voltagem da bateria
-        if battery_voltage is None:
-            for key in self.KNOWN_PARAMS["battery_voltage"]:
-                if key in params and params[key] is not None:
-                    battery_voltage = params[key]
-                    break
-
-        # Horas do motor
-        if engine_hours is None:
-            for key in self.KNOWN_PARAMS["engine_hours"]:
-                if key in params and params[key] is not None:
-                    engine_hours = params[key]
-                    break
-
-        # Monta registro transformado
-        transformed = {
-            "vehicle_id": vehicle_id,
-            "timestamp": message.get("t"),  # Unix timestamp
-            "latitude": pos.get("y"),
-            "longitude": pos.get("x"),
-            "speed": pos.get("s") or pos.get("sp"),  # Velocidade
-            "odometer": None,  # Wialon não retorna odômetro direto nas mensagens
-            "ignition": ignition,
-            "fuel_level": fuel_level,
-            "rpm": rpm,
-            "battery_voltage": battery_voltage,
-            "engine_hours": engine_hours,
-            "driver": message.get("drv"),  # Motorista vinculado
-            "address": None,  # Requer geocodificação reversa (não implementado)
-            "raw_data": message,  # Preserva dados originais
-        }
-
-        return transformed
-
     def process_vehicle_history(
         self,
         vehicle: Dict[str, Any],
@@ -308,7 +174,7 @@ class VehicleService:
 
             for page in self.client.get_history(vehicle_id, time_from, time_to):
                 for message in page:
-                    transformed = self.transform_wialon_message(
+                    transformed = self.transformer.transform_message(
                         message, vehicle_id, sensor_map
                     )
                     all_records.append(transformed)
