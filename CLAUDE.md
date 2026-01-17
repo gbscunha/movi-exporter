@@ -17,13 +17,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the Application
 
-The main entry point is `src/cli/main.py`. Run from project root:
+### GUI (Recommended)
+
+```bash
+python -m src.gui.main
+```
+
+### CLI
 
 ```bash
 python -m src.cli.main
 ```
-
-This currently tests integration with System A by listing vehicles.
 
 ## Architecture
 
@@ -92,6 +96,15 @@ The codebase follows a modular architecture with clear separation of concerns:
 ### CLI Layer (`src/cli/`)
 
 - `main.py`: Command-line interface entry point with basic integration testing
+
+### GUI Layer (`src/gui/`)
+
+- `app.py`: Main application window using CustomTkinter
+- `main.py`: GUI entry point
+- `updater.py`: Auto-update system via GitHub Releases
+- `frames/`: Application screens (home, export, settings)
+- `components/`: Reusable UI components (status_bar)
+- `dialogs/`: Modal dialogs (update_dialog)
 
 ## Configuration
 

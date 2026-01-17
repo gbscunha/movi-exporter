@@ -35,6 +35,11 @@ cp .env.example .env
 ### Uso Básico
 
 ```bash
+# Iniciar a interface gráfica
+python -m src.gui.main
+
+# Ou via CLI:
+
 # Testar conexão com Wialon
 python -m src.cli.main test
 
@@ -217,8 +222,55 @@ Instale com: `pip install -r requirements.txt`
 | Exportação Excel            | ✅ Completo  |
 | CLI Completa                | ✅ Completo  |
 | Upload Google Drive         | ✅ Completo  |
-| Interface GUI               | ⏳ Planejado |
+| Interface GUI               | ✅ Completo  |
+| Auto-Update                 | ✅ Completo  |
+| Build/Distribuição          | ✅ Completo  |
 | Testes Automatizados        | ⏳ Planejado |
+
+---
+
+---
+
+## 📦 **Build e Distribuição**
+
+### Gerar Executável Localmente
+
+```bash
+# Ativar ambiente virtual
+source venv/bin/activate  # Linux/macOS
+# ou: venv\Scripts\activate  # Windows
+
+# Executar build
+python scripts/build.py
+
+# O executável será gerado em dist/MoviExporter.exe (Windows) ou dist/MoviExporter.app (macOS)
+```
+
+### Build Automático via GitHub Actions
+
+O projeto está configurado para gerar executáveis automaticamente a cada release:
+
+1. Crie uma tag de versão:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+2. O GitHub Actions irá:
+    - Compilar para Windows (.exe) e macOS (.app)
+    - Criar uma Release automaticamente
+    - Anexar os executáveis à Release
+
+### Sistema de Auto-Update
+
+O app verifica automaticamente por atualizações no GitHub Releases ao iniciar.
+Configure seu repositório em `src/gui/updater.py`:
+
+```python
+GITHUB_OWNER = "seu-usuario"
+GITHUB_REPO = "movi_exporter_app"
+```
 
 ---
 

@@ -11,3 +11,10 @@ openpyxl
 google-auth
 google-auth-oauthlib
 google-api-python-client
+
+# Dependencias para GUI
+customtkinter
+
+# Dependencias para build/distribuição
+pyinstaller
+packaging
