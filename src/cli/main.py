@@ -14,6 +14,7 @@ from typing import List, Optional
 
 from src.core.logger import logger
 from src.services.vehicle_service import VehicleService
+from src.services.uploader import DriveUploader
 
 
 def cmd_test() -> int:
@@ -28,6 +29,25 @@ def cmd_test() -> int:
         return 0
     else:
         print("❌ Falha na conexão. Verifique o token WIALON_TOKEN no .env")
+        return 1
+
+
+def cmd_test_drive() -> int:
+    """Testa conexão com o Google Drive."""
+    print("Testando conexão com Google Drive...")
+    
+    uploader = DriveUploader()
+    success = uploader.test_connection()
+    
+    if success:
+        print("✅ Conexão com Google Drive bem-sucedida!")
+        return 0
+    else:
+        print("❌ Falha na conexão com Google Drive.")
+        print("   Verifique:")
+        print("   - credentials.json existe e é válido")
+        print("   - GOOGLE_DRIVE_FOLDER_ID está configurado no .env")
+        print("   - A pasta foi compartilhada com o email do Service Account")
         return 1
 
 
@@ -68,6 +88,7 @@ def cmd_export(
     format: str = "csv",
     consolidated: bool = True,
     output_dir: Optional[str] = None,
+    upload: bool = False,
 ) -> int:
     """
     Exporta dados históricos mensais.
@@ -79,6 +100,7 @@ def cmd_export(
         format: Formato de saída (csv, xlsx, both)
         consolidated: Se deve gerar arquivo consolidado
         output_dir: Diretório de saída customizado
+        upload: Se deve fazer upload para Google Drive
     """
     print(f"Iniciando exportação: {month:02d}/{year}")
     
@@ -89,6 +111,7 @@ def cmd_export(
     
     print(f"Formato: {format}")
     print(f"Consolidado: {'sim' if consolidated else 'não'}")
+    print(f"Upload Drive: {'sim' if upload else 'não'}")
     print()
     
     service = VehicleService(export_dir=output_dir)
@@ -100,6 +123,7 @@ def cmd_export(
             vehicle_ids=vehicle_ids,
             export_format=format,
             consolidated=consolidated,
+            upload_to_drive=upload,
         )
         
         # Exibe resultado
@@ -118,6 +142,16 @@ def cmd_export(
             print("Arquivos gerados:")
             for f in result.exported_files:
                 print(f"  📄 {f}")
+        
+        if result.upload_result:
+            print()
+            print("Upload Google Drive:")
+            print(f"  Arquivos enviados: {result.upload_result.uploaded_files}/{result.upload_result.total_files}")
+            if result.upload_result.failed_files > 0:
+                print(f"  Falhas: {result.upload_result.failed_files}")
+            for detail in result.upload_result.file_details:
+                status = "⏭️ ignorado" if detail.get("skipped") else "✅"
+                print(f"  {status} {detail['file']}")
         
         if result.errors:
             print()
@@ -165,6 +199,7 @@ Exemplos:
   python -m src.cli.main export --month 12 --year 2025
   python -m src.cli.main export --month 12 --year 2025 --vehicles 123,456
   python -m src.cli.main export --month 12 --year 2025 --format xlsx
+  python -m src.cli.main export --month 12 --year 2025 --upload
         """
     )
     
@@ -172,6 +207,9 @@ Exemplos:
     
     # Comando: test
     subparsers.add_parser("test", help="Testa conexão com a API Wialon")
+    
+    # Comando: test-drive
+    subparsers.add_parser("test-drive", help="Testa conexão com o Google Drive")
     
     # Comando: list
     subparsers.add_parser("list", help="Lista veículos disponíveis")
@@ -229,6 +267,12 @@ Exemplos:
         help="Diretório de saída customizado"
     )
     
+    export_parser.add_argument(
+        "--upload", "-u",
+        action="store_true",
+        help="Faz upload dos arquivos para Google Drive"
+    )
+    
     # Parse args
     args = parser.parse_args()
     
@@ -239,6 +283,9 @@ Exemplos:
     # Executa comando
     if args.command == "test":
         return cmd_test()
+    
+    elif args.command == "test-drive":
+        return cmd_test_drive()
     
     elif args.command == "list":
         return cmd_list()
@@ -251,6 +298,7 @@ Exemplos:
             format=args.format,
             consolidated=not args.no_consolidated,
             output_dir=args.output,
+            upload=args.upload,
         )
     
     return 0

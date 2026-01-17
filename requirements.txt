@@ -7,4 +7,7 @@ loguru
 pandas
 openpyxl
 
-# TODO: Incluir dependencias para upload no Google Drive
+# Dependencias para upload no Google Drive
+google-auth
+google-auth-oauthlib
+google-api-python-client

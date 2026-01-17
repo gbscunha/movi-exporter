@@ -78,8 +78,14 @@ The codebase follows a modular architecture with clear separation of concerns:
   - Handles pagination, sensor resolution, error recovery
   - Returns detailed statistics via `ExportResult` dataclass
 
-- Planned services:
-  - `uploader.py`: Upload to Google Drive
+- `uploader.py`: ✅ **Implemented** - Upload to Google Drive
+  - `DriveUploader` class with Service Account authentication
+  - `upload_file()`: Upload single file
+  - `upload_files()`: Upload multiple files to month folder
+  - `test_connection()`: Test Drive API connection
+  - Automatic folder structure creation (by month/year)
+  - Duplicate detection and overwrite option
+  - Returns `UploadResult` with statistics
 
 **Normalizer Design**: The normalizer uses a mapping-based approach where each system has a dictionary mapping standard field names to system-specific field names. Supports `system_a` and `wialon`. New systems can be added via `add_system_mapping()` method.
 
@@ -102,9 +108,13 @@ SYSTEM_A_TOKEN=token_a
 # Export settings
 EXPORT_DIR=./exports
 WIALON_PAGE_SIZE=1000
+
+# Google Drive (optional)
+GOOGLE_DRIVE_CREDENTIALS_FILE=./credentials.json
+GOOGLE_DRIVE_FOLDER_ID=your_folder_id_here
 ```
 
-Never commit `.env` to version control.
+Never commit `.env` or `credentials.json` to version control.
 
 **Note:** The Wialon API is stateful and uses session-based authentication (NOT Bearer token). The `WIALON_TOKEN` is used only for initial login, after which a session ID (`sid`) is used.
 
@@ -139,6 +149,12 @@ python -m src.cli.main export --month 12 --year 2025 --vehicles 123,456
 
 # Export to Excel
 python -m src.cli.main export --month 12 --year 2025 --format xlsx
+
+# Export and upload to Google Drive
+python -m src.cli.main export --month 12 --year 2025 --upload
+
+# Test Google Drive connection
+python -m src.cli.main test-drive
 ```
 
 ### Normalized Data Format

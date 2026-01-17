@@ -55,6 +55,12 @@ python -m src.cli.main export --format xlsx
 
 # Exportar em ambos os formatos
 python -m src.cli.main export --format both
+
+# Exportar e fazer upload para Google Drive
+python -m src.cli.main export --format xlsx --upload
+
+# Testar conexão com Google Drive
+python -m src.cli.main test-drive
 ```
 
 ---
@@ -77,7 +83,7 @@ movi_exporter_app/
 │   │   ├── normalizer.py         # ✅ Normalização de dados
 │   │   ├── exporter.py           # ✅ Exportação CSV/Excel
 │   │   ├── vehicle_service.py    # ✅ Orquestração principal
-│   │   └── uploader.py           # Upload Google Drive (futuro)
+│   │   └── uploader.py           # ✅ Upload Google Drive
 │   │
 │   └── cli/
 │       └── main.py               # ✅ Interface de linha de comando
@@ -130,6 +136,10 @@ WIALON_TOKEN=seu_token_aqui
 # OPCIONAL: Configurações de exportação
 EXPORT_DIR=./exports
 WIALON_PAGE_SIZE=1000
+
+# OPCIONAL: Google Drive (para upload automático)
+GOOGLE_DRIVE_CREDENTIALS_FILE=./client_secrets.json
+GOOGLE_DRIVE_FOLDER_ID=seu_folder_id_aqui
 ```
 
 **Obtendo o Token Wialon:**
@@ -137,6 +147,16 @@ WIALON_PAGE_SIZE=1000
 1. Acesse o Wialon
 2. Vá em Gestão de Usuários > Token de Acesso
 3. Crie um novo token com permissões de leitura
+
+**Configurando Google Drive (opcional):**
+
+1. Acesse [Google Cloud Console](https://console.cloud.google.com)
+2. Crie um projeto e ative a **Google Drive API**
+3. Configure a **Tela de consentimento OAuth** (tipo: Externo)
+4. Crie credenciais **ID do cliente OAuth** → **App para computador**
+5. Baixe o JSON e salve como `client_secrets.json` na raiz do projeto
+6. Crie uma pasta no Google Drive e copie o ID da URL
+7. Na primeira execução com `--upload`, o navegador abrirá para login
 
 ---
 
@@ -169,11 +189,14 @@ exports/
 ## 🗂️ **Dependências**
 
 ```
-requests          # HTTP client
-python-dotenv     # Carrega .env
-loguru            # Logging
-pandas            # Manipulação de dados
-openpyxl          # Exportação Excel
+requests                    # HTTP client
+python-dotenv               # Carrega .env
+loguru                      # Logging
+pandas                      # Manipulação de dados
+openpyxl                    # Exportação Excel
+google-auth                 # Autenticação Google
+google-auth-oauthlib        # OAuth2 Google
+google-api-python-client    # API Google Drive
 ```
 
 Instale com: `pip install -r requirements.txt`
@@ -193,7 +216,7 @@ Instale com: `pip install -r requirements.txt`
 | Exportação CSV              | ✅ Completo  |
 | Exportação Excel            | ✅ Completo  |
 | CLI Completa                | ✅ Completo  |
-| Upload Google Drive         | ⏳ Planejado |
+| Upload Google Drive         | ✅ Completo  |
 | Interface GUI               | ⏳ Planejado |
 | Testes Automatizados        | ⏳ Planejado |
 

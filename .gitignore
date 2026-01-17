@@ -12,6 +12,9 @@ docs/
 /exports_test
 /exports
 /prompts
+/credentials.json
+/client_secrets.json
+/token.json
 .DS_Store
 app.log
 *.log

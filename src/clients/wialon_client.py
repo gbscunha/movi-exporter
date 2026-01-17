@@ -11,6 +11,7 @@ Este cliente implementa:
 """
 
 import json
+import re
 import time
 from typing import Any, Dict, List, Optional, Iterator
 from datetime import datetime
@@ -249,19 +250,20 @@ class WialonClient:
 
         return items
 
-    def get_vehicle_sensors(self, vehicle_id: int) -> Dict[str, str]:
+    def get_vehicle_sensors(self, vehicle_id: int) -> Dict[str, Dict[str, Any]]:
         """
         Obtém mapa de sensores de um veículo.
 
         A API Wialon retorna dados brutos (ex: io_23) que precisam ser
         mapeados para nomes legíveis (ex: fuel_level) através dos sensores.
+        Sensores podem ter fórmulas (ex: io_2_94*const0.25) que são parseadas.
 
         Args:
             vehicle_id: ID do veículo na Wialon
 
         Returns:
-            Dicionário mapeando parâmetro bruto -> nome do sensor
-            Exemplo: {"io_23": "fuel_level", "io_1": "ignition"}
+            Dicionário mapeando parâmetro base -> info do sensor
+            Exemplo: {"io_2_94": {"name": "rpm", "formula": "io_2_94*const0.25"}}
         """
         logger.debug(f"Buscando sensores do veículo {vehicle_id}...")
 
@@ -276,20 +278,111 @@ class WialonClient:
         item = data["item"]
         sensors = item.get("sens", {})
 
-        # Cria mapa de parâmetro -> nome do sensor
+        # Cria mapa de parâmetro base -> info do sensor
         sensor_map = {}
         for sensor_id, sensor_data in sensors.items():
-            param = sensor_data.get("p", "")  # Parâmetro de origem (ex: io_23)
+            formula = sensor_data.get("p", "")  # Fórmula completa (ex: io_2_94*const0.25)
             name = sensor_data.get("n", "")  # Nome do sensor
 
-            if param and name:
+            if formula and name:
                 # Normaliza nome do sensor para snake_case
                 normalized_name = self._normalize_sensor_name(name)
-                sensor_map[param] = normalized_name
+                
+                # Extrai parâmetro base da fórmula
+                base_param = self._extract_base_param(formula)
+                
+                if base_param:
+                    sensor_map[base_param] = {
+                        "name": normalized_name,
+                        "formula": formula,
+                    }
 
         logger.debug(f"Veículo {vehicle_id}: {len(sensor_map)} sensores mapeados")
 
         return sensor_map
+
+    def _extract_base_param(self, formula: str) -> Optional[str]:
+        """
+        Extrai o parâmetro base de uma fórmula de sensor Wialon.
+
+        Exemplos:
+        - "io_2_94*const0.25" -> "io_2_94"
+        - "can_rpm/const8" -> "can_rpm"
+        - "fuel_lvl*const55/const255" -> "fuel_lvl"
+        - "io_1_409" -> "io_1_409"
+
+        Args:
+            formula: Fórmula do sensor (campo "p")
+
+        Returns:
+            Parâmetro base ou None se não conseguir extrair
+        """
+        if not formula:
+            return None
+
+        # Remove espaços
+        formula = formula.strip()
+
+        # Encontra o primeiro operador (*,/,+,-)
+        operators = ["*", "/", "+", "-"]
+        min_pos = len(formula)
+        
+        for op in operators:
+            pos = formula.find(op)
+            if pos != -1 and pos < min_pos:
+                min_pos = pos
+
+        # Se encontrou operador, pega o que vem antes
+        if min_pos < len(formula):
+            return formula[:min_pos].strip()
+
+        # Se não tem operador, a fórmula é só o parâmetro
+        return formula
+
+    def apply_sensor_formula(self, raw_value: Any, formula: str) -> Optional[float]:
+        """
+        Aplica a fórmula de um sensor Wialon ao valor bruto.
+
+        Exemplos de fórmulas suportadas:
+        - "io_2_94*const0.25" -> raw_value * 0.25
+        - "can_rpm/const8" -> raw_value / 8
+        - "fuel_lvl*const55/const255" -> raw_value * 55 / 255
+        - "power*const0.001" -> raw_value * 0.001
+
+        Args:
+            raw_value: Valor bruto do parâmetro
+            formula: Fórmula do sensor
+
+        Returns:
+            Valor calculado ou None se falhar
+        """
+        if raw_value is None:
+            return None
+
+        try:
+            result = float(raw_value)
+
+            # Encontra todas as operações const (ex: *const0.25, /const8)
+            operations = re.findall(r'([*/+-])const([\d.]+)', formula)
+
+            for op, const_str in operations:
+                const_value = float(const_str)
+                
+                if op == "*":
+                    result = result * const_value
+                elif op == "/":
+                    if const_value != 0:
+                        result = result / const_value
+                elif op == "+":
+                    result = result + const_value
+                elif op == "-":
+                    result = result - const_value
+
+            return result
+
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Erro ao aplicar fórmula '{formula}' ao valor '{raw_value}': {e}")
+            return None
 
     def _normalize_sensor_name(self, name: str) -> str:
         """
