@@ -1,5 +1,8 @@
 """
 Tela de Exportação.
+
+Exibe configurações de exportação e log de progresso em tempo real
+capturando mensagens do loguru durante o processamento.
 """
 
 import customtkinter as ctk
@@ -7,11 +10,22 @@ import threading
 from datetime import datetime
 from typing import Callable, Optional, List
 
+from src.core.logger import GUILogHandler
 from src.services.vehicle_service import VehicleService
 
 
 class ExportFrame(ctk.CTkFrame):
     """Tela de configuração e execução de exportação."""
+    
+    # Cores para diferentes níveis de log
+    LOG_COLORS = {
+        "DEBUG": "#888888",
+        "INFO": "#FFFFFF",
+        "SUCCESS": "#4CAF50",
+        "WARNING": "#FFC107",
+        "ERROR": "#F44336",
+        "CRITICAL": "#FF5722",
+    }
     
     def __init__(self, master, status_callback: Optional[Callable] = None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
@@ -20,6 +34,7 @@ class ExportFrame(ctk.CTkFrame):
         self.service: Optional[VehicleService] = None
         self.vehicles: List[dict] = []
         self.is_exporting = False
+        self._log_handler: Optional[GUILogHandler] = None
         
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
@@ -162,19 +177,43 @@ class ExportFrame(ctk.CTkFrame):
         progress_frame.grid_columnconfigure(0, weight=1)
         progress_frame.grid_rowconfigure(1, weight=1)
         
+        # Header com título e contador
+        header_frame = ctk.CTkFrame(progress_frame, fg_color="transparent")
+        header_frame.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="ew")
+        header_frame.grid_columnconfigure(1, weight=1)
+        
         ctk.CTkLabel(
-            progress_frame,
+            header_frame,
             text="Progresso:",
             font=ctk.CTkFont(weight="bold")
-        ).grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
+        ).grid(row=0, column=0, sticky="w")
         
-        self.log_text = ctk.CTkTextbox(progress_frame, height=150)
+        self.progress_label = ctk.CTkLabel(
+            header_frame,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color="#888888"
+        )
+        self.progress_label.grid(row=0, column=1, sticky="e")
+        
+        self.log_text = ctk.CTkTextbox(progress_frame, height=200)
         self.log_text.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        
+        # Configurar tags de cores para diferentes níveis de log
+        # CTkTextbox usa tkinter Text internamente
+        self._configure_log_tags()
         
         # Barra de progresso
         self.progress_bar = ctk.CTkProgressBar(progress_frame)
         self.progress_bar.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
         self.progress_bar.set(0)
+    
+    def _configure_log_tags(self):
+        """Configura tags de cor para o textbox."""
+        # Acessa o widget tkinter interno do CTkTextbox
+        text_widget = self.log_text._textbox
+        for level, color in self.LOG_COLORS.items():
+            text_widget.tag_configure(level, foreground=color)
     
     def _create_action_buttons(self):
         """Cria botões de ação."""
@@ -203,17 +242,19 @@ class ExportFrame(ctk.CTkFrame):
     def _load_vehicles(self):
         """Carrega lista de veículos."""
         self.load_btn.configure(state="disabled", text="Carregando...")
+        self._log("🔌 Conectando ao Wialon...", "INFO")
         
         def load():
             try:
                 if not self.service:
                     self.service = VehicleService()
                 
+                self._log("📡 Buscando lista de veículos...", "INFO")
                 self.vehicles = self.service.list_vehicles()
                 self.after(0, self._populate_vehicle_list)
                 
             except Exception as e:
-                self.after(0, lambda: self._log(f"❌ Erro ao carregar veículos: {e}"))
+                self._log(f"Erro ao carregar veículos: {e}", "ERROR")
             finally:
                 self.after(0, lambda: self.load_btn.configure(state="normal", text="🔄 Carregar"))
         
@@ -238,7 +279,7 @@ class ExportFrame(ctk.CTkFrame):
             cb.grid(row=i // 3, column=i % 3, padx=5, pady=2, sticky="w")
             self.vehicle_checkboxes[v['id']] = cb
         
-        self._log(f"✅ {len(self.vehicles)} veículos carregados")
+        self._log(f"{len(self.vehicles)} veículos carregados", "SUCCESS")
     
     def _get_selected_vehicle_ids(self) -> Optional[List[int]]:
         """Retorna IDs dos veículos selecionados ou None para todos."""
@@ -260,7 +301,10 @@ class ExportFrame(ctk.CTkFrame):
         self.is_exporting = True
         self.export_btn.configure(state="disabled", text="⏳ Exportando...")
         self.progress_bar.set(0)
+        self.progress_bar.configure(mode="indeterminate")
+        self.progress_bar.start()
         self.log_text.delete("1.0", "end")
+        self.progress_label.configure(text="Iniciando...")
         
         # Parâmetros
         month = int(self.month_var.get())
@@ -270,15 +314,21 @@ class ExportFrame(ctk.CTkFrame):
         upload = self.upload_var.get()
         vehicle_ids = self._get_selected_vehicle_ids()
         
-        self._log(f"📅 Exportando: {month:02d}/{year}")
-        self._log(f"📁 Formato: {format_type}")
+        self._log(f"📅 Exportando: {month:02d}/{year}", "INFO")
+        self._log(f"📁 Formato: {format_type}", "INFO")
+        if vehicle_ids:
+            self._log(f"🚗 Veículos selecionados: {len(vehicle_ids)}", "INFO")
+        else:
+            self._log("🚗 Todos os veículos", "INFO")
+        self._log("", "INFO")
+        
+        # Registra handler de logs para capturar output do serviço
+        self._setup_log_handler()
         
         def export():
             try:
                 if not self.service:
                     self.service = VehicleService()
-                
-                self._log("🔌 Conectando ao Wialon...")
                 
                 result = self.service.export_monthly_data(
                     month=month,
@@ -289,51 +339,93 @@ class ExportFrame(ctk.CTkFrame):
                     upload_to_drive=upload,
                 )
                 
-                self.after(0, lambda: self.progress_bar.set(1))
+                # Para barra de progresso e define como completo
+                self.after(0, self._set_progress_complete)
                 
-                # Resultado
-                self._log("")
-                self._log("=" * 50)
-                self._log("✅ EXPORTAÇÃO CONCLUÍDA")
-                self._log("=" * 50)
-                self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}")
-                self._log(f"Registros: {result.total_records}")
-                self._log(f"Taxa de sucesso: {result.success_rate:.1f}%")
+                # Resultado final
+                self._log("", "INFO")
+                self._log("═" * 50, "SUCCESS")
+                self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
+                self._log("═" * 50, "SUCCESS")
+                self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO")
+                self._log(f"Registros: {result.total_records}", "INFO")
+                self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
                 
                 if result.exported_files:
-                    self._log("")
-                    self._log("Arquivos gerados:")
+                    self._log("", "INFO")
+                    self._log("Arquivos gerados:", "INFO")
                     for f in result.exported_files:
-                        self._log(f"  📄 {f}")
+                        self._log(f"  📄 {f}", "SUCCESS")
+                
+                if result.upload_result:
+                    ur = result.upload_result
+                    self._log("", "INFO")
+                    self._log(f"Upload: {ur.uploaded_count}/{ur.total_files} arquivos", "INFO")
                 
                 if result.errors:
-                    self._log("")
-                    self._log("Erros:")
+                    self._log("", "WARNING")
+                    self._log("Erros:", "WARNING")
                     for e in result.errors:
-                        self._log(f"  ❌ {e}")
+                        self._log(f"  {e}", "ERROR")
                 
                 if self.status_callback:
                     self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
                 
             except Exception as e:
-                self._log(f"\n❌ Erro na exportação: {e}")
+                self._log(f"\n❌ Erro na exportação: {e}", "ERROR")
                 if self.status_callback:
                     self.status_callback(f"Erro: {e}", "error")
             finally:
+                self._teardown_log_handler()
                 self.after(0, self._reset_export_button)
         
         thread = threading.Thread(target=export, daemon=True)
         thread.start()
     
+    def _set_progress_complete(self):
+        """Define a barra de progresso como completa."""
+        self.progress_bar.stop()
+        self.progress_bar.configure(mode="determinate")
+        self.progress_bar.set(1)
+        self.progress_label.configure(text="Concluído")
+    
     def _reset_export_button(self):
         """Reseta o estado do botão de exportação."""
         self.is_exporting = False
         self.export_btn.configure(state="normal", text="▶️  Iniciar Exportação")
+        # Garante que a barra de progresso está parada
+        try:
+            self.progress_bar.stop()
+            self.progress_bar.configure(mode="determinate")
+        except Exception:
+            pass
     
-    def _log(self, message: str):
-        """Adiciona mensagem ao log."""
+    def _log(self, message: str, level: str = "INFO"):
+        """
+        Adiciona mensagem ao log com cor baseada no nível.
+        
+        Args:
+            message: Texto a exibir
+            level: Nível do log (DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL)
+        """
         def update():
-            self.log_text.insert("end", message + "\n")
+            text_widget = self.log_text._textbox
+            # Insere texto com tag de cor
+            text_widget.insert("end", message + "\n", level)
             self.log_text.see("end")
         
         self.after(0, update)
+    
+    def _setup_log_handler(self):
+        """Configura handler para capturar logs do loguru."""
+        def on_log(message: str, level: str):
+            self._log(message, level)
+        
+        self._log_handler = GUILogHandler(callback=on_log, min_level="INFO")
+        self._log_handler.register()
+    
+    def _teardown_log_handler(self):
+        """Remove handler de logs."""
+        if self._log_handler:
+            self._log_handler.unregister()
+            self._log_handler = None
