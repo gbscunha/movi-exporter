@@ -131,6 +131,8 @@ Never commit `.env` or `credentials.json` to version control.
 
 **Note:** The Wialon API is stateful and uses session-based authentication (NOT Bearer token). The `WIALON_TOKEN` is used only for initial login, after which a session ID (`sid`) is used.
 
+**How to obtain the `WIALON_TOKEN`:** See [`docs/WIALON_TOKEN_AUTORIZACAO.md`](docs/WIALON_TOKEN_AUTORIZACAO.md) — the token is generated through Wialon's web authorization form (`login.html` with redirect to `post_token.html`), NOT through an API call or admin panel button. The doc has the ready-to-use URL, all `access_type` flags, and troubleshooting for `error=8 (INVALID_AUTH_TOKEN)`.
+
 ## Core Workflow
 
 Current workflow for Wialon (via `VehicleService`):
