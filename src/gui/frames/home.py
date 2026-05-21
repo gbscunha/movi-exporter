@@ -55,7 +55,6 @@ class HomeFrame(ctk.CTkFrame):
             cards_frame,
             title="Wialon API",
             value="Verificando...",
-            icon="🔌"
         )
         self.wialon_card.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         
@@ -64,7 +63,6 @@ class HomeFrame(ctk.CTkFrame):
             cards_frame,
             title="Veículos",
             value="--",
-            icon="🚗"
         )
         self.vehicles_card.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
         
@@ -73,7 +71,6 @@ class HomeFrame(ctk.CTkFrame):
             cards_frame,
             title="Google Drive",
             value="Verificando...",
-            icon="☁️"
         )
         self.drive_card.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
         
