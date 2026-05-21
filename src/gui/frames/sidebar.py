@@ -29,7 +29,7 @@ class SidebarFrame(ctk.CTkFrame):
         # Logo/Título
         self.logo_label = ctk.CTkLabel(
             self,
-            text="🚗 Movi Exporter",
+            text="Movi Exporter",
             font=ctk.CTkFont(size=20, weight="bold")
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 30))
