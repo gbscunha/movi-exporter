@@ -107,18 +107,29 @@ class DataExporter:
         """Garante que o diretório base de exportação existe."""
         self.base_export_dir.mkdir(parents=True, exist_ok=True)
 
-    def _create_month_directory(self, month: int, year: int) -> Path:
+    def _create_month_directory(
+        self,
+        month: int,
+        year: int,
+        account_name: Optional[str] = None,
+    ) -> Path:
         """
         Cria e retorna o diretório para um mês/ano específico.
 
         Args:
             month: Mês (1-12)
             year: Ano (ex: 2024)
+            account_name: Nome da conta — se fornecido, gera subpasta
+                          dentro de `YYYY-MM/` para isolar exports de cada conta
 
         Returns:
-            Path do diretório criado (ex: exports/2024-10/)
+            Path do diretório criado.
+            Sem account_name: `exports/2024-10/`
+            Com account_name: `exports/2024-10/Conta 1/`
         """
         month_dir = self.base_export_dir / f"{year}-{month:02d}"
+        if account_name:
+            month_dir = month_dir / account_name
         month_dir.mkdir(parents=True, exist_ok=True)
         return month_dir
 
@@ -199,6 +210,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         month: Optional[int] = None,
         year: Optional[int] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta lista de veículos para arquivo CSV.
@@ -240,7 +252,7 @@ class DataExporter:
                 file_path = Path(output_path)
             else:
                 if month and year:
-                    month_dir = self._create_month_directory(month, year)
+                    month_dir = self._create_month_directory(month, year, account_name)
                 else:
                     month_dir = self.base_export_dir
                 filename = self._generate_filename("Veículos", extension="csv")
@@ -268,6 +280,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         month: Optional[int] = None,
         year: Optional[int] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta lista de veículos para arquivo Excel.
@@ -309,7 +322,7 @@ class DataExporter:
                 file_path = Path(output_path)
             else:
                 if month and year:
-                    month_dir = self._create_month_directory(month, year)
+                    month_dir = self._create_month_directory(month, year, account_name)
                 else:
                     month_dir = self.base_export_dir
                 filename = self._generate_filename("Veículos", extension="xlsx")
@@ -340,6 +353,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         vehicle_name: Optional[str] = None,
         vehicle_plate: Optional[str] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico de um veículo para arquivo CSV.
@@ -397,7 +411,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 # Usa placa para nome do arquivo, ou ID como fallback
                 plate_for_filename = vehicle_plate or vehicle_id
                 filename = self._generate_filename(
@@ -435,6 +449,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         vehicle_name: Optional[str] = None,
         vehicle_plate: Optional[str] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico de um veículo para arquivo Excel.
@@ -492,7 +507,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 # Usa placa para nome do arquivo, ou ID como fallback
                 plate_for_filename = vehicle_plate or vehicle_id
                 filename = self._generate_filename(
@@ -528,6 +543,7 @@ class DataExporter:
         year: int,
         output_path: Optional[str] = None,
         vehicles_info: Optional[Dict[str, Dict[str, str]]] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico consolidado de todos os veículos para um único arquivo CSV.
@@ -596,7 +612,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 filename = self._generate_filename(
                     "Histórico_Consolidado", extension="csv"
                 )
@@ -628,6 +644,7 @@ class DataExporter:
         year: int,
         output_path: Optional[str] = None,
         vehicles_info: Optional[Dict[str, Dict[str, str]]] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico consolidado de todos os veículos para um único arquivo Excel.
@@ -696,7 +713,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 filename = self._generate_filename(
                     "Histórico_Consolidado", extension="xlsx"
                 )

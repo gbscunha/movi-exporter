@@ -40,14 +40,28 @@ class SettingsFrame(ctk.CTkFrame):
         self.scroll_frame.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
 
+        # Estado dos campos de cada conta — preenchido por _create_wialon_section.
+        self._token_widgets: dict[int, dict] = {}
+
         # Seções
-        self._create_wialon_section()
+        self._create_wialon_section(account=1)
+        self._create_wialon_section(account=2)
         self._create_export_section()
         self._create_drive_section()
         self._create_appearance_section()
 
-    def _create_wialon_section(self):
-        """Cria seção de configuração do Wialon — Conta 1.
+    def _env_key_for_account(self, account: int) -> str:
+        """Retorna o nome da variável de ambiente para a conta dada (1 ou 2)."""
+        return "WIALON_TOKEN" if account == 1 else "WIALON_TOKEN_2"
+
+    def _token_for_account(self, account: int) -> str:
+        """Retorna o token atualmente carregado para a conta dada."""
+        if account == 1:
+            return settings.WIALON_TOKEN or ""
+        return settings.WIALON_TOKEN_2 or ""
+
+    def _create_wialon_section(self, account: int = 1):
+        """Cria seção de configuração do Wialon para uma das duas contas.
 
         Permite editar, gerar, salvar e testar o token sem reiniciar o app.
         """
@@ -59,7 +73,7 @@ class SettingsFrame(ctk.CTkFrame):
         # Título
         title = ctk.CTkLabel(
             section,
-            text="🔌  Wialon API — Conta 1",
+            text=f"🔌  Wialon API — Conta {account}",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
         title.grid(row=0, column=0, columnspan=6, padx=15, pady=(15, 10), sticky="w")
@@ -69,94 +83,124 @@ class SettingsFrame(ctk.CTkFrame):
             row=1, column=0, padx=(15, 10), pady=10, sticky="w"
         )
 
-        self.token_entry = ctk.CTkEntry(
+        entry = ctk.CTkEntry(
             section,
             width=320,
             show="*",
             placeholder_text="Cole seu token Wialon aqui",
         )
-        self.token_entry.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="we")
-        if settings.WIALON_TOKEN:
-            self.token_entry.insert(0, settings.WIALON_TOKEN)
+        entry.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="we")
+        existing = self._token_for_account(account)
+        if existing:
+            entry.insert(0, existing)
 
-        self._token_visible = False
-        self.token_toggle_btn = ctk.CTkButton(
-            section, text="👁", width=36, command=self._toggle_token_visibility
+        toggle_btn = ctk.CTkButton(
+            section,
+            text="👁",
+            width=36,
+            command=lambda a=account: self._toggle_token_visibility(a),
         )
-        self.token_toggle_btn.grid(row=1, column=2, padx=2, pady=10)
+        toggle_btn.grid(row=1, column=2, padx=2, pady=10)
 
-        self.token_open_btn = ctk.CTkButton(
+        open_btn = ctk.CTkButton(
             section,
             text="🔗 Gerar",
             width=80,
             command=self._open_wialon_auth_page,
         )
-        self.token_open_btn.grid(row=1, column=3, padx=2, pady=10)
+        open_btn.grid(row=1, column=3, padx=2, pady=10)
 
-        self.token_save_btn = ctk.CTkButton(
-            section, text="💾 Salvar", width=90, command=self._save_wialon_token
+        save_btn = ctk.CTkButton(
+            section,
+            text="💾 Salvar",
+            width=90,
+            command=lambda a=account: self._save_wialon_token(a),
         )
-        self.token_save_btn.grid(row=1, column=4, padx=2, pady=10)
+        save_btn.grid(row=1, column=4, padx=2, pady=10)
 
-        self.token_test_btn = ctk.CTkButton(
-            section, text="🔍 Testar", width=90, command=self._test_wialon_token
+        test_btn = ctk.CTkButton(
+            section,
+            text="🔍 Testar",
+            width=90,
+            command=lambda a=account: self._test_wialon_token(a),
         )
-        self.token_test_btn.grid(row=1, column=5, padx=(2, 15), pady=10)
+        test_btn.grid(row=1, column=5, padx=(2, 15), pady=10)
 
         # Status
-        self.token_status_label = ctk.CTkLabel(
+        status_label = ctk.CTkLabel(
             section,
             text="Status: (não testado)",
             text_color="gray",
             font=ctk.CTkFont(size=12),
         )
-        self.token_status_label.grid(
+        status_label.grid(
             row=2, column=0, columnspan=6, padx=15, pady=(0, 15), sticky="w"
         )
 
-    def _toggle_token_visibility(self):
-        """Alterna entre mostrar e esconder o token."""
-        self._token_visible = not self._token_visible
-        self.token_entry.configure(show="" if self._token_visible else "*")
+        # Salva referência aos widgets desta conta para uso nos callbacks.
+        self._token_widgets[account] = {
+            "entry": entry,
+            "test_btn": test_btn,
+            "status_label": status_label,
+            "visible": False,
+        }
+
+        # Aliases para compatibilidade com testes/smoke da Fase 10 (Conta 1).
+        if account == 1:
+            self.token_entry = entry
+            self.token_toggle_btn = toggle_btn
+            self.token_open_btn = open_btn
+            self.token_save_btn = save_btn
+            self.token_test_btn = test_btn
+            self.token_status_label = status_label
+
+    def _toggle_token_visibility(self, account: int):
+        """Alterna entre mostrar e esconder o token da conta dada."""
+        w = self._token_widgets[account]
+        w["visible"] = not w["visible"]
+        w["entry"].configure(show="" if w["visible"] else "*")
 
     def _open_wialon_auth_page(self):
         """Abre a página de login do Wialon no navegador."""
         webbrowser.open(URL_AUTORIZACAO_WIALON)
 
-    def _save_wialon_token(self):
-        """Grava o token no .env e recarrega as configurações em memória."""
-        token = self.token_entry.get().strip()
+    def _save_wialon_token(self, account: int):
+        """Grava o token da conta dada no .env e recarrega as configurações."""
+        w = self._token_widgets[account]
+        token = w["entry"].get().strip()
         if not token:
             messagebox.showwarning(
                 "Token vazio", "Cole um token válido antes de salvar."
             )
             return
 
+        env_key = self._env_key_for_account(account)
         try:
-            set_env_value("WIALON_TOKEN", token)
+            set_env_value(env_key, token)
             settings.reload()
         except Exception as e:
-            logger.debug(f"Erro ao salvar token Wialon: {e}")
+            logger.debug(f"Erro ao salvar {env_key}: {e}")
             messagebox.showerror("Erro", f"Não foi possível salvar o token: {e}")
             return
 
-        self.token_status_label.configure(
+        w["status_label"].configure(
             text="Status: 💾 Token salvo no .env", text_color="#2ecc71"
         )
 
-    def _test_wialon_token(self):
-        """Testa o token atual chamando authenticate() em background."""
-        token = self.token_entry.get().strip()
+    def _test_wialon_token(self, account: int):
+        """Testa o token da conta dada chamando authenticate() em background."""
+        w = self._token_widgets[account]
+        token = w["entry"].get().strip()
         if not token:
             messagebox.showwarning(
                 "Token vazio", "Cole um token antes de testar a conexão."
             )
             return
 
-        self.token_status_label.configure(
+        w["status_label"].configure(
             text="Status: 🔄 Testando conexão...", text_color="gray"
         )
-        self.token_test_btn.configure(state="disabled")
+        w["test_btn"].configure(state="disabled")
 
         def worker():
             try:
@@ -164,30 +208,32 @@ class SettingsFrame(ctk.CTkFrame):
                 client.authenticate()
                 username = getattr(client, "username", "") or ""
                 client.logout()
-                self.after(0, self._on_token_test_ok, username)
+                self.after(0, self._on_token_test_ok, account, username)
             except WialonError as e:
-                self.after(0, self._on_token_test_fail, str(e))
+                self.after(0, self._on_token_test_fail, account, str(e))
             except Exception as e:
                 logger.debug(f"Erro inesperado ao testar token: {e}")
-                self.after(0, self._on_token_test_fail, str(e))
+                self.after(0, self._on_token_test_fail, account, str(e))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def _on_token_test_ok(self, username: str):
+    def _on_token_test_ok(self, account: int, username: str):
         """Callback executado na thread da GUI após teste bem-sucedido."""
+        w = self._token_widgets[account]
         if username:
             text = f"Status: ✅ Conectado como \"{username}\""
         else:
             text = "Status: ✅ Conectado"
-        self.token_status_label.configure(text=text, text_color="#2ecc71")
-        self.token_test_btn.configure(state="normal")
+        w["status_label"].configure(text=text, text_color="#2ecc71")
+        w["test_btn"].configure(state="normal")
 
-    def _on_token_test_fail(self, error: str):
+    def _on_token_test_fail(self, account: int, error: str):
         """Callback executado na thread da GUI após teste falhar."""
-        self.token_status_label.configure(
+        w = self._token_widgets[account]
+        w["status_label"].configure(
             text=f"Status: ❌ Falha — {error}", text_color="#e74c3c"
         )
-        self.token_test_btn.configure(state="normal")
+        w["test_btn"].configure(state="normal")
 
     def _create_export_section(self):
         """Cria seção de configuração de exportação."""

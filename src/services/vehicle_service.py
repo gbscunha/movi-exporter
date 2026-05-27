@@ -220,6 +220,7 @@ class VehicleService:
         export_format: str = "csv",
         consolidated: bool = True,
         upload_to_drive: bool = False,
+        account_name: Optional[str] = None,
     ) -> ExportResult:
         """
         Exporta dados mensais de todos os veículos (ou lista específica).
@@ -231,6 +232,9 @@ class VehicleService:
             export_format: Formato de exportação ("csv", "xlsx", ou "both")
             consolidated: Se True, gera arquivo consolidado além dos individuais
             upload_to_drive: Se True, faz upload dos arquivos para o Google Drive
+            account_name: Se fornecido, exports vão para subpasta `YYYY-MM/<name>/`
+                          em vez de `YYYY-MM/` — útil quando há mais de uma conta
+                          Wialon configurada.
 
         Returns:
             Resultado da exportação com estatísticas
@@ -302,6 +306,7 @@ class VehicleService:
                             year,
                             vehicle_name=vehicle_name,
                             vehicle_plate=vehicle_plate,
+                            account_name=account_name,
                         )
                         if file_path:
                             result.exported_files.append(file_path)
@@ -314,6 +319,7 @@ class VehicleService:
                             year,
                             vehicle_name=vehicle_name,
                             vehicle_plate=vehicle_plate,
+                            account_name=account_name,
                         )
                         if file_path:
                             result.exported_files.append(file_path)
@@ -340,14 +346,22 @@ class VehicleService:
 
                 if export_format in ("csv", "both"):
                     file_path = self.exporter.export_consolidated_history_to_csv(
-                        all_history, month, year, vehicles_info=vehicles_info
+                        all_history,
+                        month,
+                        year,
+                        vehicles_info=vehicles_info,
+                        account_name=account_name,
                     )
                     if file_path:
                         result.exported_files.append(file_path)
 
                 if export_format in ("xlsx", "both"):
                     file_path = self.exporter.export_consolidated_history_to_excel(
-                        all_history, month, year, vehicles_info=vehicles_info
+                        all_history,
+                        month,
+                        year,
+                        vehicles_info=vehicles_info,
+                        account_name=account_name,
                     )
                     if file_path:
                         result.exported_files.append(file_path)

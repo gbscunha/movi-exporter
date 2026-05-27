@@ -10,6 +10,8 @@ import threading
 from datetime import datetime
 from typing import Callable, Optional, List
 
+from src.clients.wialon_client import WialonClient
+from src.core.config import settings
 from src.core.logger import GUILogHandler
 from src.services.vehicle_service import VehicleService
 
@@ -119,6 +121,38 @@ class ExportFrame(ctk.CTkFrame):
             variable=self.upload_var
         )
         self.upload_check.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+
+        # Seletor de conta (só aparece se Conta 2 estiver configurada).
+        # Mudar de conta limpa o cache de service/veículos para forçar
+        # reautenticação com o token correto.
+        self.account_var = ctk.StringVar(value="Conta 1")
+        if settings.WIALON_TOKEN_2:
+            ctk.CTkLabel(config_frame, text="Conta:").grid(
+                row=2, column=2, padx=10, pady=10, sticky="w"
+            )
+            self.account_menu = ctk.CTkOptionMenu(
+                config_frame,
+                values=["Conta 1", "Conta 2"],
+                variable=self.account_var,
+                width=120,
+                command=self._on_account_changed,
+            )
+            self.account_menu.grid(row=2, column=3, padx=10, pady=10, sticky="w")
+
+    def _on_account_changed(self, _value: str):
+        """Limpa o serviço e veículos ao trocar de conta."""
+        self.service = None
+        self.vehicles = []
+        for widget in self.vehicles_scroll.winfo_children():
+            widget.destroy()
+        self.vehicle_checkboxes.clear()
+
+    def _build_service(self) -> VehicleService:
+        """Cria um VehicleService usando o token da conta selecionada."""
+        if self.account_var.get() == "Conta 2" and settings.WIALON_TOKEN_2:
+            client = WialonClient(token=settings.WIALON_TOKEN_2)
+            return VehicleService(client=client)
+        return VehicleService()
     
     def _create_vehicles_section(self):
         """Cria seção de seleção de veículos."""
@@ -247,8 +281,8 @@ class ExportFrame(ctk.CTkFrame):
         def load():
             try:
                 if not self.service:
-                    self.service = VehicleService()
-                
+                    self.service = self._build_service()
+
                 self._log("📡 Buscando lista de veículos...", "INFO")
                 self.vehicles = self.service.list_vehicles()
                 self.after(0, self._populate_vehicle_list)
@@ -328,8 +362,13 @@ class ExportFrame(ctk.CTkFrame):
         def export():
             try:
                 if not self.service:
-                    self.service = VehicleService()
-                
+                    self.service = self._build_service()
+
+                # Subpasta por conta só quando há duas contas configuradas.
+                account_name = (
+                    self.account_var.get() if settings.WIALON_TOKEN_2 else None
+                )
+
                 result = self.service.export_monthly_data(
                     month=month,
                     year=year,
@@ -337,6 +376,7 @@ class ExportFrame(ctk.CTkFrame):
                     export_format=format_type,
                     consolidated=consolidated,
                     upload_to_drive=upload,
+                    account_name=account_name,
                 )
                 
                 # Para barra de progresso e define como completo
