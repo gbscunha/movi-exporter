@@ -70,6 +70,7 @@ class WialonClient:
         self.sid: Optional[str] = None
         self.gis_sid: Optional[str] = None
         self.gis_geocode_url: Optional[str] = None
+        self.username: str = ""
         self.base_url: str = self.BASE_URL
         self._session = requests.Session()
 
@@ -128,6 +129,14 @@ class WialonClient:
             gis_geocode = data.get("gis_geocode", "")
             if gis_geocode:
                 self.gis_geocode_url = f"{gis_geocode.rstrip('/')}/gis_geocode"
+
+            # Captura nome da conta — campo "au" pode vir como dict {"nm": "..."}
+            # ou como string direto, dependendo da versão da API.
+            user = data.get("au", {})
+            if isinstance(user, dict):
+                self.username = user.get("nm", "")
+            elif isinstance(user, str):
+                self.username = user
 
             logger.success(f"Autenticação bem-sucedida. Session ID obtido.")
             logger.debug(f"Base URL: {self.base_url}")
