@@ -105,6 +105,14 @@ class WialonTransformer:
         # Aplica fallback de parâmetros conhecidos para valores não resolvidos
         sensor_values = self._apply_param_fallbacks(params, sensor_values)
 
+        # Odômetro vem em metros; converter para km.
+        odometer_m = (
+            params.get("odometer")
+            or params.get("new_mileage")
+            or params.get("mileage")
+        )
+        odometer_km = round(odometer_m / 1000, 2) if odometer_m else None
+
         # Monta registro transformado
         transformed = {
             "vehicle_id": vehicle_id,
@@ -112,7 +120,7 @@ class WialonTransformer:
             "latitude": pos.get("y"),
             "longitude": pos.get("x"),
             "speed": pos.get("s") or pos.get("sp"),  # Velocidade
-            "odometer": None,  # Wialon não retorna odômetro direto nas mensagens
+            "odometer": odometer_km,
             "ignition": sensor_values.get("ignition"),
             "fuel_level": sensor_values.get("fuel_level"),
             "rpm": sensor_values.get("rpm"),
