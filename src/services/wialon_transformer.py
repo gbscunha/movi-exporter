@@ -31,12 +31,19 @@ class WialonTransformer:
 
     # Parâmetros conhecidos para busca direta nas mensagens
     # Mapeamento: campo normalizado -> lista de parâmetros possíveis na API
+    #
+    # IMPORTANTE: bateria do veículo (pwr_ext, ~12-28V) e bateria interna do
+    # tracker (pwr_int, voltage, battery, ~4V) são DUAS coisas diferentes e
+    # vivem em duas colunas separadas no CSV. Nunca fazer fallback de uma
+    # para a outra.
     KNOWN_PARAMS: Dict[str, list[str]] = {
         "ignition": ["in", "in1", "din1", "ignition", "ign"],
         "fuel_level": ["fuel1", "fuel2", "fuel_level", "can_fuel_level", "fuel", "fls"],
         "rpm": ["rpm", "can_rpm", "engine_rpm", "eng_rpm"],
-        # `voltage` e `battery` são bateria interna do tracker (~4V) — não usar como fallback.
-        "battery_voltage": ["pwr_ext", "pwr_int", "power", "batt"],
+        # Tensão do veículo (~12-28V) — APENAS pwr_ext, sem fallback.
+        "vehicle_voltage": ["pwr_ext"],
+        # Bateria interna do tracker (~4V) — bateria backup do dispositivo.
+        "internal_battery_voltage": ["pwr_int", "voltage", "battery", "batt"],
         "engine_hours": ["engine_hours", "eng_hours", "horimeter", "eh", "mh"],
     }
 
@@ -46,12 +53,20 @@ class WialonTransformer:
         "ignition": lambda v, _: bool(v) if v is not None else None,
         "fuel_level": lambda v, calc: calc if calc is not None else v,
         "rpm": lambda v, calc: calc if calc is not None else v,
-        "battery_voltage": lambda v, calc: calc if calc is not None else v,
+        "vehicle_voltage": lambda v, calc: calc if calc is not None else v,
+        "internal_battery_voltage": lambda v, calc: calc if calc is not None else v,
         "engine_hours": lambda v, calc: calc if calc is not None else v,
     }
 
     # Campos de sensores que o transformer suporta
-    SENSOR_FIELDS = ["ignition", "fuel_level", "rpm", "battery_voltage", "engine_hours"]
+    SENSOR_FIELDS = [
+        "ignition",
+        "fuel_level",
+        "rpm",
+        "vehicle_voltage",
+        "internal_battery_voltage",
+        "engine_hours",
+    ]
 
     def __init__(self, client: TrackingClient):
         """
@@ -102,12 +117,17 @@ class WialonTransformer:
         sensor_values = self._apply_param_fallbacks(params, sensor_values)
 
         # Odômetro vem em metros; converter para km.
-        odometer_m = (
-            params.get("odometer")
-            or params.get("new_mileage")
-            or params.get("mileage")
+        # Usar `is not None` em vez de truthy para preservar leitura legítima
+        # de 0 km (veículo novo) — ela é dado real, não dado ausente.
+        odometer_m = next(
+            (
+                params[k]
+                for k in ("odometer", "new_mileage", "mileage")
+                if params.get(k) is not None
+            ),
+            None,
         )
-        odometer_km = round(odometer_m / 1000, 2) if odometer_m else None
+        odometer_km = round(odometer_m / 1000, 2) if odometer_m is not None else None
 
         # Monta registro transformado
         transformed = {
@@ -120,7 +140,8 @@ class WialonTransformer:
             "ignition": sensor_values.get("ignition"),
             "fuel_level": sensor_values.get("fuel_level"),
             "rpm": sensor_values.get("rpm"),
-            "battery_voltage": sensor_values.get("battery_voltage"),
+            "vehicle_voltage": sensor_values.get("vehicle_voltage"),
+            "internal_battery_voltage": sensor_values.get("internal_battery_voltage"),
             "engine_hours": sensor_values.get("engine_hours"),
             "driver": message.get("drv"),  # Motorista vinculado
             "address": None,  # Requer geocodificação reversa (não implementado)

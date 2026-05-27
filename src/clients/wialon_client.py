@@ -414,7 +414,9 @@ class WialonClient:
         """
         name_lower = name.lower()
 
-        # Mapeamentos conhecidos
+        # Mapeamentos conhecidos. ORDEM IMPORTA: chaves mais específicas
+        # (ex: "bateria interna") precisam vir antes das mais genéricas
+        # ("bateria") porque "if key in name_lower" pega o primeiro match.
         mappings = {
             "ignicao": "ignition",
             "ignição": "ignition",
@@ -425,10 +427,22 @@ class WialonClient:
             "nivel combustivel": "fuel_level",
             "rpm": "rpm",
             "rotacao": "rpm",
-            "voltagem": "battery_voltage",
-            "bateria": "battery_voltage",
-            "battery": "battery_voltage",
-            "voltage": "battery_voltage",
+            # Bateria interna do tracker (~4V) — checar ANTES das genéricas.
+            "bateria interna": "internal_battery_voltage",
+            "internal battery": "internal_battery_voltage",
+            "backup battery": "internal_battery_voltage",
+            # Tensão do veículo (~12-28V) — termos explícitos.
+            "tensão do veículo": "vehicle_voltage",
+            "tensao do veiculo": "vehicle_voltage",
+            "vehicle voltage": "vehicle_voltage",
+            "tensão externa": "vehicle_voltage",
+            "tensao externa": "vehicle_voltage",
+            # Termos ambíguos — assume tensão do veículo (cliente costuma
+            # configurar isso explicitamente; bateria interna usa nome próprio).
+            "voltagem": "vehicle_voltage",
+            "bateria": "vehicle_voltage",
+            "battery": "vehicle_voltage",
+            "voltage": "vehicle_voltage",
             "horas motor": "engine_hours",
             "engine hours": "engine_hours",
             "horimetro": "engine_hours",

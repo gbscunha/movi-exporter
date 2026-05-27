@@ -189,11 +189,13 @@ class VehicleService:
                         continue
 
                     # Propaga pwr_ext mais recente para registros GPS sem leitura própria.
+                    # `pwr_ext` é tensão do veículo (12-28V). Bateria interna do tracker
+                    # (`pwr_int`, ~4V) vem em quase toda mensagem — sem necessidade de propagar.
                     if (
-                        transformed.get("battery_voltage") is None
+                        transformed.get("vehicle_voltage") is None
                         and last_pwr_ext is not None
                     ):
-                        transformed["battery_voltage"] = last_pwr_ext
+                        transformed["vehicle_voltage"] = last_pwr_ext
 
                     all_records.append(transformed)
 

@@ -42,7 +42,8 @@ def test_normalize_history_preserva_campos_completos(normalizer):
             "address": "Av. Brasil",
             "fuel_level": 80.0,
             "rpm": 1500,
-            "battery_voltage": 12.6,
+            "vehicle_voltage": 12.6,
+            "internal_battery_voltage": 4.1,
             "engine_hours": 1200,
             "driver": "João",
         }
@@ -59,14 +60,19 @@ def test_normalize_history_preserva_campos_completos(normalizer):
     assert r["ignition"] is True
     assert r["fuel_level"] == 80.0
     assert r["rpm"] == 1500
-    assert r["battery_voltage"] == 12.6
+    assert r["vehicle_voltage"] == 12.6
+    assert r["internal_battery_voltage"] == 4.1
     assert r["engine_hours"] == 1200
     assert r["driver"] == "João"
     assert r["system_source"] == "wialon"
 
 
 def test_normalize_history_sensor_ausente_vira_none(normalizer):
-    """Campos opcionais sem dado devem ficar None (exporter substitui por N/D depois)."""
+    """Campos opcionais sem dado devem ficar None — NUNCA defaults numéricos/string.
+
+    Regressão Onda 1 #34: defaults 0.0/"" mascaravam ausência como zero válido,
+    impedindo o exporter de substituir por N/D.
+    """
     raw = [
         {
             "vehicle_id": 1,
@@ -80,9 +86,12 @@ def test_normalize_history_sensor_ausente_vira_none(normalizer):
     out = normalizer.normalize_history(raw)
 
     r = out[0]
+    assert r["odometer"] is None, "odometer ausente deve ser None, não 0.0"
+    assert r["address"] is None, "address ausente deve ser None, não string vazia"
     assert r["fuel_level"] is None
     assert r["rpm"] is None
-    assert r["battery_voltage"] is None
+    assert r["vehicle_voltage"] is None
+    assert r["internal_battery_voltage"] is None
     assert r["engine_hours"] is None
     assert r["driver"] is None
 

@@ -32,14 +32,15 @@ def _format_ignition(value: Any) -> Optional[str]:
 
 
 # Colunas de sensor que podem legitimamente não ter dado para uma mensagem
-# específica. Para essas, substituímos None por "N/D" no export para que o
+# específica. Para essas, substituímos None/"" por "N/D" no export para que o
 # cliente veja explicitamente "sem dado" em vez de célula vazia.
 # Latitude/longitude/velocidade/ignição/timestamp continuam obrigatórios.
 OPTIONAL_SENSOR_COLS = [
     "odometer",
     "fuel_level",
     "rpm",
-    "battery_voltage",
+    "vehicle_voltage",
+    "internal_battery_voltage",
     "engine_hours",
     "driver",
     "address",
@@ -47,9 +48,14 @@ OPTIONAL_SENSOR_COLS = [
 
 
 def _fill_nd(record: Dict[str, Any]) -> Dict[str, Any]:
-    """Substitui None por "N/D" nas colunas de sensor opcionais."""
+    """Substitui None/string vazia por "N/D" nas colunas de sensor opcionais.
+
+    Cuidado: NÃO converter 0/0.0 — são leituras legítimas (odômetro de carro
+    novo, RPM com motor desligado etc).
+    """
     for col in OPTIONAL_SENSOR_COLS:
-        if record.get(col) is None:
+        value = record.get(col)
+        if value is None or value == "":
             record[col] = "N/D"
     return record
 
@@ -75,7 +81,9 @@ COLUMN_TRANSLATIONS = {
     "address": "Localização",
     "fuel_level": "Nível de Combustível (%)",
     "rpm": "RPM",
-    "battery_voltage": "Tensão da Bateria (V)",
+    # Duas medidas de tensão distintas — NÃO unificar.
+    "vehicle_voltage": "Tensão do Veículo (V)",  # pwr_ext, ~12-28V
+    "internal_battery_voltage": "Bateria Interna (V)",  # pwr_int, ~4V
     "engine_hours": "Horas de Motor",
     "driver": "Motorista",
 }
@@ -394,7 +402,8 @@ class DataExporter:
                     "address": record.get("address"),
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
-                    "battery_voltage": record.get("battery_voltage"),
+                    "vehicle_voltage": record.get("vehicle_voltage"),
+                    "internal_battery_voltage": record.get("internal_battery_voltage"),
                     "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
@@ -490,7 +499,8 @@ class DataExporter:
                     "address": record.get("address"),
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
-                    "battery_voltage": record.get("battery_voltage"),
+                    "vehicle_voltage": record.get("vehicle_voltage"),
+                    "internal_battery_voltage": record.get("internal_battery_voltage"),
                     "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
@@ -588,7 +598,8 @@ class DataExporter:
                         "address": record.get("address"),
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
-                        "battery_voltage": record.get("battery_voltage"),
+                        "vehicle_voltage": record.get("vehicle_voltage"),
+                        "internal_battery_voltage": record.get("internal_battery_voltage"),
                         "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
@@ -689,7 +700,8 @@ class DataExporter:
                         "address": record.get("address"),
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
-                        "battery_voltage": record.get("battery_voltage"),
+                        "vehicle_voltage": record.get("vehicle_voltage"),
+                        "internal_battery_voltage": record.get("internal_battery_voltage"),
                         "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }

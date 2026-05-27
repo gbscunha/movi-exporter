@@ -31,7 +31,8 @@ class DataNormalizer:
                 "address": "address",
                 "fuel_level": "fuel_level",
                 "rpm": "rpm",
-                "battery_voltage": "battery_voltage",
+                "vehicle_voltage": "vehicle_voltage",
+                "internal_battery_voltage": "internal_battery_voltage",
                 "engine_hours": "engine_hours",
                 "driver": "driver",
             },
@@ -140,7 +141,14 @@ class DataNormalizer:
         if not mapping:
             raise ValueError(f"Sistema '{system}' não suportado")
 
-        # Formato padronizado de saída
+        # Formato padronizado de saída.
+        #
+        # Defaults: campos OBRIGATÓRIOS (latitude/longitude/speed/ignition)
+        # têm default neutro (0.0/False) — sempre aparecem com valor no CSV.
+        # Campos OPCIONAIS de sensor (odometer/address/fuel/rpm/etc) usam
+        # default=None para preservar "ausência de dado" — o exporter
+        # converte None → "N/D" depois (Fase 07). Usar 0.0/"" aqui mascara
+        # ausência como zero válido — regressão da Onda 1 descoberta no QA.
         normalized = {
             "vehicle_id": self._get_field(record, mapping.get("vehicle_id", "id")),
             "timestamp": self._normalize_timestamp(
@@ -156,13 +164,13 @@ class DataNormalizer:
                 record, mapping.get("speed", "speed"), default=0.0
             ),
             "odometer": self._get_field(
-                record, mapping.get("odometer", "odometer"), default=0.0
+                record, mapping.get("odometer", "odometer"), default=None
             ),
             "ignition": self._get_field(
                 record, mapping.get("ignition", "ignition"), default=False
             ),
             "address": self._get_field(
-                record, mapping.get("address", "address"), default=""
+                record, mapping.get("address", "address"), default=None
             ),
             "fuel_level": self._get_field(
                 record, mapping.get("fuel_level", "fuel_level"), default=None
@@ -170,8 +178,13 @@ class DataNormalizer:
             "rpm": self._get_field(
                 record, mapping.get("rpm", "rpm"), default=None
             ),
-            "battery_voltage": self._get_field(
-                record, mapping.get("battery_voltage", "battery_voltage"), default=None
+            "vehicle_voltage": self._get_field(
+                record, mapping.get("vehicle_voltage", "vehicle_voltage"), default=None
+            ),
+            "internal_battery_voltage": self._get_field(
+                record,
+                mapping.get("internal_battery_voltage", "internal_battery_voltage"),
+                default=None,
             ),
             "driver": self._get_field(
                 record, mapping.get("driver", "driver"), default=None

@@ -18,7 +18,8 @@ def _build_record(**overrides):
         "odometer": None,
         "fuel_level": None,
         "rpm": None,
-        "battery_voltage": None,
+        "vehicle_voltage": None,
+        "internal_battery_voltage": None,
         "engine_hours": None,
         "driver": None,
         "address": None,
@@ -45,7 +46,8 @@ def test_colunas_opcionais_sem_dado_exportam_nd(tmp_path):
     assert df["Odômetro (km)"].iloc[0] == "N/D"
     assert df["RPM"].iloc[0] == "N/D"
     assert df["Nível de Combustível (%)"].iloc[0] == "N/D"
-    assert df["Tensão da Bateria (V)"].iloc[0] == "N/D"
+    assert df["Tensão do Veículo (V)"].iloc[0] == "N/D"
+    assert df["Bateria Interna (V)"].iloc[0] == "N/D"
     assert df["Horas de Motor"].iloc[0] == "N/D"
     assert df["Motorista"].iloc[0] == "N/D"
     assert df["Localização"].iloc[0] == "N/D"

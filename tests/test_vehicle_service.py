@@ -42,7 +42,7 @@ def test_pwr_ext_propagado_para_proximo_registro_gps():
     )
 
     assert len(records) == 1
-    assert records[0]["battery_voltage"] == 14.2
+    assert records[0]["vehicle_voltage"] == 14.2
 
 
 def test_page_size_propagado_ao_get_history():
