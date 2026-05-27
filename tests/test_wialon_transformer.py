@@ -57,3 +57,27 @@ def test_transformer_retorna_none_para_mensagem_sem_pos():
     msg = {"t": 1700000000, "pos": None, "p": {"pwr_ext": 14.2}}
     record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
     assert record is None
+
+
+def test_battery_voltage_nao_usa_voltage_interno():
+    """'voltage' é bateria interna do tracker — não deve preencher battery_voltage (Fase 05)."""
+    transformer = _make_transformer()
+    msg = {
+        "t": 1700000000,
+        "pos": {"y": -22.87, "x": -43.29, "s": 0},
+        "p": {"voltage": 4157},
+    }
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["battery_voltage"] is None
+
+
+def test_battery_voltage_usa_pwr_ext():
+    """pwr_ext é a tensão real do veículo (Fase 05)."""
+    transformer = _make_transformer()
+    msg = {
+        "t": 1700000000,
+        "pos": {"y": -22.87, "x": -43.29, "s": 0},
+        "p": {"pwr_ext": 12.6},
+    }
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["battery_voltage"] == 12.6

@@ -35,14 +35,8 @@ class WialonTransformer:
         "ignition": ["in", "in1", "din1", "ignition", "ign"],
         "fuel_level": ["fuel1", "fuel2", "fuel_level", "can_fuel_level", "fuel", "fls"],
         "rpm": ["rpm", "can_rpm", "engine_rpm", "eng_rpm"],
-        "battery_voltage": [
-            "pwr_ext",
-            "pwr_int",
-            "voltage",
-            "battery",
-            "power",
-            "batt",
-        ],
+        # `voltage` e `battery` são bateria interna do tracker (~4V) — não usar como fallback.
+        "battery_voltage": ["pwr_ext", "pwr_int", "power", "batt"],
         "engine_hours": ["engine_hours", "eng_hours", "horimeter", "eh", "mh"],
     }
 
