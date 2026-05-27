@@ -172,7 +172,10 @@ class VehicleService:
             # Processa histórico em páginas
             all_records = []
 
-            for page in self.client.get_history(vehicle_id, time_from, time_to):
+            page_size = settings.WIALON_PAGE_SIZE or 1000
+            for page in self.client.get_history(
+                vehicle_id, time_from, time_to, page_size=page_size
+            ):
                 for message in page:
                     transformed = self.transformer.transform_message(
                         message, vehicle_id, sensor_map
@@ -374,8 +377,8 @@ class VehicleService:
             # Encerra sessão
             try:
                 self.client.logout()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Erro: {e}")
 
     def list_vehicles(self) -> List[Dict[str, Any]]:
         """

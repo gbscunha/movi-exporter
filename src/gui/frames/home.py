@@ -188,7 +188,8 @@ class HomeFrame(ctk.CTkFrame):
     
     def _show_error(self, message: str):
         """Mostra mensagem de erro."""
-        dialog = ctk.CTkInputDialog(text=message, title="Erro")
+        import tkinter.messagebox as mb
+        mb.showerror("Erro", message)
 
 
 class StatusCard(ctk.CTkFrame):

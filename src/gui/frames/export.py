@@ -360,7 +360,7 @@ class ExportFrame(ctk.CTkFrame):
                 if result.upload_result:
                     ur = result.upload_result
                     self._log("", "INFO")
-                    self._log(f"Upload: {ur.uploaded_count}/{ur.total_files} arquivos", "INFO")
+                    self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
                 
                 if result.errors:
                     self._log("", "WARNING")
