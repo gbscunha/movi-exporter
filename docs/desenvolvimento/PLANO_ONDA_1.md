@@ -14,7 +14,7 @@
 | 02 | Bugs rápidos da GUI | B | 🔴 parcial | XS | ✅ Concluído | `export.py`, `home.py`, `vehicle_service.py` |
 | 03 | Odômetro — ler do param bruto | A | 🔴 sim | XS | ✅ Concluído | `wialon_transformer.py` |
 | 04 | `pwr_ext` — flagsMask + propagação | A | 🔴 sim | S | ✅ Concluído | `wialon_client.py`, `vehicle_service.py`, `wialon_transformer.py` |
-| 05 | Bateria — remover fallback interno | A | 🔴 sim | XS | ⬜ Todo | `wialon_transformer.py` |
+| 05 | Bateria — remover fallback interno | A | 🔴 sim | XS | ✅ Concluído | `wialon_transformer.py` |
 | 06 | Geocodificação — gis_sid dinâmico | A | — | XS | ⬜ Todo | `wialon_client.py` |
 | 07 | Export — valores `N/D` | A | 🔴 sim | XS | ⬜ Todo | `exporter.py` |
 | 08 | `env_writer.py` — novo módulo | D | 🔴 sim | S | ⬜ Todo | `src/core/env_writer.py` ← NOVO |
