@@ -68,6 +68,8 @@ class WialonClient:
         """
         self.token = token or settings.WIALON_TOKEN
         self.sid: Optional[str] = None
+        self.gis_sid: Optional[str] = None
+        self.gis_geocode_url: Optional[str] = None
         self.base_url: str = self.BASE_URL
         self._session = requests.Session()
 
@@ -119,6 +121,13 @@ class WialonClient:
                 self.base_url = f"{base}/wialon/ajax.html"
             elif "host" in data:
                 self.base_url = f"https://{data['host']}/wialon/ajax.html"
+
+            # Salva sessão e URL de geocodificação para uso futuro.
+            # URLs de GIS são dinâmicas — devem vir do login, nunca hardcoded.
+            self.gis_sid = data.get("gis_sid")
+            gis_geocode = data.get("gis_geocode", "")
+            if gis_geocode:
+                self.gis_geocode_url = f"{gis_geocode.rstrip('/')}/gis_geocode"
 
             logger.success(f"Autenticação bem-sucedida. Session ID obtido.")
             logger.debug(f"Base URL: {self.base_url}")
