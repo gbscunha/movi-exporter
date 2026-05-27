@@ -23,7 +23,7 @@
 | 11 | F2 — Segunda conta: capturar username | E | 🔴 sim | XS | ✅ Concluído | `wialon_client.py` |
 | 12 | F2 — Segunda conta: Settings + Export | E | — | M | ✅ Concluído | `settings.py`, `export.py`, `exporter.py` |
 | 13 | UX — Mês por nome + Abrir pasta + Onboarding | F | — | S | ✅ Concluído | `export.py`, `app.py` |
-| 14 | Testes — reescrever com pytest | G | — | S | ⬜ Todo | `tests/`, `pytest.ini` |
+| 14 | Testes — reescrever com pytest | G | — | S | ✅ Concluído | `tests/`, `pytest.ini` |
 | 15 | CI — workflows + version sync + deps | G | — | S | ⬜ Todo | `ci.yml`, `build.yml`, `spec`, `requirements` |
 
 **Legenda status:** ⬜ Todo · 🔄 Em andamento · ✅ Concluído · ⏸️ Bloqueado
