@@ -4,12 +4,7 @@ Testes do WialonTransformer.
 Fase 03 — odômetro deve ser lido dos params brutos e convertido de metros para km.
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
-
-# Garante que `src` é importável quando rodando direto via pytest.
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.services.wialon_transformer import WialonTransformer
 

@@ -5,12 +5,7 @@ C1: UploadResult deve ter atributo `uploaded_files` (e não `uploaded_count`).
 C4: VehicleService deve propagar `page_size` ao chamar `client.get_history`.
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
-
-# Garante que `src` é importável quando rodando direto via pytest.
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def test_upload_result_usa_uploaded_files():

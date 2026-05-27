@@ -1,12 +1,6 @@
 """Testes do tratamento N/D para colunas de sensor opcionais no export."""
 
-import sys
-from pathlib import Path
-
 import pandas as pd
-
-# Garante que `src` é importável quando rodando direto via pytest.
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.services.exporter import DataExporter
 

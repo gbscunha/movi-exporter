@@ -3,12 +3,6 @@
 Fase 08 — escrever em .env preservando ordem e comentários.
 """
 
-import sys
-from pathlib import Path
-
-# Garante que `src` é importável quando rodando direto via pytest.
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from src.core.env_writer import set_env_value
 
 

@@ -3,12 +3,7 @@
 Fase 11 — capturar username e gis_sid da resposta de login.
 """
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-# Garante que `src` é importável quando rodando direto via pytest.
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.clients.wialon_client import WialonClient
 

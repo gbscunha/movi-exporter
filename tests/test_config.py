@@ -3,12 +3,6 @@
 Fase 09 — recarregamento em memória do .env e segunda conta Wialon.
 """
 
-import sys
-from pathlib import Path
-
-# Garante que `src` é importável quando rodando direto via pytest.
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 
 def test_reload_carrega_novo_token(tmp_path, monkeypatch):
     """settings.reload() deve refletir mudança no .env sem reiniciar."""
