@@ -32,6 +32,29 @@ def _format_ignition(value: Any) -> Optional[str]:
     return "Ligado" if value else "Desligado"
 
 
+# Colunas de sensor que podem legitimamente não ter dado para uma mensagem
+# específica. Para essas, substituímos None por "N/D" no export para que o
+# cliente veja explicitamente "sem dado" em vez de célula vazia.
+# Latitude/longitude/velocidade/ignição/timestamp continuam obrigatórios.
+OPTIONAL_SENSOR_COLS = [
+    "odometer",
+    "fuel_level",
+    "rpm",
+    "battery_voltage",
+    "engine_hours",
+    "driver",
+    "address",
+]
+
+
+def _fill_nd(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Substitui None por "N/D" nas colunas de sensor opcionais."""
+    for col in OPTIONAL_SENSOR_COLS:
+        if record.get(col) is None:
+            record[col] = "N/D"
+    return record
+
+
 # Mapeamento de tradução de colunas (inglês → português)
 COLUMN_TRANSLATIONS = {
     # Metadados
@@ -362,7 +385,7 @@ class DataExporter:
                     "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
-                clean_history.append(clean_record)
+                clean_history.append(_fill_nd(clean_record))
 
             # Cria DataFrame
             df = pd.DataFrame(clean_history)
@@ -457,7 +480,7 @@ class DataExporter:
                     "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
-                clean_history.append(clean_record)
+                clean_history.append(_fill_nd(clean_record))
 
             # Cria DataFrame
             df = pd.DataFrame(clean_history)
@@ -554,7 +577,7 @@ class DataExporter:
                         "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
-                    all_records.append(clean_record)
+                    all_records.append(_fill_nd(clean_record))
 
             if not all_records:
                 logger.warning("Nenhum registro encontrado no histórico consolidado")
@@ -654,7 +677,7 @@ class DataExporter:
                         "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
-                    all_records.append(clean_record)
+                    all_records.append(_fill_nd(clean_record))
 
             if not all_records:
                 logger.warning("Nenhum registro encontrado no histórico consolidado")
