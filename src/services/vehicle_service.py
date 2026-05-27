@@ -171,15 +171,30 @@ class VehicleService:
 
             # Processa histórico em páginas
             all_records = []
+            last_pwr_ext: Optional[float] = None
 
             page_size = settings.WIALON_PAGE_SIZE or 1000
             for page in self.client.get_history(
                 vehicle_id, time_from, time_to, page_size=page_size
             ):
                 for message in page:
+                    params = message.get("p", {}) or {}
+                    if "pwr_ext" in params:
+                        last_pwr_ext = params["pwr_ext"]
+
                     transformed = self.transformer.transform_message(
                         message, vehicle_id, sensor_map
                     )
+                    if transformed is None:
+                        continue
+
+                    # Propaga pwr_ext mais recente para registros GPS sem leitura própria.
+                    if (
+                        transformed.get("battery_voltage") is None
+                        and last_pwr_ext is not None
+                    ):
+                        transformed["battery_voltage"] = last_pwr_ext
+
                     all_records.append(transformed)
 
                 stats.total_messages += len(page)

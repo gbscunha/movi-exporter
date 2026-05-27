@@ -466,7 +466,7 @@ class WialonClient:
                 "timeFrom": last_time,
                 "timeTo": time_to,
                 "flags": 1,  # Mensagens com posição
-                "flagsMask": 65281,
+                "flagsMask": 0,  # captura todos os tipos de mensagem (inclui data-only com pwr_ext)
                 "loadCount": page_size,
             }
 

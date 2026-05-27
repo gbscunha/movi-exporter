@@ -22,6 +22,34 @@ def test_upload_result_usa_uploaded_files():
     assert not hasattr(result, "uploaded_count")
 
 
+def test_pwr_ext_propagado_para_proximo_registro_gps():
+    """pwr_ext de mensagem data-only deve aparecer no próximo registro com GPS (Fase 04)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.get_history.return_value = iter(
+        [
+            [
+                {"t": 1700000000, "pos": None, "p": {"pwr_ext": 14.2}},
+                {
+                    "t": 1700000001,
+                    "pos": {"y": -22.87, "x": -43.29, "s": 30},
+                    "p": {},
+                },
+            ]
+        ]
+    )
+
+    svc = VehicleService(client=mock_client)
+    records, _ = svc.process_vehicle_history(
+        vehicle={"id": 1, "nm": "Teste"}, month=4, year=2026
+    )
+
+    assert len(records) == 1
+    assert records[0]["battery_voltage"] == 14.2
+
+
 def test_page_size_propagado_ao_get_history():
     """C4 — garante que WIALON_PAGE_SIZE chega ao client.get_history."""
     from src.core.config import settings

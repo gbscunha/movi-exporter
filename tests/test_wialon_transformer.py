@@ -49,3 +49,11 @@ def test_odometro_fallback_para_new_mileage():
     }
     record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
     assert record["odometer"] == 5000.0
+
+
+def test_transformer_retorna_none_para_mensagem_sem_pos():
+    """Mensagens sem GPS não devem virar linha no export (Fase 04)."""
+    transformer = _make_transformer()
+    msg = {"t": 1700000000, "pos": None, "p": {"pwr_ext": 14.2}}
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record is None

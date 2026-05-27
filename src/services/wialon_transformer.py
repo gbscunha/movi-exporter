@@ -73,7 +73,7 @@ class WialonTransformer:
         message: Dict[str, Any],
         vehicle_id: int,
         sensor_map: Dict[str, Dict[str, Any]],
-    ) -> Dict[str, Any]:
+    ) -> Optional[Dict[str, Any]]:
         """
         Transforma mensagem bruta da Wialon para formato intermediário.
 
@@ -93,8 +93,10 @@ class WialonTransformer:
         Returns:
             Dicionário com dados transformados
         """
-        # Extrai posição
-        pos = message.get("pos", {}) or {}
+        # Extrai posição — mensagens data-only (sem GPS) não viram linha no export.
+        pos = message.get("pos") or {}
+        if not pos:
+            return None
 
         # Extrai parâmetros (dados de sensores)
         params = message.get("p", {}) or {}
