@@ -6,8 +6,6 @@ __pycache__
 .vscode
 .editorconfig
 venv/
-tests/
-docs/
 /examples
 /exports_test
 /exports
