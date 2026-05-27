@@ -1,221 +1,103 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+App desktop Python que extrai dados mensais de rastreamento veicular da Wialon e exporta para CSV/Excel com upload opcional ao Google Drive. 1 cliente em produção (Windows). Mantenedor solo.
 
-## Project Overview
+## Estrutura
 
-**Movi Exporter App** is a Python automation tool that extracts and exports monthly historical vehicle data from a vehicle tracking system (currently Wialon) used by Movi Solutions. The goal is to eliminate manual data collection by automatically integrating with the tracking API, normalizing the data, and exporting it in structured formats (CSV/Excel) with optional Google Drive upload.
+```
+src/core/        — config, logger, env_writer
+src/clients/     — wialon_client (stateful), base_client
+src/services/    — vehicle_service, wialon_transformer, normalizer, exporter, uploader
+src/gui/         — app, frames/, components/, dialogs/, updater
+src/cli/         — main
+tests/           — pytest
+docs/desenvolvimento/  — PLANO_ONDA_1.md, CHECKLIST_DECISOES.md
+docs/wialon/           — TOKEN_AUTORIZACAO.md, GEOCODIFICACAO.md
+docs/wialon-api-docs/  — documentação oficial da API Wialon
+```
 
-**Note:** The architecture is designed to support multiple tracking systems in the future, if needed.
-
-## Development Environment
-
-- Python 3.14 with virtual environment (venv)
-- Dependencies: `requests`, `python-dotenv`, `loguru`
-- Install dependencies: Activate venv first, then run `pip install -r requirements.txt`
-- Activate venv: `source venv/bin/activate` (macOS/Linux) or `venv\Scripts\activate` (Windows)
-
-## Running the Application
-
-### GUI (Recommended)
+## Comandos
 
 ```bash
-python -m src.gui.main
+source venv/bin/activate              # ativar venv
+pip install -r requirements.txt       # dependências
+python -m src.gui.main                # rodar GUI
+python -m src.cli.main test           # testar conexão Wialon
+pytest -q                             # testes
+ruff check src/                       # lint
+python scripts/build.py               # build local
+git tag v1.x.x && git push origin v1.x.x   # trigger CI → release
 ```
 
-### CLI
+## Convenções
 
-```bash
-python -m src.cli.main
-```
+- Código e comentários em inglês; UI e mensagens em português brasileiro
+- Type hints em toda interface pública
+- `N/D` para campos de sensor sem dado — nunca `NaN` nem string vazia visível ao cliente
+- Sem comentários óbvios — comentar apenas o *porquê* de algo não-óbvio
 
-## Architecture
+## Wialon API — regras críticas
 
-The codebase follows a modular architecture with clear separation of concerns:
+Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nunca quebram:
 
-### Core Layer (`src/core/`)
+- API é **stateful** — usa `sid`, NÃO Bearer token
+- Login retorna **dois** session IDs: `eid` (API) e `gis_sid` (GIS) — usar o correto para cada chamada
+- URLs de GIS são **dinâmicas** — vêm no login, nunca hardcoded
+- `flagsMask=0` em `messages/load_interval` para capturar todos os tipos (incluindo data-only com `pwr_ext`)
+- Odômetro vem em **metros** — sempre converter para km (÷ 1000)
+- `pwr_ext` = tensão do veículo (~12-28V); `voltage` = bateria interna do tracker (~4V) — são coisas diferentes
 
-- `config.py`: Loads environment variables from `.env` using dotenv, exposes a `settings` singleton
-- `logger.py`: Configures loguru with file rotation (1 MB) to `app.log`
+**Token:** `docs/wialon/TOKEN_AUTORIZACAO.md` — gerado via formulário web, NÃO via API.
 
-### Client Layer (`src/clients/`)
+## Git
 
-**Key Pattern**: Two base classes for different authentication models:
-- `BaseClient`: HTTP client with Bearer token (for REST APIs)
-- `StatefulClient`: HTTP client with session ID (for stateful APIs like Wialon)
+- Branch por feature: `feat/nome-curto` ou `fix/nome-curto`
+- Commits em português, Conventional Commits: `tipo(escopo): descrição`
+- Tipos: `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `ci`
+- Escopos úteis: `wialon`, `gui`, `export`, `drive`, `ci`, `settings`
+- Nunca commitar direto na `main`
+- `git add` sempre com arquivos específicos — nunca `git add .`
+- Nunca commitar `.env`, `credentials.json`, `token.json`, `*.log`
 
-- `base_client.py`: Base HTTP clients with standardized methods
-- `wialon_client.py`: **Main client** - Integration with Wialon Hosting API
-  - Stateful authentication via `sid` (session ID)
-  - Automatic re-authentication on session expiry
-  - `authenticate()`: Login via token/login
-  - `list_vehicles()`: Lists all units via core/search_items
-  - `get_vehicle_sensors(vehicle_id)`: Gets sensor mapping via core/search_item
-  - `get_history(vehicle_id, time_from, time_to)`: Paginated history via messages/load_interval
-- `system_a_client.py`: Legacy client for System A (example)
+## Verificação
 
-**Extensibility**: New systems can be added by inheriting from `BaseClient` or `StatefulClient`.
+Antes de declarar qualquer tarefa concluída:
+1. `pytest -q` — todos os testes passam
+2. `ruff check src/` — zero erros
+3. GUI abre e a feature funciona (testar o caminho principal manualmente)
+4. Se mudou dados do export: abrir o arquivo gerado e confirmar colunas/valores
+5. Se mudou `wialon_client.py`: testar com token real e conferir `app.log`
 
-### Services Layer (`src/services/`)
+## Testes
 
-- `normalizer.py`: ✅ **Implemented** - Standardizes data formats from different tracking systems
-  - `DataNormalizer` class with configurable field mappings per system
-  - `normalize_vehicle_list()`: Normalizes vehicle data to standard format
-  - `normalize_history()`: Normalizes historical records to standard format
-  - `add_system_mapping()`: Allows adding new system mappings dynamically
-  - Supports nested field paths and multiple timestamp formats
-  - Preserves raw data for audit purposes
-  - **Supports**: `system_a` and `wialon` mappings
+- Focar em `normalizer` (mapping wialon), `exporter` (colunas, N/D) e `wialon_client` (paginação, re-auth)
+- Usar `requests-mock` para mockar chamadas Wialon — sem gastar quota real
+- Sem testes de GUI (CustomTkinter, ROI baixo)
+- Descrições em PT-BR: `test_normaliza_timestamp_unix_para_iso()`
 
-- `exporter.py`: ✅ **Implemented** - Export to CSV/Excel
-  - `DataExporter` class with organized folder structure by month/year
-  - `export_vehicles_to_csv/excel()`: Export vehicle list
-  - `export_history_to_csv/excel()`: Export individual vehicle history
-  - `export_consolidated_history_to_csv/excel()`: Export all vehicles in one file
-  - Adds metadata (export_date, system_source) to exported files
+## Ciclo de desenvolvimento
 
-- `vehicle_service.py`: ✅ **Implemented** - Main orchestration service
-  - `VehicleService` class coordinating full extraction flow
-  - `export_monthly_data()`: Main method for monthly extraction
-  - `list_vehicles()`: Lists available vehicles
-  - `test_connection()`: Tests Wialon API connection
-  - Handles pagination, sensor resolution, error recovery
-  - Returns detailed statistics via `ExportResult` dataclass
+Consulte `.claude/skills/xp-cycle.md` para o ciclo completo.
+Resumo: **Consultar plano → Implementar fase → Verificar → Commitar → Atualizar status no PLANO_ONDA_1.md**
 
-- `uploader.py`: ✅ **Implemented** - Upload to Google Drive
-  - `DriveUploader` class with Service Account authentication
-  - `upload_file()`: Upload single file
-  - `upload_files()`: Upload multiple files to month folder
-  - `test_connection()`: Test Drive API connection
-  - Automatic folder structure creation (by month/year)
-  - Duplicate detection and overwrite option
-  - Returns `UploadResult` with statistics
+Skills disponíveis: `/nova-fase` (executa próxima fase do plano) · `/review` (revisa código da sessão)
 
-**Normalizer Design**: The normalizer uses a mapping-based approach where each system has a dictionary mapping standard field names to system-specific field names. Supports `system_a` and `wialon`. New systems can be added via `add_system_mapping()` method.
+## Não faça
 
-### CLI Layer (`src/cli/`)
+- **NÃO use `flagsMask=65281`** — filtra mensagens data-only e perde `pwr_ext`
+- **NÃO use `self.sid` para chamadas GIS** — usar `self.gis_sid`
+- **NÃO hardcode URL de geocodificação** — vem do login em `data["gis_geocode"]`
+- **NÃO use `voltage` como fallback de `battery_voltage`** — é bateria interna do tracker
+- **NÃO hardcode `"odometer": None`** — ler de `params.get("odometer")` e converter m→km
+- **NÃO adicione dependências sem perguntar** — PyInstaller é sensível a imports inesperados
+- **NÃO use `git add .`** — pode incluir `.env` ou logs
+- **NÃO deixe `except Exception: pass`** — sempre `logger.debug(f"Erro: {e}")`
+- **NÃO acesse API Wialon diretamente da GUI** — passar pelos services
+- **NÃO commite direto na `main`**
 
-- `main.py`: Command-line interface entry point with basic integration testing
+## Compactação
 
-### GUI Layer (`src/gui/`)
-
-- `app.py`: Main application window using CustomTkinter
-- `main.py`: GUI entry point
-- `updater.py`: Auto-update system via GitHub Releases
-- `frames/`: Application screens (home, export, settings)
-- `components/`: Reusable UI components (status_bar)
-- `dialogs/`: Modal dialogs (update_dialog)
-
-## Configuration
-
-All API credentials and URLs are stored in `.env`:
-
-```
-# Wialon (main system)
-WIALON_TOKEN=your_wialon_api_token
-
-# System A (legacy/example)
-SYSTEM_A_BASE_URL=https://api.sistema-a.com
-SYSTEM_A_TOKEN=token_a
-
-# Export settings
-EXPORT_DIR=./exports
-WIALON_PAGE_SIZE=1000
-
-# Google Drive (optional)
-GOOGLE_DRIVE_CREDENTIALS_FILE=./credentials.json
-GOOGLE_DRIVE_FOLDER_ID=your_folder_id_here
-```
-
-Never commit `.env` or `credentials.json` to version control.
-
-**Note:** The Wialon API is stateful and uses session-based authentication (NOT Bearer token). The `WIALON_TOKEN` is used only for initial login, after which a session ID (`sid`) is used.
-
-**How to obtain the `WIALON_TOKEN`:** See [`docs/WIALON_TOKEN_AUTORIZACAO.md`](docs/WIALON_TOKEN_AUTORIZACAO.md) — the token is generated through Wialon's web authorization form (`login.html` with redirect to `post_token.html`), NOT through an API call or admin panel button. The doc has the ready-to-use URL, all `access_type` flags, and troubleshooting for `error=8 (INVALID_AUTH_TOKEN)`.
-
-## Core Workflow
-
-Current workflow for Wialon (via `VehicleService`):
-
-1. **Authentication**: Login via `token/login`, obtain session ID (`sid`)
-2. **List vehicles**: Fetch units via `core/search_items`
-3. **For each vehicle**:
-   - Fetch sensor mapping via `core/search_item` (cached)
-   - Fetch paginated history via `messages/load_interval`
-   - Transform raw Wialon messages to intermediate format
-   - Normalize data via `DataNormalizer.normalize_history(data, system="wialon")`
-   - Export to CSV/Excel via `DataExporter`
-4. **Generate consolidated file** with all vehicles (optional)
-5. **Logout**: End Wialon session
-
-**CLI Usage**:
-```bash
-# Test connection
-python -m src.cli.main test
-
-# List vehicles
-python -m src.cli.main list
-
-# Export monthly data (default: previous month)
-python -m src.cli.main export --month 12 --year 2025
-
-# Export specific vehicles
-python -m src.cli.main export --month 12 --year 2025 --vehicles 123,456
-
-# Export to Excel
-python -m src.cli.main export --month 12 --year 2025 --format xlsx
-
-# Export and upload to Google Drive
-python -m src.cli.main export --month 12 --year 2025 --upload
-
-# Test Google Drive connection
-python -m src.cli.main test-drive
-```
-
-### Normalized Data Format
-
-**Vehicles:**
-```python
-{
-    "id": "ABC123",
-    "name": "Vehicle Name",
-    "plate": "ABC-1234",
-    "system_source": "system_a",
-    "raw_data": {...}  # Original data preserved
-}
-```
-
-**Historical Records:**
-```python
-{
-    "vehicle_id": "ABC123",
-    "timestamp": "2024-01-15T14:30:00",  # ISO 8601 format
-    "latitude": -23.5505,
-    "longitude": -46.6333,
-    "speed": 60.5,
-    "odometer": 15000.0,
-    "ignition": True,
-    "address": "Street Address",
-    "system_source": "system_a",
-    "raw_data": {...}  # Original data preserved
-}
-```
-
-## Key Design Decisions
-
-- **Wialon as Primary System**: Main integration with Wialon Hosting API
-  - Stateful authentication via session ID (`sid`), NOT Bearer token
-  - Automatic re-authentication on session expiry
-  - Paginated data fetching to avoid memory issues
-- **Extensible Architecture**: Supports multiple systems via mapping approach
-  - `BaseClient`: For REST APIs with Bearer token
-  - `StatefulClient`: For session-based APIs (like Wialon)
-  - Normalizer mappings isolate system-specific logic
-- **No Wialon Logic in Normalizer/Exporter**: 
-  - Raw data transformation happens in `VehicleService`
-  - Normalizer receives pre-processed data
-- **Monthly Granularity**: Data extraction is organized by vehicle and month
-- **Sensor Resolution**: Wialon raw parameters (io_23, etc.) are mapped to readable names
-- **Environment-based Config**: All secrets and URLs loaded from `.env`
-- **Data Preservation**: `raw_data` field preserves original system response
-- **Type Safety**: Python type hints throughout for IDE support
+Quando o contexto for compactado, preservar:
+- Fase atual do `PLANO_ONDA_1.md` e status de cada item
+- Arquivos modificados na sessão ainda não commitados
+- Decisões arquiteturais tomadas e erros encontrados
