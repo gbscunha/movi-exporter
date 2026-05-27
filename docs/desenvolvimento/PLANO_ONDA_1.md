@@ -21,7 +21,7 @@
 | 09 | `config.py` — reload + TOKEN_2 | D+E | 🔴 sim | XS | ✅ Concluído | `config.py` |
 | 10 | F1 — Token Wialon pela GUI | D | — | M | ✅ Concluído | `settings.py` |
 | 11 | F2 — Segunda conta: capturar username | E | 🔴 sim | XS | ✅ Concluído | `wialon_client.py` |
-| 12 | F2 — Segunda conta: Settings + Export | E | — | M | ⬜ Todo | `settings.py`, `export.py`, `exporter.py` |
+| 12 | F2 — Segunda conta: Settings + Export | E | — | M | ✅ Concluído | `settings.py`, `export.py`, `exporter.py` |
 | 13 | UX — Mês por nome + Abrir pasta + Onboarding | F | — | S | ⬜ Todo | `export.py`, `app.py` |
 | 14 | Testes — reescrever com pytest | G | — | S | ⬜ Todo | `tests/`, `pytest.ini` |
 | 15 | CI — workflows + version sync + deps | G | — | S | ⬜ Todo | `ci.yml`, `build.yml`, `spec`, `requirements` |
