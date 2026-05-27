@@ -5,15 +5,36 @@ Exibe configurações de exportação e log de progresso em tempo real
 capturando mensagens do loguru durante o processamento.
 """
 
-import customtkinter as ctk
+import subprocess
+import sys
 import threading
 from datetime import datetime
-from typing import Callable, Optional, List
+from pathlib import Path
+from tkinter import messagebox
+from typing import Callable, List, Optional
+
+import customtkinter as ctk
 
 from src.clients.wialon_client import WialonClient
 from src.core.config import settings
-from src.core.logger import GUILogHandler
+from src.core.logger import GUILogHandler, logger
 from src.services.vehicle_service import VehicleService
+
+# Nomes dos meses em português brasileiro — usados no dropdown.
+MESES = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+]
 
 
 class ExportFrame(ctk.CTkFrame):
@@ -70,16 +91,17 @@ class ExportFrame(ctk.CTkFrame):
         
         # Mês
         ctk.CTkLabel(config_frame, text="Mês:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        
+
         now = datetime.now()
-        default_month = now.month - 1 if now.month > 1 else 12
-        
-        self.month_var = ctk.StringVar(value=str(default_month))
+        # Default: mês anterior (relatórios geralmente são do mês fechado).
+        default_month_idx = (now.month - 2) % 12  # zero-based
+
+        self.month_var = ctk.StringVar(value=MESES[default_month_idx])
         self.month_menu = ctk.CTkOptionMenu(
             config_frame,
-            values=[str(i) for i in range(1, 13)],
+            values=MESES,
             variable=self.month_var,
-            width=80
+            width=130,
         )
         self.month_menu.grid(row=0, column=1, padx=10, pady=10, sticky="w")
         
@@ -253,16 +275,53 @@ class ExportFrame(ctk.CTkFrame):
         """Cria botões de ação."""
         actions_frame = ctk.CTkFrame(self, fg_color="transparent")
         actions_frame.grid(row=4, column=0, sticky="e")
-        
+
+        self.open_folder_btn = ctk.CTkButton(
+            actions_frame,
+            text="📂  Abrir pasta",
+            width=140,
+            height=45,
+            command=self._open_export_folder,
+        )
+        self.open_folder_btn.grid(row=0, column=0, padx=5)
+
         self.export_btn = ctk.CTkButton(
             actions_frame,
             text="▶️  Iniciar Exportação",
             width=200,
             height=45,
             font=ctk.CTkFont(size=14, weight="bold"),
-            command=self._start_export
+            command=self._start_export,
         )
-        self.export_btn.grid(row=0, column=0, padx=5)
+        self.export_btn.grid(row=0, column=1, padx=5)
+
+    def _open_export_folder(self):
+        """Abre a pasta de exportação do mês/ano atualmente selecionados.
+
+        Se a subpasta do mês ainda não existir, abre o diretório base.
+        """
+        try:
+            month = MESES.index(self.month_var.get()) + 1
+            year = int(self.year_var.get())
+        except (ValueError, IndexError):
+            messagebox.showerror("Erro", "Mês/ano inválidos.")
+            return
+
+        base = Path(settings.EXPORT_DIR or "./exports")
+        target = base / f"{year}-{month:02d}"
+        path = target if target.exists() else base
+        path.mkdir(parents=True, exist_ok=True)
+
+        try:
+            if sys.platform == "win32":
+                subprocess.Popen(["explorer", str(path)])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as e:
+            logger.debug(f"Erro ao abrir pasta: {e}")
+            messagebox.showerror("Erro", f"Não foi possível abrir a pasta: {e}")
     
     def _toggle_vehicle_selection(self):
         """Alterna visibilidade da lista de veículos."""
@@ -341,7 +400,7 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_label.configure(text="Iniciando...")
         
         # Parâmetros
-        month = int(self.month_var.get())
+        month = MESES.index(self.month_var.get()) + 1
         year = int(self.year_var.get())
         format_type = self.format_var.get()
         consolidated = self.consolidated_var.get()

@@ -2,18 +2,20 @@
 Aplicação principal da GUI do Movi Exporter.
 """
 
-import customtkinter as ctk
-from typing import Optional
 import threading
-from datetime import datetime
+from tkinter import messagebox
+from typing import Optional
 
-from src.gui.frames.sidebar import SidebarFrame
-from src.gui.frames.home import HomeFrame
-from src.gui.frames.export import ExportFrame
-from src.gui.frames.settings import SettingsFrame
-from src.gui.components.status_bar import StatusBar
-from src.gui.updater import AutoUpdater
+import customtkinter as ctk
+
+from src.core.config import settings
 from src.gui import __version__
+from src.gui.components.status_bar import StatusBar
+from src.gui.frames.export import ExportFrame
+from src.gui.frames.home import HomeFrame
+from src.gui.frames.settings import SettingsFrame
+from src.gui.frames.sidebar import SidebarFrame
+from src.gui.updater import AutoUpdater
 
 
 class MoviExporterApp(ctk.CTk):
@@ -46,7 +48,12 @@ class MoviExporterApp(ctk.CTk):
         
         # Iniciar na tela Home
         self.show_frame("home")
-        
+
+        # Onboarding — se o token Wialon não foi configurado, orienta o usuário
+        # a abrir Settings antes de tentar exportar.
+        if not settings.WIALON_TOKEN:
+            self.after(300, self._show_setup_notice)
+
         # Verificar atualizações em background
         self._check_updates_async()
     
@@ -109,6 +116,16 @@ class MoviExporterApp(ctk.CTk):
         from src.gui.dialogs.update_dialog import UpdateDialog
         dialog = UpdateDialog(self, version, download_url)
         dialog.grab_set()
+
+    def _show_setup_notice(self):
+        """Avisa o usuário que falta configurar o token Wialon."""
+        messagebox.showinfo(
+            "Configuração necessária",
+            "O token da API Wialon ainda não foi configurado.\n\n"
+            "Abra a tela de Configurações para colar seu token e testá-lo "
+            "antes de iniciar uma exportação.",
+        )
+        self.show_frame("settings")
 
 
 def run():
