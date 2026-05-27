@@ -10,7 +10,7 @@
 
 | # | Fase | Grupo | TDD | Esforço | Status | Arquivos principais |
 |---|------|-------|-----|---------|--------|---------------------|
-| 01 | Limpeza de código morto | C | — | S | ⬜ Todo | `system_a_client.py`, `normalizer.py`, `config.py`, `.env` |
+| 01 | Limpeza de código morto | C | — | S | ✅ Concluído | `system_a_client.py`, `normalizer.py`, `config.py`, `.env` |
 | 02 | Bugs rápidos da GUI | B | 🔴 parcial | XS | ⬜ Todo | `export.py`, `home.py`, `vehicle_service.py` |
 | 03 | Odômetro — ler do param bruto | A | 🔴 sim | XS | ⬜ Todo | `wialon_transformer.py` |
 | 04 | `pwr_ext` — flagsMask + propagação | A | 🔴 sim | S | ⬜ Todo | `wialon_client.py`, `vehicle_service.py`, `wialon_transformer.py` |
