@@ -132,7 +132,7 @@ class HomeFrame(ctk.CTkFrame):
                 else:
                     self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
                     
-            except Exception as e:
+            except Exception:
                 self.after(0, lambda: self.wialon_card.set_value("Erro ❌", "error"))
                 self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
             

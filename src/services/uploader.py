@@ -424,9 +424,9 @@ class DriveUploader:
             logger.warning("Nenhum arquivo para upload")
             return result
         
-        logger.info(f"═══════════════════════════════════════════════════════════")
+        logger.info("═══════════════════════════════════════════════════════════")
         logger.info(f"Iniciando upload para Google Drive: {len(file_paths)} arquivos")
-        logger.info(f"═══════════════════════════════════════════════════════════")
+        logger.info("═══════════════════════════════════════════════════════════")
         
         try:
             # Obtém/cria pasta do mês
@@ -461,12 +461,12 @@ class DriveUploader:
                     logger.error(error_msg)
             
             # Log final
-            logger.info(f"═══════════════════════════════════════════════════════════")
-            logger.info(f"Upload concluído")
+            logger.info("═══════════════════════════════════════════════════════════")
+            logger.info("Upload concluído")
             logger.info(f"  Arquivos enviados: {result.uploaded_files}/{result.total_files}")
             logger.info(f"  Falhas: {result.failed_files}")
             logger.info(f"  Taxa de sucesso: {result.success_rate:.1f}%")
-            logger.info(f"═══════════════════════════════════════════════════════════")
+            logger.info("═══════════════════════════════════════════════════════════")
             
             return result
             

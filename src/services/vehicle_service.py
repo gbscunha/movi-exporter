@@ -241,9 +241,9 @@ class VehicleService:
         """
         result = ExportResult(month=month, year=year)
 
-        logger.info(f"═══════════════════════════════════════════════════════════")
+        logger.info("═══════════════════════════════════════════════════════════")
         logger.info(f"Iniciando exportação mensal: {month:02d}/{year}")
-        logger.info(f"═══════════════════════════════════════════════════════════")
+        logger.info("═══════════════════════════════════════════════════════════")
 
         try:
             # Autentica
@@ -383,7 +383,7 @@ class VehicleService:
                     result.errors.append(error_msg)
 
             # Log final
-            logger.info(f"═══════════════════════════════════════════════════════════")
+            logger.info("═══════════════════════════════════════════════════════════")
             logger.info(f"Exportação concluída: {month:02d}/{year}")
             logger.info(
                 f"  Veículos processados: {result.processed_vehicles}/{result.total_vehicles}"
@@ -392,7 +392,7 @@ class VehicleService:
             logger.info(f"  Total de registros: {result.total_records}")
             logger.info(f"  Arquivos gerados: {len(result.exported_files)}")
             logger.info(f"  Taxa de sucesso: {result.success_rate:.1f}%")
-            logger.info(f"═══════════════════════════════════════════════════════════")
+            logger.info("═══════════════════════════════════════════════════════════")
 
             return result
 

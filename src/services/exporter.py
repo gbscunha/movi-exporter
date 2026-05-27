@@ -9,7 +9,6 @@ Este módulo fornece funcionalidades para:
 - Gerar nomenclatura padronizada de arquivos
 """
 
-import os
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Any, Optional

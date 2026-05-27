@@ -12,7 +12,6 @@ Este cliente implementa:
 
 import json
 import re
-import time
 from typing import Any, Dict, List, Optional, Iterator
 from datetime import datetime
 
@@ -138,7 +137,7 @@ class WialonClient:
             elif isinstance(user, str):
                 self.username = user
 
-            logger.success(f"Autenticação bem-sucedida. Session ID obtido.")
+            logger.success("Autenticação bem-sucedida. Session ID obtido.")
             logger.debug(f"Base URL: {self.base_url}")
 
             return data
