@@ -8,29 +8,13 @@ class DataNormalizer:
     Classe responsável por normalizar dados de diferentes sistemas de rastreamento
     para um formato padronizado.
 
-    Atualmente suporta System A, mas está preparada para expansão futura com
+    Atualmente suporta Wialon, mas está preparada para expansão futura com
     múltiplos sistemas.
     """
 
     def __init__(self):
         """Inicializa o normalizador com mapeamentos de campos por sistema."""
         self.system_mappings = {
-            "system_a": {
-                "vehicle_id": "veiculoId",
-                "vehicle_name": "nome",
-                "plate": "placa",
-                "timestamp": "dataHora",
-                "latitude": "latitude",
-                "longitude": "longitude",
-                "speed": "velocidade",
-                "odometer": "odometro",
-                "ignition": "ignicao",
-                "address": "endereco",
-                "fuel_level": "nivelCombustivel",
-                "rpm": "rpm",
-                "battery_voltage": "voltagemBateria",
-                "driver": "motorista",
-            },
             # Wialon - Sistema de rastreamento principal
             # Os dados já vêm pré-processados pelo WialonClient/VehicleService
             # Este mapeamento espera dados já transformados, não dados brutos da API
@@ -54,14 +38,14 @@ class DataNormalizer:
         }
 
     def normalize_vehicle_list(
-        self, raw_data: List[Dict[str, Any]], system: str = "system_a"
+        self, raw_data: List[Dict[str, Any]], system: str = "wialon"
     ) -> List[Dict[str, Any]]:
         """
         Normaliza uma lista de veículos para o formato padronizado.
 
         Args:
             raw_data: Lista de veículos no formato original do sistema
-            system: Identificador do sistema de origem (padrão: "system_a")
+            system: Identificador do sistema de origem (padrão: "wialon")
 
         Returns:
             Lista de veículos no formato normalizado
@@ -82,14 +66,14 @@ class DataNormalizer:
         return normalized_vehicles
 
     def normalize_history(
-        self, raw_data: List[Dict[str, Any]], system: str = "system_a"
+        self, raw_data: List[Dict[str, Any]], system: str = "wialon"
     ) -> List[Dict[str, Any]]:
         """
         Normaliza dados históricos de um veículo para o formato padronizado.
 
         Args:
             raw_data: Lista de registros históricos no formato original do sistema
-            system: Identificador do sistema de origem (padrão: "system_a")
+            system: Identificador do sistema de origem (padrão: "wialon")
 
         Returns:
             Lista de registros históricos no formato normalizado

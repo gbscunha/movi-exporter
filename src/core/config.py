@@ -13,10 +13,6 @@ load_dotenv()
 class Settings:
     """Configurações da aplicação carregadas do ambiente."""
 
-    # System A (legado/exemplo)
-    SYSTEM_A_BASE_URL: str = os.getenv("SYSTEM_A_BASE_URL", "")
-    SYSTEM_A_TOKEN: str = os.getenv("SYSTEM_A_TOKEN", "")
-
     # Wialon (sistema principal)
     WIALON_TOKEN: str = os.getenv("WIALON_TOKEN", "")
     WIALON_BASE_URL: str = os.getenv(

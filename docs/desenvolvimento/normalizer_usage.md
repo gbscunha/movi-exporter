@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O `DataNormalizer` é responsável por converter dados de diferentes sistemas de rastreamento para um formato padronizado. Atualmente suporta o System A, mas está preparado para adicionar novos sistemas no futuro.
+O `DataNormalizer` é responsável por converter dados de diferentes sistemas de rastreamento para um formato padronizado. Atualmente suporta o Wialon, mas está preparado para adicionar novos sistemas no futuro.
 
 ## Instalação
 
@@ -26,71 +26,34 @@ normalizer = DataNormalizer()
 ### 2. Normalizar Lista de Veículos
 
 ```python
-# Dados brutos do System A
+# Dados brutos (Wialon, já pré-processados pelo VehicleService)
 raw_vehicles = [
-    {
-        "veiculoId": "VEI001",
-        "nome": "Caminhão 01",
-        "placa": "ABC-1234"
-    },
-    {
-        "veiculoId": "VEI002",
-        "nome": "Van 02",
-        "placa": "XYZ-5678"
-    }
+    {"vehicle_id": 1, "nm": "Caminhão 01", "plate": "ABC-1234"},
+    {"vehicle_id": 2, "nm": "Van 02", "plate": "XYZ-5678"},
 ]
 
 # Normalizar
-normalized_vehicles = normalizer.normalize_vehicle_list(raw_vehicles, system="system_a")
-
-# Resultado:
-# [
-#     {
-#         "id": "VEI001",
-#         "name": "Caminhão 01",
-#         "plate": "ABC-1234",
-#         "system_source": "system_a",
-#         "raw_data": {...}
-#     },
-#     ...
-# ]
+normalized_vehicles = normalizer.normalize_vehicle_list(raw_vehicles, system="wialon")
 ```
 
 ### 3. Normalizar Dados Históricos
 
 ```python
-# Dados históricos brutos do System A
+# Registros já transformados pelo WialonTransformer
 raw_history = [
     {
-        "veiculoId": "VEI001",
-        "dataHora": "2024-01-15T14:30:00",
+        "vehicle_id": 1,
+        "timestamp": "2024-01-15T14:30:00",
         "latitude": -23.5505,
         "longitude": -46.6333,
-        "velocidade": 60.5,
-        "odometro": 15000.0,
-        "ignicao": True,
-        "endereco": "Av. Paulista, 1000"
+        "speed": 60.5,
+        "odometer": 15000.0,
+        "ignition": True,
+        "address": "Av. Paulista, 1000",
     }
 ]
 
-# Normalizar
-normalized_history = normalizer.normalize_history(raw_history, system="system_a")
-
-# Resultado:
-# [
-#     {
-#         "vehicle_id": "VEI001",
-#         "timestamp": "2024-01-15T14:30:00",
-#         "latitude": -23.5505,
-#         "longitude": -46.6333,
-#         "speed": 60.5,
-#         "odometer": 15000.0,
-#         "ignition": True,
-#         "address": "Av. Paulista, 1000",
-#         "system_source": "system_a",
-#         "raw_data": {...}
-#     }
-# ]
+normalized_history = normalizer.normalize_history(raw_history, system="wialon")
 ```
 
 ## Formato Padronizado
@@ -102,7 +65,7 @@ normalized_history = normalizer.normalize_history(raw_history, system="system_a"
 | `id` | string | Identificador único do veículo |
 | `name` | string | Nome do veículo |
 | `plate` | string | Placa do veículo |
-| `system_source` | string | Sistema de origem (ex: "system_a") |
+| `system_source` | string | Sistema de origem (ex: "wialon") |
 | `raw_data` | dict | Dados originais completos |
 
 ### Registros Históricos
@@ -189,27 +152,18 @@ normalized = normalizer.normalize_vehicle_list(raw_vehicles)
 ## Exemplo Completo
 
 ```python
-from services.normalizer import DataNormalizer
-from clients.system_a_client import SystemAClient
+from src.services.normalizer import DataNormalizer
+from src.services.vehicle_service import VehicleService
 
-# Inicializar
-client = SystemAClient()
 normalizer = DataNormalizer()
+svc = VehicleService()
 
-# Buscar dados
-raw_vehicles = client.listar_veiculos()
-raw_history = client.buscar_historico("VEI001", "2024-01")
+# Os dados já vêm pré-processados pelo VehicleService
+vehicles_raw = svc.list_vehicles()
+history_raw = svc.get_vehicle_history(vehicle_id=1, month=1, year=2026)
 
-# Normalizar
-vehicles = normalizer.normalize_vehicle_list(raw_vehicles, system="system_a")
-history = normalizer.normalize_history(raw_history, system="system_a")
-
-# Usar dados normalizados
-for vehicle in vehicles:
-    print(f"Veículo: {vehicle['name']} - Placa: {vehicle['plate']}")
-
-for record in history:
-    print(f"Timestamp: {record['timestamp']} - Velocidade: {record['speed']} km/h")
+vehicles = normalizer.normalize_vehicle_list(vehicles_raw, system="wialon")
+history = normalizer.normalize_history(history_raw, system="wialon")
 ```
 
 ## Verificar Sistemas Suportados
@@ -217,7 +171,7 @@ for record in history:
 ```python
 systems = normalizer.get_supported_systems()
 print(f"Sistemas suportados: {systems}")
-# Output: ['system_a']
+# Output: ['wialon']
 ```
 
 ## Logs

@@ -512,27 +512,6 @@ class WialonClient:
             f"Veículo {vehicle_id}: {total_messages} mensagens em {page_num} páginas"
         )
 
-    def get_full_history(
-        self, vehicle_id: int, time_from: int, time_to: int
-    ) -> List[Dict[str, Any]]:
-        """
-        Busca histórico completo (conveniente para volumes menores).
-
-        ATENÇÃO: Para grandes volumes, use get_history() com generator.
-
-        Args:
-            vehicle_id: ID do veículo
-            time_from: Timestamp Unix início
-            time_to: Timestamp Unix fim
-
-        Returns:
-            Lista completa de mensagens
-        """
-        all_messages = []
-        for page in self.get_history(vehicle_id, time_from, time_to):
-            all_messages.extend(page)
-        return all_messages
-
     def logout(self) -> bool:
         """
         Encerra a sessão Wialon.
