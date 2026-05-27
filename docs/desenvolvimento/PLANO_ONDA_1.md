@@ -25,6 +25,7 @@
 | 13 | UX — Mês por nome + Abrir pasta + Onboarding | F | — | S | ✅ Concluído | `export.py`, `app.py` |
 | 14 | Testes — reescrever com pytest | G | — | S | ✅ Concluído | `tests/`, `pytest.ini` |
 | 15 | CI — workflows + version sync + deps | G | — | S | ✅ Concluído | `ci.yml`, `build.yml`, `spec`, `requirements` |
+| 16 | Correção de regressões + 2 colunas de tensão | H | 🔴 sim | M | ✅ Concluído | `wialon_transformer.py`, `vehicle_service.py`, `normalizer.py`, `wialon_client.py`, `exporter.py`, testes + integração |
 
 **Legenda status:** ⬜ Todo · 🔄 Em andamento · ✅ Concluído · ⏸️ Bloqueado
 **Legenda TDD:** 🔴 sim = escrever teste antes de implementar · 🔴 parcial = só nos bugs com lógica testável · — = não aplicável
@@ -744,3 +745,50 @@ packaging
 | 13 | — | — | `export.py`, `app.py` | — |
 | 14 | — | `pytest.ini` | `tests/test_normalizer.py`, `tests/test_exporter.py` | — |
 | 15 | — | `ci.yml`, `requirements.in` | `build.yml`, `movi_exporter.spec`, `requirements.txt` | — |
+
+---
+
+## Fase 16 — Correção de regressões + 2 colunas de tensão
+
+**Descoberta:** durante o QA manual do CSV exportado (após Fase 15), 3 problemas reais foram detectados que invalidavam parcialmente as fases 03, 05 e 07:
+
+1. **#33** — `pwr_int` ainda no fallback de `battery_voltage`. Fase 05 removeu `voltage` e `battery` mas deixou `pwr_int` — bateria interna do tracker (~4V) seguia poluindo a coluna do veículo
+2. **#34** — Defaults do `DataNormalizer` (`0.0`/`""`) mascaravam o `None` que o transformer retornava, fazendo o `_fill_nd` do exporter não aplicar N/D
+3. **Sentido das colunas** — uma única coluna "Tensão da Bateria" ambiguamente recebia ora tensão do veículo ora bateria do tracker
+
+**Por que os testes unitários da Onda 1 não pegaram:**
+Cada camada (transformer, normalizer, exporter) tinha teste isolado. Nenhum teste cobria a pipeline end-to-end. Bugs ficaram entre as camadas.
+
+**O que esta fase entrega:**
+
+- **Separação em 2 colunas**:
+  - `Tensão do Veículo (V)` ← `pwr_ext` (12-28V), sem fallback nenhum
+  - `Bateria Interna (V)` ← `pwr_int` / `voltage` / `battery` (~4V)
+- **Defaults do normalizer corrigidos**: `odometer` e `address` agora têm `default=None` (eram `0.0` e `""`)
+- **`_fill_nd` defensivo**: agora cobre `None` E string vazia
+- **Odômetro robusto**: lê com `is not None` para preservar 0 km legítimo (veículo novo)
+- **Sensor name mapping atualizado**: nomes específicos como "Bateria Interna" mapeiam pra `internal_battery_voltage`; termos ambíguos (`bateria`, `voltage`) seguem para `vehicle_voltage`
+- **Testes**:
+  - `test_wialon_transformer.py` reescrito com 11 testes cobrindo ambas as colunas + edge case do odômetro=0
+  - `test_normalizer.py` cobre novos defaults `None`
+  - `test_exporter.py` e `test_exporter_nd.py` validam as novas colunas no CSV
+  - `tests/test_pipeline_integration.py` ← NOVO, 7 testes E2E que teriam pego os bugs
+
+**Arquivos modificados:**
+
+- `src/services/wialon_transformer.py` — KNOWN_PARAMS / SENSOR_FIELDS / SENSOR_HANDLERS divididos
+- `src/services/vehicle_service.py` — propagação usa `vehicle_voltage`
+- `src/services/normalizer.py` — defaults `None` em opcionais, novo mapping
+- `src/clients/wialon_client.py` — `_normalize_sensor_name` com mapeamentos específicos
+- `src/services/exporter.py` — `COLUMN_TRANSLATIONS`, `OPTIONAL_SENSOR_COLS`, `_fill_nd`, 4 funções de export
+- `tests/test_wialon_transformer.py` — 11 testes
+- `tests/test_normalizer.py` — assertions atualizadas
+- `tests/test_exporter.py` — colunas atualizadas
+- `tests/test_exporter_nd.py` — colunas atualizadas
+- `tests/test_vehicle_service.py` — assertion atualizada
+- `tests/test_pipeline_integration.py` ← NOVO
+
+**Commit:** `fix: split vehicle voltage from tracker battery and fix normalizer defaults`
+
+**Lição aprendida:**
+Toda fase que modifica dados do export DEVE incluir um teste de integração transformer→normalizer→exporter. Adicionar à checklist do `.claude/skills/xp-cycle.md` na próxima retrospectiva.
