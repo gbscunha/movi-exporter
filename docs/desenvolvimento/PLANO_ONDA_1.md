@@ -17,7 +17,7 @@
 | 05 | Bateria — remover fallback interno | A | 🔴 sim | XS | ✅ Concluído | `wialon_transformer.py` |
 | 06 | Geocodificação — gis_sid dinâmico | A | — | XS | ✅ Concluído | `wialon_client.py` |
 | 07 | Export — valores `N/D` | A | 🔴 sim | XS | ✅ Concluído | `exporter.py` |
-| 08 | `env_writer.py` — novo módulo | D | 🔴 sim | S | ⬜ Todo | `src/core/env_writer.py` ← NOVO |
+| 08 | `env_writer.py` — novo módulo | D | 🔴 sim | S | ✅ Concluído | `src/core/env_writer.py` ← NOVO |
 | 09 | `config.py` — reload + TOKEN_2 | D+E | 🔴 sim | XS | ⬜ Todo | `config.py` |
 | 10 | F1 — Token Wialon pela GUI | D | — | M | ⬜ Todo | `settings.py` |
 | 11 | F2 — Segunda conta: capturar username | E | 🔴 sim | XS | ⬜ Todo | `wialon_client.py` |
