@@ -26,6 +26,7 @@
 | 14 | Testes — reescrever com pytest | G | — | S | ✅ Concluído | `tests/`, `pytest.ini` |
 | 15 | CI — workflows + version sync + deps | G | — | S | ✅ Concluído | `ci.yml`, `build.yml`, `spec`, `requirements` |
 | 16 | Correção de regressões + 2 colunas de tensão | H | 🔴 sim | M | ✅ Concluído | `wialon_transformer.py`, `vehicle_service.py`, `normalizer.py`, `wialon_client.py`, `exporter.py`, testes + integração |
+| 17 | Perfis de tracker (Suntech ST380) | I | 🔴 sim | M | ✅ Concluído | `src/services/tracker_profiles/` ← NOVO, `wialon_transformer.py`, `wialon_client.py`, testes + integração |
 
 **Legenda status:** ⬜ Todo · 🔄 Em andamento · ✅ Concluído · ⏸️ Bloqueado
 **Legenda TDD:** 🔴 sim = escrever teste antes de implementar · 🔴 parcial = só nos bugs com lógica testável · — = não aplicável
@@ -792,3 +793,67 @@ Cada camada (transformer, normalizer, exporter) tinha teste isolado. Nenhum test
 
 **Lição aprendida:**
 Toda fase que modifica dados do export DEVE incluir um teste de integração transformer→normalizer→exporter. Adicionar à checklist do `.claude/skills/xp-cycle.md` na próxima retrospectiva.
+
+---
+
+## Fase 17 — Perfis de tracker (Suntech ST380)
+
+**Descoberta:** depois da Fase 16, o QA do CSV revelou que o transformer ainda devolvia `N/D` em colunas críticas para a frota real da Movi (Suntech ST380, model 197). Causa: o Suntech NÃO usa os params padrão Wialon — `mode` (não `in`/`in1`), `m_asgn1` (não `odometer`), `s_asgn1`/`s_asgn2` (não `pwr_ext`/`pwr_int`).
+
+**Por que não foi um fix inline:**
+
+Empilhar `mode`/`m_asgn1`/`s_asgn1` direto em `KNOWN_PARAMS` funcionaria para Suntech, mas:
+- `mode` pode ter outro significado em outros trackers (criando bugs silenciosos)
+- `s_asgn1` é um slot configurável — significado varia por firmware/cliente
+- Conforme o app crescer para outros clientes, listas únicas viram fonte de erros sutis
+
+**Solução arquitetural — perfis isolados por fabricante:**
+
+Cada perfil isola o dialeto de um fabricante. Detecção por mensagem via `model`/`rep_type`. Default profile como fallback genérico.
+
+```
+src/services/tracker_profiles/
+├── base.py        # Protocol TrackerProfile (interface)
+├── default.py     # Comportamento Wialon-genérico (fallback)
+├── suntech.py     # Suntech ST380+ (model 197, rep_type=STT)
+└── registry.py    # detect_profile(message) escolhe o perfil
+```
+
+**Como adicionar suporte a novo tracker (Queclink, Teltonika, etc):** criar `queclink.py` com `matches()`/`known_params()`/`extract_odometer_meters()` + adicionar instância em `registry.py`. Zero mudança no `WialonTransformer`.
+
+**Bug bonus corrigido (#37 do backlog):**
+
+`WialonClient._normalize_sensor_name` confundia o sensor "Bateria do dispositivo" (configurado pelo admin do cliente no Wialon) mapeando para `vehicle_voltage` porque pegava "bateria" antes de chegar em "dispositivo". Reorganizada a ordem dos mappings — chaves específicas (`bateria do dispositivo`, `bateria do rastreador`, `device battery`, `tracker battery`) ANTES das genéricas.
+
+**Validação em produção real:**
+
+CLI `python -m src.cli.main export --month 4 --year 2026 --vehicles 401987846 --no-consolidated` no VTR05 (Conta 1, frota Movi).
+
+| Coluna | Antes da Fase 17 | Depois |
+|--------|------------------|--------|
+| Ignição | "Desligado" em todas as 21.813 linhas | 20.382 Ligado / 1.431 Desligado |
+| Tensão do Veículo (V) | N/D | 25V parado / 28V rodando |
+| Bateria Interna (V) | (vazava na coluna acima) | 4.1V estável |
+| Odômetro (km) | N/D | 240.099 → 248.090 km (~8.000 km no mês) |
+
+**Arquivos:**
+
+Novos:
+- `src/services/tracker_profiles/__init__.py`
+- `src/services/tracker_profiles/base.py` (Protocol)
+- `src/services/tracker_profiles/default.py`
+- `src/services/tracker_profiles/suntech.py`
+- `src/services/tracker_profiles/registry.py`
+- `tests/test_tracker_profiles.py` (21 testes)
+
+Modificados:
+- `src/services/wialon_transformer.py` — delega aos perfis (KNOWN_PARAMS removido)
+- `src/clients/wialon_client.py` — `_normalize_sensor_name` com mappings específicos
+- `tests/test_wialon_client.py` — testes do mapping de sensor names
+- `tests/test_pipeline_integration.py` — 4 cenários Suntech E2E
+
+**Testes:** 90 passando (76 + 14 novos). Ruff clean.
+
+**Backlog Onda 2 — itens fechados:** #37 (bateria do dispositivo), #38 (mode ignição), #39 (m_asgn1 odômetro), #40 (perfis de tracker).
+
+**Commit:** `feat: tracker profiles architecture with Suntech ST380 support`
