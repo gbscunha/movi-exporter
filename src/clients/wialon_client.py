@@ -441,10 +441,12 @@ class WialonClient:
             # Tensão do veículo (~12-28V) — termos explícitos.
             "bateria do veículo": "vehicle_voltage",
             "bateria do veiculo": "vehicle_voltage",
+            "bateria externa": "vehicle_voltage",  # Movi/CVM0H79 nomeou assim
             "tensão do veículo": "vehicle_voltage",
             "tensao do veiculo": "vehicle_voltage",
             "vehicle voltage": "vehicle_voltage",
             "vehicle battery": "vehicle_voltage",
+            "external battery": "vehicle_voltage",
             "tensão externa": "vehicle_voltage",
             "tensao externa": "vehicle_voltage",
             # Termos ambíguos — fallback para tensão do veículo. Bateria

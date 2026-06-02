@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Set, Tuple
 from src.core.logger import logger
 from src.services.tracker_profiles.base import TrackerProfile
 from src.services.tracker_profiles.default import DefaultProfile
+from src.services.tracker_profiles.jimi import JimiProfile
 from src.services.tracker_profiles.suntech import SuntechProfile
 
 # Ordem importa: perfis específicos primeiro, fallback genérico no fim.
@@ -12,6 +13,7 @@ from src.services.tracker_profiles.suntech import SuntechProfile
 # adicionar a instância antes do DefaultProfile.
 DEFAULT_PROFILES: List[TrackerProfile] = [
     SuntechProfile(),
+    JimiProfile(),
     DefaultProfile(),
 ]
 

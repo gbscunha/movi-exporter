@@ -17,6 +17,7 @@ e registrar em `registry.py`. Não tocar no `WialonTransformer`.
 
 from src.services.tracker_profiles.base import TrackerProfile
 from src.services.tracker_profiles.default import DefaultProfile
+from src.services.tracker_profiles.jimi import JimiProfile
 from src.services.tracker_profiles.registry import (
     DEFAULT_PROFILES,
     detect_profile,
@@ -27,6 +28,7 @@ from src.services.tracker_profiles.suntech import SuntechProfile
 __all__ = [
     "DEFAULT_PROFILES",
     "DefaultProfile",
+    "JimiProfile",
     "SuntechProfile",
     "TrackerProfile",
     "detect_profile",

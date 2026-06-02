@@ -112,6 +112,11 @@ def test_normalize_sensor_bateria_do_veiculo_vai_para_vehicle():
     assert _client()._normalize_sensor_name("Bateria do veículo") == "vehicle_voltage"
 
 
+def test_normalize_sensor_bateria_externa_vai_para_vehicle():
+    """Cliente Movi (CVM0H79, Jimi VL03) nomeou 'Bateria Externa' no Wialon."""
+    assert _client()._normalize_sensor_name("Bateria Externa") == "vehicle_voltage"
+
+
 def test_normalize_sensor_tensao_do_veiculo_vai_para_vehicle():
     assert _client()._normalize_sensor_name("Tensão do veículo") == "vehicle_voltage"
 

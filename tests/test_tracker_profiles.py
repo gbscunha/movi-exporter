@@ -9,6 +9,7 @@ import pytest
 from src.services.tracker_profiles import (
     DEFAULT_PROFILES,
     DefaultProfile,
+    JimiProfile,
     SuntechProfile,
     detect_profile,
     reset_unknown_tracker_cache,
@@ -151,6 +152,109 @@ def test_suntech_odometro_prefere_m_asgn1_sobre_odometer():
 def test_suntech_odometro_none_quando_ausente():
     profile = SuntechProfile()
     assert profile.extract_odometer_meters({}) is None
+
+
+# ---------- JimiProfile (VL03 e similares) ----------
+#
+# Dados reais capturados do CVM0H79 (Conta 2, cliente Movi).
+# Detecção por params signature: `serial` + `gps_real_up` + `data_mode`.
+
+
+def test_jimi_matches_msg_com_signature_params():
+    """Mensagem GPS típica do VL03 deve ser detectada."""
+    profile = JimiProfile()
+    msg = {
+        "pos": {"y": -22.7, "x": -43.5, "s": 11},
+        "p": {
+            "mcc": 0,
+            "mnc": 0,
+            "lac": 0,
+            "cell_id": 0,
+            "acc": 1,
+            "data_mode": 2,
+            "gps_real_up": 0,
+            "serial": 723,
+        },
+    }
+    assert profile.matches(msg) is True
+
+
+def test_jimi_nao_matches_msg_sem_signature_completa():
+    """Faltando qualquer um dos 3 signature params, não é Jimi."""
+    profile = JimiProfile()
+    # Falta `data_mode`
+    assert profile.matches({"p": {"serial": 1, "gps_real_up": 0}}) is False
+    # Falta `serial`
+    assert profile.matches({"p": {"data_mode": 0, "gps_real_up": 0}}) is False
+    # Falta `gps_real_up`
+    assert profile.matches({"p": {"serial": 1, "data_mode": 0}}) is False
+
+
+def test_jimi_nao_matches_msg_suntech():
+    """Suntech (rep_type=STT) nunca deve ser confundido com Jimi."""
+    profile = JimiProfile()
+    msg = {"p": {"rep_type": "STT", "model": 197, "mode": 1, "s_asgn1": 28.0}}
+    assert profile.matches(msg) is False
+
+
+def test_jimi_nao_matches_msg_data_only():
+    """Msgs data-only do Jimi (alm1/alm2 ou voltage/gsm) caem em fallback,
+    não no JimiProfile.matches (não têm o signature)."""
+    profile = JimiProfile()
+    assert profile.matches({"p": {"alm1": 196, "sta1": 64}}) is False
+    assert profile.matches({"p": {"voltage": 6, "gsm": 4, "alarm": 0}}) is False
+
+
+def test_jimi_ignicao_em_acc():
+    profile = JimiProfile()
+    assert profile.known_params()["ignition"] == ["acc"]
+
+
+def test_jimi_vehicle_voltage_em_pwr_ext():
+    """Jimi usa o mesmo nome (`pwr_ext`) que o padrão Wialon."""
+    profile = JimiProfile()
+    assert profile.known_params()["vehicle_voltage"] == ["pwr_ext"]
+
+
+def test_jimi_internal_battery_em_voltage():
+    """`voltage` no Jimi é a bateria interna do tracker (~6V)."""
+    profile = JimiProfile()
+    assert profile.known_params()["internal_battery_voltage"] == ["voltage"]
+
+
+def test_jimi_sem_rpm_fuel_engine_hours():
+    """VL03 nessa config não reporta esses campos."""
+    profile = JimiProfile()
+    params = profile.known_params()
+    assert params["fuel_level"] == []
+    assert params["rpm"] == []
+    assert params["engine_hours"] == []
+
+
+def test_jimi_odometro_obd_mileage_se_presente():
+    profile = JimiProfile()
+    assert profile.extract_odometer_meters({"obd_mileage": 1234567}) == 1234567.0
+
+
+def test_jimi_odometro_none_quando_ausente():
+    """VL03 nessa config não reporta odômetro — fica N/D no CSV."""
+    profile = JimiProfile()
+    assert profile.extract_odometer_meters({"acc": 1, "serial": 1}) is None
+
+
+def test_detect_jimi_por_signature_params():
+    """detect_profile deve escolher JimiProfile para msg do VL03."""
+    msg = {
+        "pos": {"y": -22.7, "x": -43.5, "s": 11},
+        "p": {"acc": 1, "data_mode": 2, "gps_real_up": 0, "serial": 723},
+    }
+    assert isinstance(detect_profile(msg), JimiProfile)
+
+
+def test_detect_jimi_antes_de_default():
+    """Quando msg tem signature Jimi, NÃO deve cair no DefaultProfile."""
+    classes = [type(p) for p in DEFAULT_PROFILES]
+    assert classes.index(JimiProfile) < classes.index(DefaultProfile)
 
 
 # ---------- Warning de tracker desconhecido (#41) ----------

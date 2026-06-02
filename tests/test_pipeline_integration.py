@@ -259,3 +259,73 @@ def test_pipeline_msg_generica_continua_funcionando(pipeline):
     assert float(row["Tensão do Veículo (V)"]) == 12.6
     assert float(row["Bateria Interna (V)"]) == 4.0
     assert float(row["Odômetro (km)"]) == 50.0
+
+
+# ----- Cenários Jimi VL03 (CVM0H79 — frota Movi Conta 2) -----
+#
+# Mensagens reais capturadas via API. Jimi não tem `model`/`rep_type` óbvio
+# como Suntech — detecção é pela combinação `serial`+`gps_real_up`+`data_mode`.
+
+
+def test_pipeline_jimi_andando_ignicao_ligada(pipeline):
+    """Msg Jimi VL03 com `acc=1` → Ignição='Ligado'."""
+    msgs = [
+        {
+            "t": 1780414000,
+            "pos": {"y": -22.6799, "x": -43.4660, "s": 11},
+            "p": {
+                "mcc": 0,
+                "mnc": 0,
+                "lac": 0,
+                "cell_id": 0,
+                "acc": 1,
+                "data_mode": 2,
+                "gps_real_up": 0,
+                "serial": 723,
+            },
+        }
+    ]
+    df = _run_pipeline(pipeline, msgs)
+    row = df.iloc[0]
+    assert row["Ignição"] == "Ligado"
+    # Sem `pwr_ext` nessa msg, sem propagação anterior — fica N/D.
+    assert row["Tensão do Veículo (V)"] == "N/D"
+    # `voltage` não aparece nessa msg também.
+    assert row["Bateria Interna (V)"] == "N/D"
+    # VL03 não reporta odômetro nessa config.
+    assert row["Odômetro (km)"] == "N/D"
+
+
+def test_pipeline_jimi_acc_zero_desligado(pipeline):
+    """`acc=0` → Ignição='Desligado'."""
+    msgs = [
+        {
+            "t": 1780000000,
+            "pos": {"y": -22.7, "x": -43.5, "s": 0},
+            "p": {"acc": 0, "data_mode": 0, "gps_real_up": 0, "serial": 1},
+        }
+    ]
+    df = _run_pipeline(pipeline, msgs)
+    assert df.iloc[0]["Ignição"] == "Desligado"
+
+
+def test_pipeline_jimi_voltage_vai_para_bateria_interna(pipeline):
+    """`voltage` no Jimi é bateria interna do tracker — NÃO confundir com Suntech."""
+    msgs = [
+        {
+            "t": 1780000000,
+            "pos": {"y": -22.7, "x": -43.5, "s": 5},
+            "p": {
+                "acc": 1,
+                "data_mode": 0,
+                "gps_real_up": 0,
+                "serial": 1,
+                "voltage": 6,
+            },
+        }
+    ]
+    df = _run_pipeline(pipeline, msgs)
+    row = df.iloc[0]
+    assert float(row["Bateria Interna (V)"]) == 6.0
+    # NÃO deve vazar para tensão do veículo.
+    assert row["Tensão do Veículo (V)"] == "N/D"
