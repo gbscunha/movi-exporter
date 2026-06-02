@@ -55,6 +55,8 @@ Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nu
 - Commits em português, Conventional Commits: `tipo(escopo): descrição`
 - Tipos: `feat`, `fix`, `refactor`, `test`, `chore`, `docs`, `ci`
 - Escopos úteis: `wialon`, `gui`, `export`, `drive`, `ci`, `settings`
+- **Mensagem de commit = uma única frase curta** — sem corpo, sem trailers
+- **NUNCA incluir `Co-Authored-By` ou qualquer trailer** nas mensagens de commit
 - Nunca commitar direto na `main`
 - `git add` sempre com arquivos específicos — nunca `git add .`
 - Nunca commitar `.env`, `credentials.json`, `token.json`, `*.log`

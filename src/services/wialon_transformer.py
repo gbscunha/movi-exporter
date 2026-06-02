@@ -4,14 +4,23 @@ Transformador de mensagens Wialon para formato intermediário.
 Esta classe isola toda a lógica específica de transformação de dados
 da API Wialon, seguindo o Princípio da Responsabilidade Única (SRP).
 
-O Strategy Pattern é usado para resolver valores de sensores,
-permitindo adicionar novos tipos de sensores sem modificar a lógica
-principal (Open/Closed Principle - OCP).
+Estratégia em duas camadas:
+- **Sensor map** — sensores que o admin configurou no Wialon (com fórmula).
+  Caminho preferencial: o admin sabe melhor que param representa o quê.
+- **Tracker profiles** — fallback quando o sensor map não cobre. O perfil
+  certo é detectado por mensagem (model/rep_type) e fornece os nomes de
+  params nativos do fabricante. Adicionar suporte a tracker novo = criar
+  arquivo em `src/services/tracker_profiles/` sem mexer aqui.
 """
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from src.clients.protocols import TrackingClient
+from src.services.tracker_profiles import (
+    DEFAULT_PROFILES,
+    TrackerProfile,
+    detect_profile,
+)
 
 
 # Tipo para handlers de sensores: (raw_value, calculated_value) -> resolved_value
@@ -19,70 +28,62 @@ SensorHandler = Callable[[Any, Optional[float]], Any]
 
 
 class WialonTransformer:
-    """
-    Transforma mensagens brutas da Wialon para formato intermediário.
+    """Transforma mensagens brutas da Wialon para formato intermediário.
 
-    Responsabilidades:
-    - Extrair dados de posição das mensagens
-    - Resolver valores de sensores via sensor_map e fórmulas
-    - Buscar parâmetros conhecidos como fallback
-    - Montar dicionário transformado com campos padronizados
+    Esta é a única classe que conhece a estrutura "raw" da Wialon. Sai daqui
+    um dict com chaves estáveis usadas pelo resto da pipeline.
     """
 
-    # Parâmetros conhecidos para busca direta nas mensagens
-    # Mapeamento: campo normalizado -> lista de parâmetros possíveis na API
-    KNOWN_PARAMS: Dict[str, list[str]] = {
-        "ignition": ["in", "in1", "din1", "ignition", "ign"],
-        "fuel_level": ["fuel1", "fuel2", "fuel_level", "can_fuel_level", "fuel", "fls"],
-        "rpm": ["rpm", "can_rpm", "engine_rpm", "eng_rpm"],
-        "battery_voltage": [
-            "pwr_ext",
-            "pwr_int",
-            "voltage",
-            "battery",
-            "power",
-            "batt",
-        ],
-        "engine_hours": ["engine_hours", "eng_hours", "horimeter", "eh", "mh"],
-    }
-
-    # Strategy Pattern: handlers para cada tipo de sensor
-    # Cada handler recebe (raw_value, calculated_value) e retorna o valor resolvido
+    # Strategy Pattern: handlers para cada tipo de sensor.
+    # Cada handler recebe (raw_value, calculated_value) e retorna o valor resolvido.
     SENSOR_HANDLERS: Dict[str, SensorHandler] = {
         "ignition": lambda v, _: bool(v) if v is not None else None,
         "fuel_level": lambda v, calc: calc if calc is not None else v,
         "rpm": lambda v, calc: calc if calc is not None else v,
-        "battery_voltage": lambda v, calc: calc if calc is not None else v,
+        "vehicle_voltage": lambda v, calc: calc if calc is not None else v,
+        "internal_battery_voltage": lambda v, calc: calc if calc is not None else v,
         "engine_hours": lambda v, calc: calc if calc is not None else v,
     }
 
     # Campos de sensores que o transformer suporta
-    SENSOR_FIELDS = ["ignition", "fuel_level", "rpm", "battery_voltage", "engine_hours"]
+    SENSOR_FIELDS = [
+        "ignition",
+        "fuel_level",
+        "rpm",
+        "vehicle_voltage",
+        "internal_battery_voltage",
+        "engine_hours",
+    ]
 
-    def __init__(self, client: TrackingClient):
-        """
-        Inicializa o transformer.
+    def __init__(
+        self,
+        client: TrackingClient,
+        profiles: Optional[List[TrackerProfile]] = None,
+    ):
+        """Inicializa o transformer.
 
         Args:
             client: Cliente de rastreamento para aplicar fórmulas de sensores
+            profiles: Lista de perfis de tracker. Default = registro global
+                      (Suntech + DefaultProfile). Permitir override é útil
+                      em testes e em pipelines com clientes especiais.
         """
         self.client = client
+        self.profiles = profiles or DEFAULT_PROFILES
 
     def transform_message(
         self,
         message: Dict[str, Any],
         vehicle_id: int,
         sensor_map: Dict[str, Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """
-        Transforma mensagem bruta da Wialon para formato intermediário.
+    ) -> Optional[Dict[str, Any]]:
+        """Transforma mensagem bruta da Wialon para formato intermediário.
 
-        Esta é a única função que conhece a estrutura da Wialon.
-        O resultado é um dicionário com campos padronizados.
-
-        Busca dados de duas formas:
-        1. Via sensor_map (sensores configurados no Wialon, com fórmulas)
-        2. Via KNOWN_PARAMS (parâmetros conhecidos diretamente nas mensagens)
+        Busca dados em ordem de prioridade:
+        1. Via `sensor_map` (sensores configurados pelo admin no Wialon, com
+           fórmulas). Caminho preferencial.
+        2. Via perfil de tracker detectado (Suntech, default, ...) — usado
+           quando o admin não configurou sensor pra aquele campo.
 
         Args:
             message: Mensagem bruta da API Wialon
@@ -91,10 +92,16 @@ class WialonTransformer:
                         Formato: {param_base: {"name": str, "formula": str}}
 
         Returns:
-            Dicionário com dados transformados
+            Dicionário com dados transformados, ou `None` se a mensagem
+            for data-only (sem GPS).
         """
-        # Extrai posição
-        pos = message.get("pos", {}) or {}
+        # Extrai posição — mensagens data-only (sem GPS) não viram linha no export.
+        pos = message.get("pos") or {}
+        if not pos:
+            return None
+
+        # Detecta o perfil de tracker (uma vez por mensagem).
+        profile = detect_profile(message, self.profiles)
 
         # Extrai parâmetros (dados de sensores)
         params = message.get("p", {}) or {}
@@ -103,7 +110,11 @@ class WialonTransformer:
         sensor_values = self._resolve_sensors_from_map(params, sensor_map)
 
         # Aplica fallback de parâmetros conhecidos para valores não resolvidos
-        sensor_values = self._apply_param_fallbacks(params, sensor_values)
+        sensor_values = self._apply_param_fallbacks(params, sensor_values, profile)
+
+        # Odômetro vem em metros; converter para km.
+        odometer_m = profile.extract_odometer_meters(params)
+        odometer_km = round(odometer_m / 1000, 2) if odometer_m is not None else None
 
         # Monta registro transformado
         transformed = {
@@ -112,11 +123,12 @@ class WialonTransformer:
             "latitude": pos.get("y"),
             "longitude": pos.get("x"),
             "speed": pos.get("s") or pos.get("sp"),  # Velocidade
-            "odometer": None,  # Wialon não retorna odômetro direto nas mensagens
+            "odometer": odometer_km,
             "ignition": sensor_values.get("ignition"),
             "fuel_level": sensor_values.get("fuel_level"),
             "rpm": sensor_values.get("rpm"),
-            "battery_voltage": sensor_values.get("battery_voltage"),
+            "vehicle_voltage": sensor_values.get("vehicle_voltage"),
+            "internal_battery_voltage": sensor_values.get("internal_battery_voltage"),
             "engine_hours": sensor_values.get("engine_hours"),
             "driver": message.get("drv"),  # Motorista vinculado
             "address": None,  # Requer geocodificação reversa (não implementado)
@@ -130,8 +142,7 @@ class WialonTransformer:
         params: Dict[str, Any],
         sensor_map: Dict[str, Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """
-        Resolve valores de sensores usando o sensor_map.
+        """Resolve valores de sensores usando o sensor_map.
 
         Args:
             params: Parâmetros da mensagem Wialon
@@ -168,8 +179,7 @@ class WialonTransformer:
         raw_value: Any,
         calculated: Optional[float],
     ) -> Any:
-        """
-        Resolve o valor de um sensor usando o handler apropriado (Strategy Pattern).
+        """Resolve o valor de um sensor usando o handler apropriado.
 
         Args:
             sensor_name: Nome do sensor (ex: "ignition", "fuel_level")
@@ -191,46 +201,50 @@ class WialonTransformer:
         self,
         params: Dict[str, Any],
         sensor_values: Dict[str, Any],
+        profile: TrackerProfile,
     ) -> Dict[str, Any]:
-        """
-        Aplica fallback de parâmetros conhecidos para valores não resolvidos.
+        """Aplica fallback de parâmetros do perfil para valores não resolvidos.
 
         Args:
             params: Parâmetros da mensagem Wialon
             sensor_values: Valores já resolvidos via sensor_map
+            profile: Perfil de tracker detectado pra esta mensagem
 
         Returns:
             Dicionário com valores atualizados incluindo fallbacks
         """
+        known_params = profile.known_params()
+
         for field in self.SENSOR_FIELDS:
             if sensor_values.get(field) is not None:
                 continue
 
-            # Determina o converter baseado no tipo de sensor
+            # Ignição vira bool; demais campos passam pelo handler do sensor.
             converter = bool if field == "ignition" else None
-
-            sensor_values[field] = self._get_param_fallback(params, field, converter)
+            candidate_keys = known_params.get(field, [])
+            sensor_values[field] = self._get_param_fallback(
+                params, candidate_keys, converter
+            )
 
         return sensor_values
 
     def _get_param_fallback(
         self,
         params: Dict[str, Any],
-        param_type: str,
+        candidate_keys: List[str],
         converter: Optional[Callable] = None,
     ) -> Optional[Any]:
-        """
-        Busca valor de parâmetro como fallback quando não há sensor configurado.
+        """Busca o primeiro param presente em `candidate_keys`.
 
         Args:
             params: Dicionário de parâmetros da mensagem
-            param_type: Tipo de parâmetro (chave em KNOWN_PARAMS)
+            candidate_keys: Nomes de params a tentar, em ordem de preferência
             converter: Função opcional para converter o valor (ex: bool)
 
         Returns:
-            Valor encontrado ou None se não existir
+            Valor encontrado ou None se nenhum candidato existir
         """
-        for key in self.KNOWN_PARAMS.get(param_type, []):
+        for key in candidate_keys:
             if key in params and params[key] is not None:
                 value = params[key]
                 return converter(value) if converter else value

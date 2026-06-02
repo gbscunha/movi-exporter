@@ -171,12 +171,32 @@ class VehicleService:
 
             # Processa histórico em páginas
             all_records = []
+            last_pwr_ext: Optional[float] = None
 
-            for page in self.client.get_history(vehicle_id, time_from, time_to):
+            page_size = settings.WIALON_PAGE_SIZE or 1000
+            for page in self.client.get_history(
+                vehicle_id, time_from, time_to, page_size=page_size
+            ):
                 for message in page:
+                    params = message.get("p", {}) or {}
+                    if "pwr_ext" in params:
+                        last_pwr_ext = params["pwr_ext"]
+
                     transformed = self.transformer.transform_message(
                         message, vehicle_id, sensor_map
                     )
+                    if transformed is None:
+                        continue
+
+                    # Propaga pwr_ext mais recente para registros GPS sem leitura própria.
+                    # `pwr_ext` é tensão do veículo (12-28V). Bateria interna do tracker
+                    # (`pwr_int`, ~4V) vem em quase toda mensagem — sem necessidade de propagar.
+                    if (
+                        transformed.get("vehicle_voltage") is None
+                        and last_pwr_ext is not None
+                    ):
+                        transformed["vehicle_voltage"] = last_pwr_ext
+
                     all_records.append(transformed)
 
                 stats.total_messages += len(page)
@@ -202,6 +222,7 @@ class VehicleService:
         export_format: str = "csv",
         consolidated: bool = True,
         upload_to_drive: bool = False,
+        account_name: Optional[str] = None,
     ) -> ExportResult:
         """
         Exporta dados mensais de todos os veículos (ou lista específica).
@@ -213,15 +234,18 @@ class VehicleService:
             export_format: Formato de exportação ("csv", "xlsx", ou "both")
             consolidated: Se True, gera arquivo consolidado além dos individuais
             upload_to_drive: Se True, faz upload dos arquivos para o Google Drive
+            account_name: Se fornecido, exports vão para subpasta `YYYY-MM/<name>/`
+                          em vez de `YYYY-MM/` — útil quando há mais de uma conta
+                          Wialon configurada.
 
         Returns:
             Resultado da exportação com estatísticas
         """
         result = ExportResult(month=month, year=year)
 
-        logger.info(f"═══════════════════════════════════════════════════════════")
+        logger.info("═══════════════════════════════════════════════════════════")
         logger.info(f"Iniciando exportação mensal: {month:02d}/{year}")
-        logger.info(f"═══════════════════════════════════════════════════════════")
+        logger.info("═══════════════════════════════════════════════════════════")
 
         try:
             # Autentica
@@ -284,6 +308,7 @@ class VehicleService:
                             year,
                             vehicle_name=vehicle_name,
                             vehicle_plate=vehicle_plate,
+                            account_name=account_name,
                         )
                         if file_path:
                             result.exported_files.append(file_path)
@@ -296,6 +321,7 @@ class VehicleService:
                             year,
                             vehicle_name=vehicle_name,
                             vehicle_plate=vehicle_plate,
+                            account_name=account_name,
                         )
                         if file_path:
                             result.exported_files.append(file_path)
@@ -322,14 +348,22 @@ class VehicleService:
 
                 if export_format in ("csv", "both"):
                     file_path = self.exporter.export_consolidated_history_to_csv(
-                        all_history, month, year, vehicles_info=vehicles_info
+                        all_history,
+                        month,
+                        year,
+                        vehicles_info=vehicles_info,
+                        account_name=account_name,
                     )
                     if file_path:
                         result.exported_files.append(file_path)
 
                 if export_format in ("xlsx", "both"):
                     file_path = self.exporter.export_consolidated_history_to_excel(
-                        all_history, month, year, vehicles_info=vehicles_info
+                        all_history,
+                        month,
+                        year,
+                        vehicles_info=vehicles_info,
+                        account_name=account_name,
                     )
                     if file_path:
                         result.exported_files.append(file_path)
@@ -351,7 +385,7 @@ class VehicleService:
                     result.errors.append(error_msg)
 
             # Log final
-            logger.info(f"═══════════════════════════════════════════════════════════")
+            logger.info("═══════════════════════════════════════════════════════════")
             logger.info(f"Exportação concluída: {month:02d}/{year}")
             logger.info(
                 f"  Veículos processados: {result.processed_vehicles}/{result.total_vehicles}"
@@ -360,7 +394,7 @@ class VehicleService:
             logger.info(f"  Total de registros: {result.total_records}")
             logger.info(f"  Arquivos gerados: {len(result.exported_files)}")
             logger.info(f"  Taxa de sucesso: {result.success_rate:.1f}%")
-            logger.info(f"═══════════════════════════════════════════════════════════")
+            logger.info("═══════════════════════════════════════════════════════════")
 
             return result
 
@@ -374,8 +408,8 @@ class VehicleService:
             # Encerra sessão
             try:
                 self.client.logout()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Erro: {e}")
 
     def list_vehicles(self) -> List[Dict[str, Any]]:
         """

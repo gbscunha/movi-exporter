@@ -8,29 +8,13 @@ class DataNormalizer:
     Classe responsável por normalizar dados de diferentes sistemas de rastreamento
     para um formato padronizado.
 
-    Atualmente suporta System A, mas está preparada para expansão futura com
+    Atualmente suporta Wialon, mas está preparada para expansão futura com
     múltiplos sistemas.
     """
 
     def __init__(self):
         """Inicializa o normalizador com mapeamentos de campos por sistema."""
         self.system_mappings = {
-            "system_a": {
-                "vehicle_id": "veiculoId",
-                "vehicle_name": "nome",
-                "plate": "placa",
-                "timestamp": "dataHora",
-                "latitude": "latitude",
-                "longitude": "longitude",
-                "speed": "velocidade",
-                "odometer": "odometro",
-                "ignition": "ignicao",
-                "address": "endereco",
-                "fuel_level": "nivelCombustivel",
-                "rpm": "rpm",
-                "battery_voltage": "voltagemBateria",
-                "driver": "motorista",
-            },
             # Wialon - Sistema de rastreamento principal
             # Os dados já vêm pré-processados pelo WialonClient/VehicleService
             # Este mapeamento espera dados já transformados, não dados brutos da API
@@ -47,21 +31,22 @@ class DataNormalizer:
                 "address": "address",
                 "fuel_level": "fuel_level",
                 "rpm": "rpm",
-                "battery_voltage": "battery_voltage",
+                "vehicle_voltage": "vehicle_voltage",
+                "internal_battery_voltage": "internal_battery_voltage",
                 "engine_hours": "engine_hours",
                 "driver": "driver",
             },
         }
 
     def normalize_vehicle_list(
-        self, raw_data: List[Dict[str, Any]], system: str = "system_a"
+        self, raw_data: List[Dict[str, Any]], system: str = "wialon"
     ) -> List[Dict[str, Any]]:
         """
         Normaliza uma lista de veículos para o formato padronizado.
 
         Args:
             raw_data: Lista de veículos no formato original do sistema
-            system: Identificador do sistema de origem (padrão: "system_a")
+            system: Identificador do sistema de origem (padrão: "wialon")
 
         Returns:
             Lista de veículos no formato normalizado
@@ -82,14 +67,14 @@ class DataNormalizer:
         return normalized_vehicles
 
     def normalize_history(
-        self, raw_data: List[Dict[str, Any]], system: str = "system_a"
+        self, raw_data: List[Dict[str, Any]], system: str = "wialon"
     ) -> List[Dict[str, Any]]:
         """
         Normaliza dados históricos de um veículo para o formato padronizado.
 
         Args:
             raw_data: Lista de registros históricos no formato original do sistema
-            system: Identificador do sistema de origem (padrão: "system_a")
+            system: Identificador do sistema de origem (padrão: "wialon")
 
         Returns:
             Lista de registros históricos no formato normalizado
@@ -156,7 +141,14 @@ class DataNormalizer:
         if not mapping:
             raise ValueError(f"Sistema '{system}' não suportado")
 
-        # Formato padronizado de saída
+        # Formato padronizado de saída.
+        #
+        # Defaults: campos OBRIGATÓRIOS (latitude/longitude/speed/ignition)
+        # têm default neutro (0.0/False) — sempre aparecem com valor no CSV.
+        # Campos OPCIONAIS de sensor (odometer/address/fuel/rpm/etc) usam
+        # default=None para preservar "ausência de dado" — o exporter
+        # converte None → "N/D" depois (Fase 07). Usar 0.0/"" aqui mascara
+        # ausência como zero válido — regressão da Onda 1 descoberta no QA.
         normalized = {
             "vehicle_id": self._get_field(record, mapping.get("vehicle_id", "id")),
             "timestamp": self._normalize_timestamp(
@@ -172,13 +164,13 @@ class DataNormalizer:
                 record, mapping.get("speed", "speed"), default=0.0
             ),
             "odometer": self._get_field(
-                record, mapping.get("odometer", "odometer"), default=0.0
+                record, mapping.get("odometer", "odometer"), default=None
             ),
             "ignition": self._get_field(
                 record, mapping.get("ignition", "ignition"), default=False
             ),
             "address": self._get_field(
-                record, mapping.get("address", "address"), default=""
+                record, mapping.get("address", "address"), default=None
             ),
             "fuel_level": self._get_field(
                 record, mapping.get("fuel_level", "fuel_level"), default=None
@@ -186,8 +178,13 @@ class DataNormalizer:
             "rpm": self._get_field(
                 record, mapping.get("rpm", "rpm"), default=None
             ),
-            "battery_voltage": self._get_field(
-                record, mapping.get("battery_voltage", "battery_voltage"), default=None
+            "vehicle_voltage": self._get_field(
+                record, mapping.get("vehicle_voltage", "vehicle_voltage"), default=None
+            ),
+            "internal_battery_voltage": self._get_field(
+                record,
+                mapping.get("internal_battery_voltage", "internal_battery_voltage"),
+                default=None,
             ),
             "driver": self._get_field(
                 record, mapping.get("driver", "driver"), default=None

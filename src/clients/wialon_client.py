@@ -12,7 +12,6 @@ Este cliente implementa:
 
 import json
 import re
-import time
 from typing import Any, Dict, List, Optional, Iterator
 from datetime import datetime
 
@@ -68,6 +67,9 @@ class WialonClient:
         """
         self.token = token or settings.WIALON_TOKEN
         self.sid: Optional[str] = None
+        self.gis_sid: Optional[str] = None
+        self.gis_geocode_url: Optional[str] = None
+        self.username: str = ""
         self.base_url: str = self.BASE_URL
         self._session = requests.Session()
 
@@ -120,7 +122,22 @@ class WialonClient:
             elif "host" in data:
                 self.base_url = f"https://{data['host']}/wialon/ajax.html"
 
-            logger.success(f"Autenticação bem-sucedida. Session ID obtido.")
+            # Salva sessão e URL de geocodificação para uso futuro.
+            # URLs de GIS são dinâmicas — devem vir do login, nunca hardcoded.
+            self.gis_sid = data.get("gis_sid")
+            gis_geocode = data.get("gis_geocode", "")
+            if gis_geocode:
+                self.gis_geocode_url = f"{gis_geocode.rstrip('/')}/gis_geocode"
+
+            # Captura nome da conta — campo "au" pode vir como dict {"nm": "..."}
+            # ou como string direto, dependendo da versão da API.
+            user = data.get("au", {})
+            if isinstance(user, dict):
+                self.username = user.get("nm", "")
+            elif isinstance(user, str):
+                self.username = user
+
+            logger.success("Autenticação bem-sucedida. Session ID obtido.")
             logger.debug(f"Base URL: {self.base_url}")
 
             return data
@@ -397,7 +414,9 @@ class WialonClient:
         """
         name_lower = name.lower()
 
-        # Mapeamentos conhecidos
+        # Mapeamentos conhecidos. ORDEM IMPORTA: chaves mais específicas
+        # (ex: "bateria interna") precisam vir antes das mais genéricas
+        # ("bateria") porque "if key in name_lower" pega o primeiro match.
         mappings = {
             "ignicao": "ignition",
             "ignição": "ignition",
@@ -408,10 +427,34 @@ class WialonClient:
             "nivel combustivel": "fuel_level",
             "rpm": "rpm",
             "rotacao": "rpm",
-            "voltagem": "battery_voltage",
-            "bateria": "battery_voltage",
-            "battery": "battery_voltage",
-            "voltage": "battery_voltage",
+            # Bateria interna do tracker (~4V) — chaves mais específicas
+            # PRIMEIRO; "bateria"/"battery" sozinhas são ambíguas e ficam
+            # no fim. Cliente Movi nomeou "Bateria do dispositivo" no
+            # Wialon — esse case foi visto em produção.
+            "bateria do dispositivo": "internal_battery_voltage",
+            "bateria do rastreador": "internal_battery_voltage",
+            "bateria interna": "internal_battery_voltage",
+            "internal battery": "internal_battery_voltage",
+            "device battery": "internal_battery_voltage",
+            "tracker battery": "internal_battery_voltage",
+            "backup battery": "internal_battery_voltage",
+            # Tensão do veículo (~12-28V) — termos explícitos.
+            "bateria do veículo": "vehicle_voltage",
+            "bateria do veiculo": "vehicle_voltage",
+            "bateria externa": "vehicle_voltage",  # Movi/CVM0H79 nomeou assim
+            "tensão do veículo": "vehicle_voltage",
+            "tensao do veiculo": "vehicle_voltage",
+            "vehicle voltage": "vehicle_voltage",
+            "vehicle battery": "vehicle_voltage",
+            "external battery": "vehicle_voltage",
+            "tensão externa": "vehicle_voltage",
+            "tensao externa": "vehicle_voltage",
+            # Termos ambíguos — fallback para tensão do veículo. Bateria
+            # interna SEMPRE é nomeada explicitamente pelo admin (acima).
+            "voltagem": "vehicle_voltage",
+            "bateria": "vehicle_voltage",
+            "battery": "vehicle_voltage",
+            "voltage": "vehicle_voltage",
             "horas motor": "engine_hours",
             "engine hours": "engine_hours",
             "horimetro": "engine_hours",
@@ -466,7 +509,7 @@ class WialonClient:
                 "timeFrom": last_time,
                 "timeTo": time_to,
                 "flags": 1,  # Mensagens com posição
-                "flagsMask": 65281,
+                "flagsMask": 0,  # captura todos os tipos de mensagem (inclui data-only com pwr_ext)
                 "loadCount": page_size,
             }
 
@@ -511,27 +554,6 @@ class WialonClient:
         logger.success(
             f"Veículo {vehicle_id}: {total_messages} mensagens em {page_num} páginas"
         )
-
-    def get_full_history(
-        self, vehicle_id: int, time_from: int, time_to: int
-    ) -> List[Dict[str, Any]]:
-        """
-        Busca histórico completo (conveniente para volumes menores).
-
-        ATENÇÃO: Para grandes volumes, use get_history() com generator.
-
-        Args:
-            vehicle_id: ID do veículo
-            time_from: Timestamp Unix início
-            time_to: Timestamp Unix fim
-
-        Returns:
-            Lista completa de mensagens
-        """
-        all_messages = []
-        for page in self.get_history(vehicle_id, time_from, time_to):
-            all_messages.extend(page)
-        return all_messages
 
     def logout(self) -> bool:
         """

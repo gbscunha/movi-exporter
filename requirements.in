@@ -1,0 +1,16 @@
+# Origem das dependências (sem pin).
+# Gere o requirements.txt pinado com:
+#     pip install pip-tools
+#     pip-compile requirements.in
+
+requests
+python-dotenv
+loguru
+pandas
+openpyxl
+google-auth
+google-auth-oauthlib
+google-api-python-client
+customtkinter
+pyinstaller
+packaging

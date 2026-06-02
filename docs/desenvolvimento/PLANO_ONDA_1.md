@@ -10,21 +10,24 @@
 
 | # | Fase | Grupo | TDD | Esforço | Status | Arquivos principais |
 |---|------|-------|-----|---------|--------|---------------------|
-| 01 | Limpeza de código morto | C | — | S | ⬜ Todo | `system_a_client.py`, `normalizer.py`, `config.py`, `.env` |
-| 02 | Bugs rápidos da GUI | B | 🔴 parcial | XS | ⬜ Todo | `export.py`, `home.py`, `vehicle_service.py` |
-| 03 | Odômetro — ler do param bruto | A | 🔴 sim | XS | ⬜ Todo | `wialon_transformer.py` |
-| 04 | `pwr_ext` — flagsMask + propagação | A | 🔴 sim | S | ⬜ Todo | `wialon_client.py`, `vehicle_service.py`, `wialon_transformer.py` |
-| 05 | Bateria — remover fallback interno | A | 🔴 sim | XS | ⬜ Todo | `wialon_transformer.py` |
-| 06 | Geocodificação — gis_sid dinâmico | A | — | XS | ⬜ Todo | `wialon_client.py` |
-| 07 | Export — valores `N/D` | A | 🔴 sim | XS | ⬜ Todo | `exporter.py` |
-| 08 | `env_writer.py` — novo módulo | D | 🔴 sim | S | ⬜ Todo | `src/core/env_writer.py` ← NOVO |
-| 09 | `config.py` — reload + TOKEN_2 | D+E | 🔴 sim | XS | ⬜ Todo | `config.py` |
-| 10 | F1 — Token Wialon pela GUI | D | — | M | ⬜ Todo | `settings.py` |
-| 11 | F2 — Segunda conta: capturar username | E | 🔴 sim | XS | ⬜ Todo | `wialon_client.py` |
-| 12 | F2 — Segunda conta: Settings + Export | E | — | M | ⬜ Todo | `settings.py`, `export.py`, `exporter.py` |
-| 13 | UX — Mês por nome + Abrir pasta + Onboarding | F | — | S | ⬜ Todo | `export.py`, `app.py` |
-| 14 | Testes — reescrever com pytest | G | — | S | ⬜ Todo | `tests/`, `pytest.ini` |
-| 15 | CI — workflows + version sync + deps | G | — | S | ⬜ Todo | `ci.yml`, `build.yml`, `spec`, `requirements` |
+| 01 | Limpeza de código morto | C | — | S | ✅ Concluído | `system_a_client.py`, `normalizer.py`, `config.py`, `.env` |
+| 02 | Bugs rápidos da GUI | B | 🔴 parcial | XS | ✅ Concluído | `export.py`, `home.py`, `vehicle_service.py` |
+| 03 | Odômetro — ler do param bruto | A | 🔴 sim | XS | ✅ Concluído | `wialon_transformer.py` |
+| 04 | `pwr_ext` — flagsMask + propagação | A | 🔴 sim | S | ✅ Concluído | `wialon_client.py`, `vehicle_service.py`, `wialon_transformer.py` |
+| 05 | Bateria — remover fallback interno | A | 🔴 sim | XS | ✅ Concluído | `wialon_transformer.py` |
+| 06 | Geocodificação — gis_sid dinâmico | A | — | XS | ✅ Concluído | `wialon_client.py` |
+| 07 | Export — valores `N/D` | A | 🔴 sim | XS | ✅ Concluído | `exporter.py` |
+| 08 | `env_writer.py` — novo módulo | D | 🔴 sim | S | ✅ Concluído | `src/core/env_writer.py` ← NOVO |
+| 09 | `config.py` — reload + TOKEN_2 | D+E | 🔴 sim | XS | ✅ Concluído | `config.py` |
+| 10 | F1 — Token Wialon pela GUI | D | — | M | ✅ Concluído | `settings.py` |
+| 11 | F2 — Segunda conta: capturar username | E | 🔴 sim | XS | ✅ Concluído | `wialon_client.py` |
+| 12 | F2 — Segunda conta: Settings + Export | E | — | M | ✅ Concluído | `settings.py`, `export.py`, `exporter.py` |
+| 13 | UX — Mês por nome + Abrir pasta + Onboarding | F | — | S | ✅ Concluído | `export.py`, `app.py` |
+| 14 | Testes — reescrever com pytest | G | — | S | ✅ Concluído | `tests/`, `pytest.ini` |
+| 15 | CI — workflows + version sync + deps | G | — | S | ✅ Concluído | `ci.yml`, `build.yml`, `spec`, `requirements` |
+| 16 | Correção de regressões + 2 colunas de tensão | H | 🔴 sim | M | ✅ Concluído | `wialon_transformer.py`, `vehicle_service.py`, `normalizer.py`, `wialon_client.py`, `exporter.py`, testes + integração |
+| 17 | Perfis de tracker (Suntech ST380) | I | 🔴 sim | M | ✅ Concluído | `src/services/tracker_profiles/` ← NOVO, `wialon_transformer.py`, `wialon_client.py`, testes + integração |
+| 18 | Perfil Jimi VL03 + warning tracker desconhecido | I | 🔴 sim | S | ✅ Concluído | `tracker_profiles/jimi.py` ← NOVO, `registry.py`, `_normalize_sensor_name`, testes |
 
 **Legenda status:** ⬜ Todo · 🔄 Em andamento · ✅ Concluído · ⏸️ Bloqueado
 **Legenda TDD:** 🔴 sim = escrever teste antes de implementar · 🔴 parcial = só nos bugs com lógica testável · — = não aplicável
@@ -744,3 +747,176 @@ packaging
 | 13 | — | — | `export.py`, `app.py` | — |
 | 14 | — | `pytest.ini` | `tests/test_normalizer.py`, `tests/test_exporter.py` | — |
 | 15 | — | `ci.yml`, `requirements.in` | `build.yml`, `movi_exporter.spec`, `requirements.txt` | — |
+
+---
+
+## Fase 16 — Correção de regressões + 2 colunas de tensão
+
+**Descoberta:** durante o QA manual do CSV exportado (após Fase 15), 3 problemas reais foram detectados que invalidavam parcialmente as fases 03, 05 e 07:
+
+1. **#33** — `pwr_int` ainda no fallback de `battery_voltage`. Fase 05 removeu `voltage` e `battery` mas deixou `pwr_int` — bateria interna do tracker (~4V) seguia poluindo a coluna do veículo
+2. **#34** — Defaults do `DataNormalizer` (`0.0`/`""`) mascaravam o `None` que o transformer retornava, fazendo o `_fill_nd` do exporter não aplicar N/D
+3. **Sentido das colunas** — uma única coluna "Tensão da Bateria" ambiguamente recebia ora tensão do veículo ora bateria do tracker
+
+**Por que os testes unitários da Onda 1 não pegaram:**
+Cada camada (transformer, normalizer, exporter) tinha teste isolado. Nenhum teste cobria a pipeline end-to-end. Bugs ficaram entre as camadas.
+
+**O que esta fase entrega:**
+
+- **Separação em 2 colunas**:
+  - `Tensão do Veículo (V)` ← `pwr_ext` (12-28V), sem fallback nenhum
+  - `Bateria Interna (V)` ← `pwr_int` / `voltage` / `battery` (~4V)
+- **Defaults do normalizer corrigidos**: `odometer` e `address` agora têm `default=None` (eram `0.0` e `""`)
+- **`_fill_nd` defensivo**: agora cobre `None` E string vazia
+- **Odômetro robusto**: lê com `is not None` para preservar 0 km legítimo (veículo novo)
+- **Sensor name mapping atualizado**: nomes específicos como "Bateria Interna" mapeiam pra `internal_battery_voltage`; termos ambíguos (`bateria`, `voltage`) seguem para `vehicle_voltage`
+- **Testes**:
+  - `test_wialon_transformer.py` reescrito com 11 testes cobrindo ambas as colunas + edge case do odômetro=0
+  - `test_normalizer.py` cobre novos defaults `None`
+  - `test_exporter.py` e `test_exporter_nd.py` validam as novas colunas no CSV
+  - `tests/test_pipeline_integration.py` ← NOVO, 7 testes E2E que teriam pego os bugs
+
+**Arquivos modificados:**
+
+- `src/services/wialon_transformer.py` — KNOWN_PARAMS / SENSOR_FIELDS / SENSOR_HANDLERS divididos
+- `src/services/vehicle_service.py` — propagação usa `vehicle_voltage`
+- `src/services/normalizer.py` — defaults `None` em opcionais, novo mapping
+- `src/clients/wialon_client.py` — `_normalize_sensor_name` com mapeamentos específicos
+- `src/services/exporter.py` — `COLUMN_TRANSLATIONS`, `OPTIONAL_SENSOR_COLS`, `_fill_nd`, 4 funções de export
+- `tests/test_wialon_transformer.py` — 11 testes
+- `tests/test_normalizer.py` — assertions atualizadas
+- `tests/test_exporter.py` — colunas atualizadas
+- `tests/test_exporter_nd.py` — colunas atualizadas
+- `tests/test_vehicle_service.py` — assertion atualizada
+- `tests/test_pipeline_integration.py` ← NOVO
+
+**Commit:** `fix: split vehicle voltage from tracker battery and fix normalizer defaults`
+
+**Lição aprendida:**
+Toda fase que modifica dados do export DEVE incluir um teste de integração transformer→normalizer→exporter. Adicionar à checklist do `.claude/skills/xp-cycle.md` na próxima retrospectiva.
+
+---
+
+## Fase 17 — Perfis de tracker (Suntech ST380)
+
+**Descoberta:** depois da Fase 16, o QA do CSV revelou que o transformer ainda devolvia `N/D` em colunas críticas para a frota real da Movi (Suntech ST380, model 197). Causa: o Suntech NÃO usa os params padrão Wialon — `mode` (não `in`/`in1`), `m_asgn1` (não `odometer`), `s_asgn1`/`s_asgn2` (não `pwr_ext`/`pwr_int`).
+
+**Por que não foi um fix inline:**
+
+Empilhar `mode`/`m_asgn1`/`s_asgn1` direto em `KNOWN_PARAMS` funcionaria para Suntech, mas:
+- `mode` pode ter outro significado em outros trackers (criando bugs silenciosos)
+- `s_asgn1` é um slot configurável — significado varia por firmware/cliente
+- Conforme o app crescer para outros clientes, listas únicas viram fonte de erros sutis
+
+**Solução arquitetural — perfis isolados por fabricante:**
+
+Cada perfil isola o dialeto de um fabricante. Detecção por mensagem via `model`/`rep_type`. Default profile como fallback genérico.
+
+```
+src/services/tracker_profiles/
+├── base.py        # Protocol TrackerProfile (interface)
+├── default.py     # Comportamento Wialon-genérico (fallback)
+├── suntech.py     # Suntech ST380+ (model 197, rep_type=STT)
+└── registry.py    # detect_profile(message) escolhe o perfil
+```
+
+**Como adicionar suporte a novo tracker (Queclink, Teltonika, etc):** criar `queclink.py` com `matches()`/`known_params()`/`extract_odometer_meters()` + adicionar instância em `registry.py`. Zero mudança no `WialonTransformer`.
+
+**Bug bonus corrigido (#37 do backlog):**
+
+`WialonClient._normalize_sensor_name` confundia o sensor "Bateria do dispositivo" (configurado pelo admin do cliente no Wialon) mapeando para `vehicle_voltage` porque pegava "bateria" antes de chegar em "dispositivo". Reorganizada a ordem dos mappings — chaves específicas (`bateria do dispositivo`, `bateria do rastreador`, `device battery`, `tracker battery`) ANTES das genéricas.
+
+**Validação em produção real:**
+
+CLI `python -m src.cli.main export --month 4 --year 2026 --vehicles 401987846 --no-consolidated` no VTR05 (Conta 1, frota Movi).
+
+| Coluna | Antes da Fase 17 | Depois |
+|--------|------------------|--------|
+| Ignição | "Desligado" em todas as 21.813 linhas | 20.382 Ligado / 1.431 Desligado |
+| Tensão do Veículo (V) | N/D | 25V parado / 28V rodando |
+| Bateria Interna (V) | (vazava na coluna acima) | 4.1V estável |
+| Odômetro (km) | N/D | 240.099 → 248.090 km (~8.000 km no mês) |
+
+**Arquivos:**
+
+Novos:
+- `src/services/tracker_profiles/__init__.py`
+- `src/services/tracker_profiles/base.py` (Protocol)
+- `src/services/tracker_profiles/default.py`
+- `src/services/tracker_profiles/suntech.py`
+- `src/services/tracker_profiles/registry.py`
+- `tests/test_tracker_profiles.py` (21 testes)
+
+Modificados:
+- `src/services/wialon_transformer.py` — delega aos perfis (KNOWN_PARAMS removido)
+- `src/clients/wialon_client.py` — `_normalize_sensor_name` com mappings específicos
+- `tests/test_wialon_client.py` — testes do mapping de sensor names
+- `tests/test_pipeline_integration.py` — 4 cenários Suntech E2E
+
+**Testes:** 90 passando (76 + 14 novos). Ruff clean.
+
+**Backlog Onda 2 — itens fechados:** #37 (bateria do dispositivo), #38 (mode ignição), #39 (m_asgn1 odômetro), #40 (perfis de tracker).
+
+**Commit:** `feat: tracker profiles architecture with Suntech ST380 support`
+
+---
+
+## Fase 18 — Perfil Jimi VL03 + warning tracker desconhecido
+
+**Contexto:** cliente Movi confirmou frota mista — além dos Suntech (cobertos na Fase 17), tem também Jimi VL03 (OBD-II plug-and-play, mesma família da Concox). Matheus do cliente identificou veículo CVM0H79 como Jimi VL03 na Conta 2.
+
+**Captura de dados reais (CVM0H79, Conta 2, últimos 7 dias):**
+
+430 mensagens analisadas. Params Jimi VL03:
+
+| Conceito | Param | Onde |
+|----------|-------|------|
+| Ignição | `acc` (0/1) | toda msg GPS |
+| Tensão do veículo | `pwr_ext` (~14V) | msg data-only |
+| Bateria interna | `voltage` (~6V) | msg data-only |
+| Signature (detecção) | `serial` + `gps_real_up` + `data_mode` | toda msg GPS |
+| Odômetro | (ausente) | VL03 nessa config não reporta |
+
+**Detecção:** combinação de 3 params (`serial`, `gps_real_up`, `data_mode`) presente em **todas** as 259 msgs GPS. Nunca vista em outros fabricantes — assinatura forte do protocolo Jimi.
+
+**Item bônus (#41 do backlog Onda 2):** sistema de warning para tracker desconhecido. Quando uma mensagem cai no DefaultProfile e tem `model` ou `rep_type` populados (sinal de tracker identificável mas sem perfil próprio), `app.log` recebe um WARNING uma vez por combinação `(model, rep_type)`. Evita que problema tipo "CSV com N/D silenciosamente" passe despercebido como aconteceu com Suntech.
+
+**Bug bonus corrigido:** `_normalize_sensor_name` agora reconhece "Bateria Externa" (e "external battery") explicitamente — no veículo CVM0H79 o admin Wialon usou esse nome para `pwr_ext`. Antes funcionava por acidente (caía no fallback "bateria"); agora é intencional.
+
+**Validação em produção real:**
+
+CVM0H79 (Jimi VL03), Conta 2, últimos 7 dias — 258 linhas:
+
+| Coluna | Resultado |
+|--------|-----------|
+| Ignição | 246 Ligado / 12 Desligado |
+| Tensão do Veículo (V) | 14.26–14.38V (rodando), 12.96V (parado) |
+| Bateria Interna (V) | N/D (msgs data-only que reportariam não viram linha) |
+| Odômetro (km) | N/D (VL03 nessa config não reporta — esperado) |
+
+**Arquivos:**
+
+Novos:
+- `src/services/tracker_profiles/jimi.py` — JimiProfile baseado em dados reais
+- `tests/test_tracker_profiles.py` — 12 testes novos (Jimi) + 5 do warning
+
+Modificados:
+- `src/services/tracker_profiles/registry.py` — registra Jimi antes do default + sistema de warning
+- `src/services/tracker_profiles/__init__.py` — exporta JimiProfile e reset_unknown_tracker_cache
+- `src/clients/wialon_client.py` — adiciona "bateria externa" / "external battery" no mapping
+- `tests/test_wialon_client.py` — teste do novo mapping
+- `tests/test_pipeline_integration.py` — 3 cenários E2E Jimi (ignição ligada, desligada, voltage→bateria interna)
+
+**Testes:** 111 passando (95 antes + 16 novos). Ruff clean.
+
+**Backlog Onda 2 — itens fechados:** #41 (warning tracker desconhecido), #42 (perfil Jimi VL03).
+
+**Commit:** `feat: add Jimi VL03 profile based on real CVM0H79 message capture`
+
+**Como adicionar suporte a outro tracker no futuro:**
+
+1. Capturar 1 mensagem real via `c.get_history(...)` e inspecionar `params`
+2. Identificar assinatura única (params que outros fabricantes não têm)
+3. Criar `src/services/tracker_profiles/<nome>.py` implementando `TrackerProfile`
+4. Adicionar instância em `DEFAULT_PROFILES` (antes do `DefaultProfile`)
+5. Testes unitários + 1 E2E

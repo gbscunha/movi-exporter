@@ -9,7 +9,6 @@ Este módulo fornece funcionalidades para:
 - Gerar nomenclatura padronizada de arquivos
 """
 
-import os
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -30,6 +29,35 @@ def _format_ignition(value: Any) -> Optional[str]:
     if value is None:
         return None
     return "Ligado" if value else "Desligado"
+
+
+# Colunas de sensor que podem legitimamente não ter dado para uma mensagem
+# específica. Para essas, substituímos None/"" por "N/D" no export para que o
+# cliente veja explicitamente "sem dado" em vez de célula vazia.
+# Latitude/longitude/velocidade/ignição/timestamp continuam obrigatórios.
+OPTIONAL_SENSOR_COLS = [
+    "odometer",
+    "fuel_level",
+    "rpm",
+    "vehicle_voltage",
+    "internal_battery_voltage",
+    "engine_hours",
+    "driver",
+    "address",
+]
+
+
+def _fill_nd(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Substitui None/string vazia por "N/D" nas colunas de sensor opcionais.
+
+    Cuidado: NÃO converter 0/0.0 — são leituras legítimas (odômetro de carro
+    novo, RPM com motor desligado etc).
+    """
+    for col in OPTIONAL_SENSOR_COLS:
+        value = record.get(col)
+        if value is None or value == "":
+            record[col] = "N/D"
+    return record
 
 
 # Mapeamento de tradução de colunas (inglês → português)
@@ -53,7 +81,9 @@ COLUMN_TRANSLATIONS = {
     "address": "Localização",
     "fuel_level": "Nível de Combustível (%)",
     "rpm": "RPM",
-    "battery_voltage": "Tensão da Bateria (V)",
+    # Duas medidas de tensão distintas — NÃO unificar.
+    "vehicle_voltage": "Tensão do Veículo (V)",  # pwr_ext, ~12-28V
+    "internal_battery_voltage": "Bateria Interna (V)",  # pwr_int, ~4V
     "engine_hours": "Horas de Motor",
     "driver": "Motorista",
 }
@@ -84,18 +114,29 @@ class DataExporter:
         """Garante que o diretório base de exportação existe."""
         self.base_export_dir.mkdir(parents=True, exist_ok=True)
 
-    def _create_month_directory(self, month: int, year: int) -> Path:
+    def _create_month_directory(
+        self,
+        month: int,
+        year: int,
+        account_name: Optional[str] = None,
+    ) -> Path:
         """
         Cria e retorna o diretório para um mês/ano específico.
 
         Args:
             month: Mês (1-12)
             year: Ano (ex: 2024)
+            account_name: Nome da conta — se fornecido, gera subpasta
+                          dentro de `YYYY-MM/` para isolar exports de cada conta
 
         Returns:
-            Path do diretório criado (ex: exports/2024-10/)
+            Path do diretório criado.
+            Sem account_name: `exports/2024-10/`
+            Com account_name: `exports/2024-10/Conta 1/`
         """
         month_dir = self.base_export_dir / f"{year}-{month:02d}"
+        if account_name:
+            month_dir = month_dir / account_name
         month_dir.mkdir(parents=True, exist_ok=True)
         return month_dir
 
@@ -176,6 +217,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         month: Optional[int] = None,
         year: Optional[int] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta lista de veículos para arquivo CSV.
@@ -217,7 +259,7 @@ class DataExporter:
                 file_path = Path(output_path)
             else:
                 if month and year:
-                    month_dir = self._create_month_directory(month, year)
+                    month_dir = self._create_month_directory(month, year, account_name)
                 else:
                     month_dir = self.base_export_dir
                 filename = self._generate_filename("Veículos", extension="csv")
@@ -245,6 +287,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         month: Optional[int] = None,
         year: Optional[int] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta lista de veículos para arquivo Excel.
@@ -286,7 +329,7 @@ class DataExporter:
                 file_path = Path(output_path)
             else:
                 if month and year:
-                    month_dir = self._create_month_directory(month, year)
+                    month_dir = self._create_month_directory(month, year, account_name)
                 else:
                     month_dir = self.base_export_dir
                 filename = self._generate_filename("Veículos", extension="xlsx")
@@ -317,6 +360,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         vehicle_name: Optional[str] = None,
         vehicle_plate: Optional[str] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico de um veículo para arquivo CSV.
@@ -358,11 +402,12 @@ class DataExporter:
                     "address": record.get("address"),
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
-                    "battery_voltage": record.get("battery_voltage"),
+                    "vehicle_voltage": record.get("vehicle_voltage"),
+                    "internal_battery_voltage": record.get("internal_battery_voltage"),
                     "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
-                clean_history.append(clean_record)
+                clean_history.append(_fill_nd(clean_record))
 
             # Cria DataFrame
             df = pd.DataFrame(clean_history)
@@ -374,7 +419,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 # Usa placa para nome do arquivo, ou ID como fallback
                 plate_for_filename = vehicle_plate or vehicle_id
                 filename = self._generate_filename(
@@ -412,6 +457,7 @@ class DataExporter:
         output_path: Optional[str] = None,
         vehicle_name: Optional[str] = None,
         vehicle_plate: Optional[str] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico de um veículo para arquivo Excel.
@@ -453,11 +499,12 @@ class DataExporter:
                     "address": record.get("address"),
                     "fuel_level": record.get("fuel_level"),
                     "rpm": record.get("rpm"),
-                    "battery_voltage": record.get("battery_voltage"),
+                    "vehicle_voltage": record.get("vehicle_voltage"),
+                    "internal_battery_voltage": record.get("internal_battery_voltage"),
                     "engine_hours": record.get("engine_hours"),
                     "driver": record.get("driver"),
                 }
-                clean_history.append(clean_record)
+                clean_history.append(_fill_nd(clean_record))
 
             # Cria DataFrame
             df = pd.DataFrame(clean_history)
@@ -469,7 +516,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 # Usa placa para nome do arquivo, ou ID como fallback
                 plate_for_filename = vehicle_plate or vehicle_id
                 filename = self._generate_filename(
@@ -505,6 +552,7 @@ class DataExporter:
         year: int,
         output_path: Optional[str] = None,
         vehicles_info: Optional[Dict[str, Dict[str, str]]] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico consolidado de todos os veículos para um único arquivo CSV.
@@ -550,11 +598,12 @@ class DataExporter:
                         "address": record.get("address"),
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
-                        "battery_voltage": record.get("battery_voltage"),
+                        "vehicle_voltage": record.get("vehicle_voltage"),
+                        "internal_battery_voltage": record.get("internal_battery_voltage"),
                         "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
-                    all_records.append(clean_record)
+                    all_records.append(_fill_nd(clean_record))
 
             if not all_records:
                 logger.warning("Nenhum registro encontrado no histórico consolidado")
@@ -573,7 +622,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 filename = self._generate_filename(
                     "Histórico_Consolidado", extension="csv"
                 )
@@ -605,6 +654,7 @@ class DataExporter:
         year: int,
         output_path: Optional[str] = None,
         vehicles_info: Optional[Dict[str, Dict[str, str]]] = None,
+        account_name: Optional[str] = None,
     ) -> str:
         """
         Exporta histórico consolidado de todos os veículos para um único arquivo Excel.
@@ -650,11 +700,12 @@ class DataExporter:
                         "address": record.get("address"),
                         "fuel_level": record.get("fuel_level"),
                         "rpm": record.get("rpm"),
-                        "battery_voltage": record.get("battery_voltage"),
+                        "vehicle_voltage": record.get("vehicle_voltage"),
+                        "internal_battery_voltage": record.get("internal_battery_voltage"),
                         "engine_hours": record.get("engine_hours"),
                         "driver": record.get("driver"),
                     }
-                    all_records.append(clean_record)
+                    all_records.append(_fill_nd(clean_record))
 
             if not all_records:
                 logger.warning("Nenhum registro encontrado no histórico consolidado")
@@ -673,7 +724,7 @@ class DataExporter:
             if output_path:
                 file_path = Path(output_path)
             else:
-                month_dir = self._create_month_directory(month, year)
+                month_dir = self._create_month_directory(month, year, account_name)
                 filename = self._generate_filename(
                     "Histórico_Consolidado", extension="xlsx"
                 )

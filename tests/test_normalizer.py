@@ -1,209 +1,131 @@
-"""
-Script de exemplo para testar o DataNormalizer
-"""
+"""Testes do DataNormalizer (mapeamento Wialon)."""
 
-import sys
+from datetime import datetime
 
-sys.path.insert(0, "/Users/gbscunha/dev/movi_exporter_app/src")
+import pytest
 
-from services.normalizer import DataNormalizer
-from core.logger import logger
+from src.services.normalizer import DataNormalizer
 
 
-def test_vehicle_normalization():
-    """Testa normalização de lista de veículos"""
-    logger.info("=" * 60)
-    logger.info("TESTE 1: Normalização de Veículos")
-    logger.info("=" * 60)
-
-    # Dados simulados do System A
-    raw_vehicles = [
-        {"veiculoId": "VEI001", "nome": "Caminhão Mercedes", "placa": "ABC-1234"},
-        {"veiculoId": "VEI002", "nome": "Van Sprinter", "placa": "XYZ-5678"},
-        {"veiculoId": "VEI003", "nome": "Carro Passeio", "placa": "DEF-9012"},
-    ]
-
-    normalizer = DataNormalizer()
-    normalized = normalizer.normalize_vehicle_list(raw_vehicles, system="system_a")
-
-    logger.info(f"\nVeículos normalizados: {len(normalized)}")
-    for vehicle in normalized:
-        logger.info(
-            f"  - ID: {vehicle['id']}, Nome: {vehicle['name']}, Placa: {vehicle['plate']}"
-        )
-
-    return normalized
+@pytest.fixture
+def normalizer():
+    return DataNormalizer()
 
 
-def test_history_normalization():
-    """Testa normalização de dados históricos"""
-    logger.info("\n" + "=" * 60)
-    logger.info("TESTE 2: Normalização de Histórico")
-    logger.info("=" * 60)
+def test_sistemas_suportados_inclui_wialon(normalizer):
+    assert "wialon" in normalizer.get_supported_systems()
 
-    # Dados simulados do System A (incluindo novos campos do cliente)
-    raw_history = [
+
+def test_normalize_vehicle_list_preserva_campos_basicos(normalizer):
+    raw = [{"vehicle_id": 1, "nm": "Caminhão A", "plate": "ABC-1234"}]
+    out = normalizer.normalize_vehicle_list(raw)
+
+    assert len(out) == 1
+    v = out[0]
+    assert v["id"] == 1
+    assert v["name"] == "Caminhão A"
+    assert v["plate"] == "ABC-1234"
+    assert v["system_source"] == "wialon"
+    assert v["raw_data"] == raw[0]
+
+
+def test_normalize_history_preserva_campos_completos(normalizer):
+    raw = [
         {
-            "veiculoId": "VEI001",
-            "dataHora": "2024-01-15T08:30:00",
-            "latitude": -23.5505,
-            "longitude": -46.6333,
-            "velocidade": 45.5,
-            "odometro": 15000.0,
-            "ignicao": True,
-            "endereco": "Av. Paulista, 1000 - São Paulo",
-            "nivelCombustivel": 31.27,
-            "rpm": 1198.0,
-            "voltagemBateria": 12.47,
-            "motorista": "João Silva",
-        },
-        {
-            "veiculoId": "VEI001",
-            "dataHora": "2024-01-15T09:00:00",
-            "latitude": -23.5520,
-            "longitude": -46.6350,
-            "velocidade": 60.0,
-            "odometro": 15025.5,
-            "ignicao": True,
-            "endereco": "Av. Brigadeiro Luís Antônio - São Paulo",
-            "nivelCombustivel": 30.84,
-            "rpm": 2148.0,
-            "voltagemBateria": 13.38,
-            "motorista": "João Silva",
-        },
-        {
-            "veiculoId": "VEI001",
-            "dataHora": "2024-01-15T09:30:00",
-            "latitude": -23.5535,
-            "longitude": -46.6370,
-            "velocidade": 0.0,
-            "odometro": 15050.0,
-            "ignicao": False,
-            "endereco": "Rua Augusta, 500 - São Paulo",
-            "nivelCombustivel": 29.55,
-            "rpm": 0.0,
-            "voltagemBateria": 12.02,
-            "motorista": None,
-        },
-    ]
-
-    normalizer = DataNormalizer()
-    normalized = normalizer.normalize_history(raw_history, system="system_a")
-
-    logger.info(f"\nRegistros históricos normalizados: {len(normalized)}")
-    for record in normalized:
-        logger.info(
-            f"  - {record['timestamp']} | "
-            f"Velocidade: {record['speed']} km/h | "
-            f"Ignição: {'Ligada' if record['ignition'] else 'Desligada'} | "
-            f"Odômetro: {record['odometer']} km | "
-            f"Combustível: {record['fuel_level']} L | "
-            f"RPM: {record['rpm']} | "
-            f"Bateria: {record['battery_voltage']} V"
-        )
-
-    return normalized
-
-
-def test_add_new_system():
-    """Testa adição de um novo sistema"""
-    logger.info("\n" + "=" * 60)
-    logger.info("TESTE 3: Adição de Novo Sistema (System B)")
-    logger.info("=" * 60)
-
-    normalizer = DataNormalizer()
-
-    # Adicionar mapeamento para System B (exemplo hipotético)
-    system_b_mapping = {
-        "vehicle_id": "deviceId",
-        "vehicle_name": "deviceName",
-        "plate": "licensePlate",
-        "timestamp": "eventTime",
-        "latitude": "gps.lat",
-        "longitude": "gps.lng",
-        "speed": "speedKmh",
-        "odometer": "totalKm",
-        "ignition": "engineOn",
-        "address": "location",
-        # Novos campos
-        "fuel_level": "fuelLevel",
-        "rpm": "engineRpm",
-        "battery_voltage": "batteryVoltage",
-        "driver": "driverName",
-    }
-
-    normalizer.add_system_mapping("system_b", system_b_mapping)
-
-    # Dados simulados do System B
-    raw_vehicles_b = [
-        {"deviceId": "DEV001", "deviceName": "Truck 01", "licensePlate": "GHI-3456"}
-    ]
-
-    normalized = normalizer.normalize_vehicle_list(raw_vehicles_b, system="system_b")
-
-    logger.info(f"\nVeículo do System B normalizado:")
-    logger.info(
-        f"  - ID: {normalized[0]['id']}, Nome: {normalized[0]['name']}, Placa: {normalized[0]['plate']}"
-    )
-    logger.info(f"  - Sistema de origem: {normalized[0]['system_source']}")
-
-    # Listar sistemas suportados
-    systems = normalizer.get_supported_systems()
-    logger.info(f"\nSistemas suportados: {systems}")
-
-    return normalized
-
-
-def test_missing_fields():
-    """Testa tratamento de campos ausentes"""
-    logger.info("\n" + "=" * 60)
-    logger.info("TESTE 4: Tratamento de Campos Ausentes")
-    logger.info("=" * 60)
-
-    # Dados incompletos
-    raw_history = [
-        {
-            "veiculoId": "VEI001",
-            "dataHora": "2024-01-15T10:00:00",
-            # latitude e longitude ausentes
-            # velocidade ausente
-            # outros campos ausentes (incluindo novos campos)
+            "vehicle_id": 1,
+            "timestamp": "2026-04-01T10:00:00",
+            "latitude": -22.87,
+            "longitude": -43.29,
+            "speed": 45.5,
+            "odometer": 1234.5,
+            "ignition": True,
+            "address": "Av. Brasil",
+            "fuel_level": 80.0,
+            "rpm": 1500,
+            "vehicle_voltage": 12.6,
+            "internal_battery_voltage": 4.1,
+            "engine_hours": 1200,
+            "driver": "João",
         }
     ]
+    out = normalizer.normalize_history(raw)
 
-    normalizer = DataNormalizer()
-    normalized = normalizer.normalize_history(raw_history, system="system_a")
-
-    logger.info(f"\nRegistro com campos ausentes normalizado:")
-    record = normalized[0]
-    logger.info(f"  - Vehicle ID: {record['vehicle_id']}")
-    logger.info(f"  - Timestamp: {record['timestamp']}")
-    logger.info(f"  - Latitude: {record['latitude']} (padrão)")
-    logger.info(f"  - Longitude: {record['longitude']} (padrão)")
-    logger.info(f"  - Speed: {record['speed']} (padrão)")
-    logger.info(f"  - Odometer: {record['odometer']} (padrão)")
-    logger.info(f"  - Ignition: {record['ignition']} (padrão)")
-    logger.info(f"  - Address: '{record['address']}' (padrão)")
-    logger.info(f"  - Fuel Level: {record['fuel_level']} (padrão)")
-    logger.info(f"  - RPM: {record['rpm']} (padrão)")
-    logger.info(f"  - Battery Voltage: {record['battery_voltage']} (padrão)")
-    logger.info(f"  - Driver: {record['driver']} (padrão)")
-
-    return normalized
+    assert len(out) == 1
+    r = out[0]
+    assert r["vehicle_id"] == 1
+    assert r["latitude"] == -22.87
+    assert r["longitude"] == -43.29
+    assert r["speed"] == 45.5
+    assert r["odometer"] == 1234.5
+    assert r["ignition"] is True
+    assert r["fuel_level"] == 80.0
+    assert r["rpm"] == 1500
+    assert r["vehicle_voltage"] == 12.6
+    assert r["internal_battery_voltage"] == 4.1
+    assert r["engine_hours"] == 1200
+    assert r["driver"] == "João"
+    assert r["system_source"] == "wialon"
 
 
-if __name__ == "__main__":
-    logger.info("\n🚀 Iniciando testes do DataNormalizer\n")
+def test_normalize_history_sensor_ausente_vira_none(normalizer):
+    """Campos opcionais sem dado devem ficar None — NUNCA defaults numéricos/string.
 
-    try:
-        # Executar testes
-        test_vehicle_normalization()
-        test_history_normalization()
-        test_add_new_system()
-        test_missing_fields()
+    Regressão Onda 1 #34: defaults 0.0/"" mascaravam ausência como zero válido,
+    impedindo o exporter de substituir por N/D.
+    """
+    raw = [
+        {
+            "vehicle_id": 1,
+            "timestamp": "2026-04-01T10:00:00",
+            "latitude": -22.87,
+            "longitude": -43.29,
+            "speed": 0,
+            "ignition": False,
+        }
+    ]
+    out = normalizer.normalize_history(raw)
 
-        logger.success("\n✅ Todos os testes concluídos com sucesso!")
+    r = out[0]
+    assert r["odometer"] is None, "odometer ausente deve ser None, não 0.0"
+    assert r["address"] is None, "address ausente deve ser None, não string vazia"
+    assert r["fuel_level"] is None
+    assert r["rpm"] is None
+    assert r["vehicle_voltage"] is None
+    assert r["internal_battery_voltage"] is None
+    assert r["engine_hours"] is None
+    assert r["driver"] is None
 
-    except Exception as e:
-        logger.error(f"\n❌ Erro durante os testes: {e}")
-        raise
+
+def test_normaliza_timestamp_unix_para_iso(normalizer):
+    raw = [{"vehicle_id": 1, "timestamp": 1700000000}]
+    out = normalizer.normalize_history(raw)
+
+    # 1700000000 → ~2023-11-14 — depende do timezone local, mas deve produzir
+    # uma string ISO válida com ano 2023.
+    ts = out[0]["timestamp"]
+    parsed = datetime.fromisoformat(ts)
+    assert parsed.year == 2023
+
+
+def test_normaliza_timestamp_iso_preservado(normalizer):
+    raw = [{"vehicle_id": 1, "timestamp": "2026-04-01T10:00:00"}]
+    out = normalizer.normalize_history(raw)
+    assert out[0]["timestamp"] == "2026-04-01T10:00:00"
+
+
+def test_sistema_desconhecido_retorna_lista_vazia(normalizer):
+    """Sistema sem mapeamento deve logar erro e devolver lista vazia (sem crash)."""
+    raw = [{"vehicle_id": 1}]
+    out = normalizer.normalize_history(raw, system="sistema_inexistente")
+    assert out == []
+
+
+def test_add_system_mapping_estende_suportados(normalizer):
+    normalizer.add_system_mapping("teste", {"vehicle_id": "device_id"})
+    assert "teste" in normalizer.get_supported_systems()
+
+
+def test_get_field_aninhado(normalizer):
+    record = {"nested": {"key": "value"}}
+    assert normalizer._get_field(record, "nested.key") == "value"
+    assert normalizer._get_field(record, "nested.ausente", default="d") == "d"

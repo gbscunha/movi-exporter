@@ -17,6 +17,10 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 block_cipher = None
 root_dir = os.path.dirname(os.path.abspath(SPEC))
 
+# Importa __version__ do código fonte para manter spec e GUI sincronizados.
+sys.path.insert(0, root_dir)
+from src.gui import __version__ as APP_VERSION  # noqa: E402
+
 # Coletar dados do CustomTkinter (necessário para temas e fontes)
 customtkinter_datas = collect_data_files('customtkinter')
 
@@ -83,7 +87,9 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    # UPX comprime binários, mas com PyInstaller costuma causar falsos positivos
+    # de antivírus e corromper algumas DLLs no Windows — manter desligado.
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,  # GUI app, sem console
@@ -105,8 +111,8 @@ app = BUNDLE(
     info_plist={
         'CFBundleName': 'Movi Exporter',
         'CFBundleDisplayName': 'Movi Exporter',
-        'CFBundleVersion': '1.0.0',
-        'CFBundleShortVersionString': '1.0.0',
+        'CFBundleVersion': APP_VERSION,
+        'CFBundleShortVersionString': APP_VERSION,
         'NSHighResolutionCapable': True,
     },
 )

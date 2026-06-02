@@ -5,13 +5,36 @@ Exibe configurações de exportação e log de progresso em tempo real
 capturando mensagens do loguru durante o processamento.
 """
 
-import customtkinter as ctk
+import subprocess
+import sys
 import threading
 from datetime import datetime
-from typing import Callable, Optional, List
+from pathlib import Path
+from tkinter import messagebox
+from typing import Callable, List, Optional
 
-from src.core.logger import GUILogHandler
+import customtkinter as ctk
+
+from src.clients.wialon_client import WialonClient
+from src.core.config import settings
+from src.core.logger import GUILogHandler, logger
 from src.services.vehicle_service import VehicleService
+
+# Nomes dos meses em português brasileiro — usados no dropdown.
+MESES = [
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
+]
 
 
 class ExportFrame(ctk.CTkFrame):
@@ -68,16 +91,17 @@ class ExportFrame(ctk.CTkFrame):
         
         # Mês
         ctk.CTkLabel(config_frame, text="Mês:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        
+
         now = datetime.now()
-        default_month = now.month - 1 if now.month > 1 else 12
-        
-        self.month_var = ctk.StringVar(value=str(default_month))
+        # Default: mês anterior (relatórios geralmente são do mês fechado).
+        default_month_idx = (now.month - 2) % 12  # zero-based
+
+        self.month_var = ctk.StringVar(value=MESES[default_month_idx])
         self.month_menu = ctk.CTkOptionMenu(
             config_frame,
-            values=[str(i) for i in range(1, 13)],
+            values=MESES,
             variable=self.month_var,
-            width=80
+            width=130,
         )
         self.month_menu.grid(row=0, column=1, padx=10, pady=10, sticky="w")
         
@@ -119,6 +143,38 @@ class ExportFrame(ctk.CTkFrame):
             variable=self.upload_var
         )
         self.upload_check.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+
+        # Seletor de conta (só aparece se Conta 2 estiver configurada).
+        # Mudar de conta limpa o cache de service/veículos para forçar
+        # reautenticação com o token correto.
+        self.account_var = ctk.StringVar(value="Conta 1")
+        if settings.WIALON_TOKEN_2:
+            ctk.CTkLabel(config_frame, text="Conta:").grid(
+                row=2, column=2, padx=10, pady=10, sticky="w"
+            )
+            self.account_menu = ctk.CTkOptionMenu(
+                config_frame,
+                values=["Conta 1", "Conta 2"],
+                variable=self.account_var,
+                width=120,
+                command=self._on_account_changed,
+            )
+            self.account_menu.grid(row=2, column=3, padx=10, pady=10, sticky="w")
+
+    def _on_account_changed(self, _value: str):
+        """Limpa o serviço e veículos ao trocar de conta."""
+        self.service = None
+        self.vehicles = []
+        for widget in self.vehicles_scroll.winfo_children():
+            widget.destroy()
+        self.vehicle_checkboxes.clear()
+
+    def _build_service(self) -> VehicleService:
+        """Cria um VehicleService usando o token da conta selecionada."""
+        if self.account_var.get() == "Conta 2" and settings.WIALON_TOKEN_2:
+            client = WialonClient(token=settings.WIALON_TOKEN_2)
+            return VehicleService(client=client)
+        return VehicleService()
     
     def _create_vehicles_section(self):
         """Cria seção de seleção de veículos."""
@@ -219,16 +275,53 @@ class ExportFrame(ctk.CTkFrame):
         """Cria botões de ação."""
         actions_frame = ctk.CTkFrame(self, fg_color="transparent")
         actions_frame.grid(row=4, column=0, sticky="e")
-        
+
+        self.open_folder_btn = ctk.CTkButton(
+            actions_frame,
+            text="📂  Abrir pasta",
+            width=140,
+            height=45,
+            command=self._open_export_folder,
+        )
+        self.open_folder_btn.grid(row=0, column=0, padx=5)
+
         self.export_btn = ctk.CTkButton(
             actions_frame,
             text="▶️  Iniciar Exportação",
             width=200,
             height=45,
             font=ctk.CTkFont(size=14, weight="bold"),
-            command=self._start_export
+            command=self._start_export,
         )
-        self.export_btn.grid(row=0, column=0, padx=5)
+        self.export_btn.grid(row=0, column=1, padx=5)
+
+    def _open_export_folder(self):
+        """Abre a pasta de exportação do mês/ano atualmente selecionados.
+
+        Se a subpasta do mês ainda não existir, abre o diretório base.
+        """
+        try:
+            month = MESES.index(self.month_var.get()) + 1
+            year = int(self.year_var.get())
+        except (ValueError, IndexError):
+            messagebox.showerror("Erro", "Mês/ano inválidos.")
+            return
+
+        base = Path(settings.EXPORT_DIR or "./exports")
+        target = base / f"{year}-{month:02d}"
+        path = target if target.exists() else base
+        path.mkdir(parents=True, exist_ok=True)
+
+        try:
+            if sys.platform == "win32":
+                subprocess.Popen(["explorer", str(path)])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as e:
+            logger.debug(f"Erro ao abrir pasta: {e}")
+            messagebox.showerror("Erro", f"Não foi possível abrir a pasta: {e}")
     
     def _toggle_vehicle_selection(self):
         """Alterna visibilidade da lista de veículos."""
@@ -247,8 +340,8 @@ class ExportFrame(ctk.CTkFrame):
         def load():
             try:
                 if not self.service:
-                    self.service = VehicleService()
-                
+                    self.service = self._build_service()
+
                 self._log("📡 Buscando lista de veículos...", "INFO")
                 self.vehicles = self.service.list_vehicles()
                 self.after(0, self._populate_vehicle_list)
@@ -307,7 +400,7 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_label.configure(text="Iniciando...")
         
         # Parâmetros
-        month = int(self.month_var.get())
+        month = MESES.index(self.month_var.get()) + 1
         year = int(self.year_var.get())
         format_type = self.format_var.get()
         consolidated = self.consolidated_var.get()
@@ -328,8 +421,13 @@ class ExportFrame(ctk.CTkFrame):
         def export():
             try:
                 if not self.service:
-                    self.service = VehicleService()
-                
+                    self.service = self._build_service()
+
+                # Subpasta por conta só quando há duas contas configuradas.
+                account_name = (
+                    self.account_var.get() if settings.WIALON_TOKEN_2 else None
+                )
+
                 result = self.service.export_monthly_data(
                     month=month,
                     year=year,
@@ -337,6 +435,7 @@ class ExportFrame(ctk.CTkFrame):
                     export_format=format_type,
                     consolidated=consolidated,
                     upload_to_drive=upload,
+                    account_name=account_name,
                 )
                 
                 # Para barra de progresso e define como completo
@@ -360,7 +459,7 @@ class ExportFrame(ctk.CTkFrame):
                 if result.upload_result:
                     ur = result.upload_result
                     self._log("", "INFO")
-                    self._log(f"Upload: {ur.uploaded_count}/{ur.total_files} arquivos", "INFO")
+                    self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
                 
                 if result.errors:
                     self._log("", "WARNING")

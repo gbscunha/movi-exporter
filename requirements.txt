@@ -18,3 +18,6 @@ customtkinter
 # Dependencias para build/distribuição
 pyinstaller
 packaging
+
+# Dependencias de testes
+pytest

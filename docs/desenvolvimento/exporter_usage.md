@@ -91,14 +91,14 @@ vehicles = [
         "id": "VEI001",
         "name": "Caminhão Mercedes 1",
         "plate": "ABC-1234",
-        "system_source": "system_a",
+        "system_source": "wialon",
         "raw_data": {...}
     },
     {
         "id": "VEI002",
         "name": "Van Fiat 2",
         "plate": "DEF-5678",
-        "system_source": "system_a",
+        "system_source": "wialon",
         "raw_data": {...}
     }
 ]
@@ -136,8 +136,8 @@ csv_path = exporter.export_vehicles_to_csv(
 
 ```csv
 export_date,system_source,id,name,plate
-2024-12-03T10:30:00,system_a,VEI001,Caminhão Mercedes 1,ABC-1234
-2024-12-03T10:30:00,system_a,VEI002,Van Fiat 2,DEF-5678
+2024-12-03T10:30:00,wialon,VEI001,Caminhão Mercedes 1,ABC-1234
+2024-12-03T10:30:00,wialon,VEI002,Van Fiat 2,DEF-5678
 ```
 
 ---
@@ -157,7 +157,7 @@ history = [
         "odometer": 15000.0,
         "ignition": True,
         "address": "Av. Paulista, 1000",
-        "system_source": "system_a",
+        "system_source": "wialon",
         "raw_data": {...}
     },
     # ... mais registros
@@ -188,8 +188,8 @@ excel_path = exporter.export_history_to_excel(
 
 ```csv
 export_date,system_source,vehicle_id,timestamp,latitude,longitude,speed,odometer,ignition,address
-2024-12-03T10:30:00,system_a,VEI001,2024-10-01T08:00:00,-23.5505,-46.6333,45.5,15000.0,True,Av. Paulista 1000
-2024-12-03T10:30:00,system_a,VEI001,2024-10-01T09:00:00,-23.5489,-46.6388,60.0,15050.0,True,Av. Faria Lima 500
+2024-12-03T10:30:00,wialon,VEI001,2024-10-01T08:00:00,-23.5505,-46.6333,45.5,15000.0,True,Av. Paulista 1000
+2024-12-03T10:30:00,wialon,VEI001,2024-10-01T09:00:00,-23.5489,-46.6388,60.0,15050.0,True,Av. Faria Lima 500
 ```
 
 ---
@@ -212,7 +212,7 @@ all_history = {
             "odometer": 15000.0,
             "ignition": True,
             "address": "Av. Paulista, 1000",
-            "system_source": "system_a",
+            "system_source": "wialon",
             "raw_data": {}
         },
         # ... mais registros do VEI001
@@ -227,7 +227,7 @@ all_history = {
             "odometer": 8000.0,
             "ignition": True,
             "address": "Rua Augusta, 2000",
-            "system_source": "system_a",
+            "system_source": "wialon",
             "raw_data": {}
         },
         # ... mais registros do VEI002
@@ -294,13 +294,13 @@ Todos os arquivos exportados incluem metadados automáticos:
 | Campo | Descrição | Exemplo |
 |-------|-----------|---------|
 | `export_date` | Data/hora da exportação | `2024-12-03T10:30:00` |
-| `system_source` | Sistema de origem dos dados | `system_a` |
+| `system_source` | Sistema de origem dos dados | `wialon` |
 
 ### Exemplo de CSV com Metadados
 
 ```csv
 export_date,system_source,vehicle_id,timestamp,latitude,longitude,speed
-2024-12-03T10:30:00,system_a,VEI001,2024-10-01T08:00:00,-23.5505,-46.6333,45.5
+2024-12-03T10:30:00,wialon,VEI001,2024-10-01T08:00:00,-23.5505,-46.6333,45.5
 ```
 
 Os metadados são adicionados como **primeiras colunas** do arquivo, facilitando rastreabilidade e auditoria.
@@ -351,7 +351,7 @@ from src.services.exporter import DataExporter
 
 # Dados normalizados
 vehicles = [
-    {"id": "VEI001", "name": "Caminhão 1", "plate": "ABC-1234", "system_source": "system_a", "raw_data": {}}
+    {"id": "VEI001", "name": "Caminhão 1", "plate": "ABC-1234", "system_source": "wialon", "raw_data": {}}
 ]
 
 # Exporta
