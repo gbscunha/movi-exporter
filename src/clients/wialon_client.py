@@ -427,18 +427,28 @@ class WialonClient:
             "nivel combustivel": "fuel_level",
             "rpm": "rpm",
             "rotacao": "rpm",
-            # Bateria interna do tracker (~4V) — checar ANTES das genéricas.
+            # Bateria interna do tracker (~4V) — chaves mais específicas
+            # PRIMEIRO; "bateria"/"battery" sozinhas são ambíguas e ficam
+            # no fim. Cliente Movi nomeou "Bateria do dispositivo" no
+            # Wialon — esse case foi visto em produção.
+            "bateria do dispositivo": "internal_battery_voltage",
+            "bateria do rastreador": "internal_battery_voltage",
             "bateria interna": "internal_battery_voltage",
             "internal battery": "internal_battery_voltage",
+            "device battery": "internal_battery_voltage",
+            "tracker battery": "internal_battery_voltage",
             "backup battery": "internal_battery_voltage",
             # Tensão do veículo (~12-28V) — termos explícitos.
+            "bateria do veículo": "vehicle_voltage",
+            "bateria do veiculo": "vehicle_voltage",
             "tensão do veículo": "vehicle_voltage",
             "tensao do veiculo": "vehicle_voltage",
             "vehicle voltage": "vehicle_voltage",
+            "vehicle battery": "vehicle_voltage",
             "tensão externa": "vehicle_voltage",
             "tensao externa": "vehicle_voltage",
-            # Termos ambíguos — assume tensão do veículo (cliente costuma
-            # configurar isso explicitamente; bateria interna usa nome próprio).
+            # Termos ambíguos — fallback para tensão do veículo. Bateria
+            # interna SEMPRE é nomeada explicitamente pelo admin (acima).
             "voltagem": "vehicle_voltage",
             "bateria": "vehicle_voltage",
             "battery": "vehicle_voltage",

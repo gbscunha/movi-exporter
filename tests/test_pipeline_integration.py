@@ -167,3 +167,95 @@ def test_pipeline_csv_tem_as_duas_colunas_de_tensao(pipeline, tmp_path):
     assert "Bateria Interna (V)" in df.columns
     # E NÃO deve mais existir a coluna ambígua antiga
     assert "Tensão da Bateria (V)" not in df.columns
+
+
+# ----- Cenários Suntech ST380 (frota Movi em produção) -----
+#
+# Mensagens reais capturadas via API no QA do VTR05 (Conta 1, Abril/2026).
+# Suntech ST380 usa `model=197`, `rep_type='STT'` e nomes próprios para
+# params críticos: `mode` (ignição), `s_asgn1`/`s_asgn2` (voltagens),
+# `m_asgn1` (odômetro em metros).
+
+
+def test_pipeline_suntech_andando_ignicao_ligada(pipeline):
+    """Msg Suntech com velocidade > 0 e mode=1 → Ignição='Ligado'.
+
+    Pré-Fase 17: Ignição vinha 'Desligado' mesmo com vel=20km/h porque o
+    transformer procurava 'in'/'in1'/'din1' que não existem no Suntech.
+    """
+    msgs = [
+        {
+            "t": 1775136988,
+            "pos": {"y": -22.88428, "x": -43.406108, "s": 20},
+            "p": {
+                "rep_type": "STT",
+                "model": 197,
+                "mode": 1,
+                "s_asgn1": 28.67,
+                "s_asgn2": 4.1,
+                "m_asgn1": 240141149,
+            },
+        }
+    ]
+    df = _run_pipeline(pipeline, msgs)
+    row = df.iloc[0]
+    assert row["Ignição"] == "Ligado"
+    assert float(row["Tensão do Veículo (V)"]) == 28.67
+    assert float(row["Bateria Interna (V)"]) == 4.1
+    assert float(row["Odômetro (km)"]) == 240141.15
+
+
+def test_pipeline_suntech_parado_ignicao_desligada(pipeline):
+    """Msg Suntech com vel=0 e mode=0 → Ignição='Desligado'."""
+    msgs = [
+        {
+            "t": 1775023200,
+            "pos": {"y": -22.852862, "x": -43.483135, "s": 0},
+            "p": {
+                "rep_type": "STT",
+                "model": 197,
+                "mode": 0,
+                "s_asgn1": 25.07,
+                "s_asgn2": 4.2,
+                "m_asgn1": 240099537,
+            },
+        }
+    ]
+    df = _run_pipeline(pipeline, msgs)
+    row = df.iloc[0]
+    assert row["Ignição"] == "Desligado"
+    # Mesmo parado, Suntech reporta tensão do veículo (s_asgn1 = bateria
+    # de chumbo, lê sempre — não depende de motor ligado).
+    assert float(row["Tensão do Veículo (V)"]) == 25.07
+    assert float(row["Bateria Interna (V)"]) == 4.2
+    assert float(row["Odômetro (km)"]) == 240099.54
+
+
+def test_pipeline_suntech_perfil_detectado_por_rep_type():
+    """Modelo Suntech diferente de 197 (ex: ST300) ainda usa o perfil pelo rep_type."""
+    from src.services.tracker_profiles import SuntechProfile, detect_profile
+
+    msg = {"pos": {}, "p": {"rep_type": "STT", "model": 215}}
+    assert isinstance(detect_profile(msg), SuntechProfile)
+
+
+def test_pipeline_msg_generica_continua_funcionando(pipeline):
+    """Tracker genérico (não Suntech) deve continuar usando os nomes Wialon padrão."""
+    msgs = [
+        {
+            "t": 1700000000,
+            "pos": {"y": -22.87, "x": -43.29, "s": 60},
+            "p": {
+                "in": 1,
+                "pwr_ext": 12.6,
+                "pwr_int": 4.0,
+                "odometer": 50000,
+            },
+        }
+    ]
+    df = _run_pipeline(pipeline, msgs)
+    row = df.iloc[0]
+    assert row["Ignição"] == "Ligado"
+    assert float(row["Tensão do Veículo (V)"]) == 12.6
+    assert float(row["Bateria Interna (V)"]) == 4.0
+    assert float(row["Odômetro (km)"]) == 50.0
