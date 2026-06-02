@@ -54,7 +54,7 @@
 | 38 | 🔴 | XS | ✅ | ~~Fallback Suntech para ignição (`mode`)~~ — **Resolvido na Fase 17 da Onda 1** via `SuntechProfile`. Validado em produção: 21.813 linhas do VTR05, agora 20.382 "Ligado" / 1.431 "Desligado" (antes era 100% Desligado). | QA manual v1.1.0 |
 | 39 | 🔴 | XS | ✅ | ~~Fallback Suntech para odômetro (`m_asgn1`)~~ — **Resolvido na Fase 17 da Onda 1** via `SuntechProfile`. Validado em produção: odômetro 240.099 → 248.090 km no VTR05/abr-2026. | QA manual v1.1.0 |
 | 40 | 🟢 | M | ✅ | ~~Perfis de tracker~~ — **Resolvido na Fase 17 da Onda 1**. Arquitetura `tracker_profiles/` criada com `SuntechProfile` + `DefaultProfile`. | QA manual v1.1.0 |
-| 41 | 🟢 | XS | ⬜ | **Logar warning quando tracker desconhecido cair no DefaultProfile** — hoje uma msg com `model`/`rep_type` não reconhecido cai silenciosamente no perfil padrão e provavelmente vira N/D nas colunas. Detectar via um set de `(model, rep_type)` "conhecidos" e logar uma vez por sessão quando aparece combinação nova. Ajuda a descobrir que existe cliente com tracker novo precisando de perfil próprio. | Discussão Fase 17 |
+| 41 | 🟢 | XS | ✅ | ~~Logar warning quando tracker desconhecido cair no DefaultProfile~~ — **Resolvido**. `registry.py` agora loga uma vez por combinação `(model, rep_type)` quando msg cai no DefaultProfile com identificador populado. Cache module-level (resetável via `reset_unknown_tracker_cache()` em testes). 5 testes cobrindo cenários. | Discussão Fase 17 |
 
 ---
 

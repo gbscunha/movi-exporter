@@ -4,12 +4,23 @@ Cada perfil isola o dialeto de um fabricante. Testamos cada um em isolamento
 e a função de detecção que escolhe qual aplicar para uma mensagem.
 """
 
+import pytest
+
 from src.services.tracker_profiles import (
     DEFAULT_PROFILES,
     DefaultProfile,
     SuntechProfile,
     detect_profile,
+    reset_unknown_tracker_cache,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolate_unknown_tracker_cache():
+    """Garante que o cache de warnings é isolado entre testes."""
+    reset_unknown_tracker_cache()
+    yield
+    reset_unknown_tracker_cache()
 
 
 # ---------- Detecção ----------
@@ -140,3 +151,66 @@ def test_suntech_odometro_prefere_m_asgn1_sobre_odometer():
 def test_suntech_odometro_none_quando_ausente():
     profile = SuntechProfile()
     assert profile.extract_odometer_meters({}) is None
+
+
+# ---------- Warning de tracker desconhecido (#41) ----------
+#
+# Quando uma mensagem com `model`/`rep_type` populados cai no DefaultProfile,
+# o registry loga um warning UMA vez por combinação (model, rep_type). Isso
+# torna visível no `app.log` que existe tracker em uso sem perfil próprio
+# — sinal para o mantenedor criar um perfil específico antes que o CSV saia
+# silenciosamente com colunas N/D para esse cliente.
+
+
+@pytest.fixture
+def captured_warnings(monkeypatch):
+    """Captura warnings emitidos pelo logger do registry."""
+    from src.services.tracker_profiles import registry as registry_module
+
+    captured: list[str] = []
+
+    class _FakeLogger:
+        def warning(self, msg):
+            captured.append(msg)
+
+    monkeypatch.setattr(registry_module, "logger", _FakeLogger())
+    return captured
+
+
+def test_warning_emitido_para_tracker_desconhecido_com_model(captured_warnings):
+    msg = {"pos": {}, "p": {"model": 999, "rep_type": "FOO"}}
+    detect_profile(msg)
+    assert len(captured_warnings) == 1
+    assert "model=999" in captured_warnings[0]
+    assert "rep_type='FOO'" in captured_warnings[0]
+
+
+def test_warning_nao_emitido_quando_tracker_eh_reconhecido(captured_warnings):
+    """Suntech tem perfil próprio — não deve gerar warning."""
+    msg = {"pos": {}, "p": {"model": 197, "s_asgn1": 28.0}}
+    detect_profile(msg)
+    assert captured_warnings == []
+
+
+def test_warning_nao_emitido_quando_msg_sem_model_nem_rep_type(captured_warnings):
+    """Mensagens sem nenhum identificador (data-only, tracker antigo) não
+    são úteis para diagnóstico — silenciar evita inundar o log."""
+    msg = {"pos": {}, "p": {"pwr_ext": 12.0}}
+    detect_profile(msg)
+    assert captured_warnings == []
+
+
+def test_warning_loga_apenas_uma_vez_por_combinacao(captured_warnings):
+    """Cache no escopo do módulo deve impedir milhares de logs iguais
+    (export tem milhões de mensagens, todas do mesmo tracker)."""
+    msg = {"pos": {}, "p": {"model": 999, "rep_type": "FOO"}}
+    for _ in range(10):
+        detect_profile(msg)
+    assert len(captured_warnings) == 1
+
+
+def test_warning_loga_para_cada_combinacao_distinta(captured_warnings):
+    """Combinações diferentes devem ter logs separados."""
+    detect_profile({"pos": {}, "p": {"model": 999, "rep_type": "FOO"}})
+    detect_profile({"pos": {}, "p": {"model": 888, "rep_type": "BAR"}})
+    assert len(captured_warnings) == 2
