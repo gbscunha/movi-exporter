@@ -40,9 +40,14 @@ class HomeFrame(ctk.CTkFrame):
         
         # Cards de status
         self._create_status_cards()
-        
+
         # Ações rápidas
         self._create_quick_actions()
+
+        # Verificar status em background. Importante chamar DEPOIS dos botões
+        # serem criados — `_check_status_async` desabilita `btn_list` enquanto
+        # roda (#05).
+        self._check_status_async()
     
     def _create_status_cards(self):
         """Cria os cards de status."""
@@ -73,10 +78,7 @@ class HomeFrame(ctk.CTkFrame):
             value="Verificando...",
         )
         self.drive_card.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
-        
-        # Verificar status em background
-        self._check_status_async()
-    
+
     def _create_quick_actions(self):
         """Cria botões de ações rápidas."""
         actions_label = ctk.CTkLabel(
@@ -99,29 +101,38 @@ class HomeFrame(ctk.CTkFrame):
         )
         self.btn_test.grid(row=0, column=0, padx=5, pady=5)
         
-        # Botão: Listar Veículos
+        # Botão: Listar Veículos. Começa desabilitado e é habilitado quando
+        # _check_status_async conclui — evita o silent fail relatado no QA
+        # quando o usuário clica antes do boot terminar (#05).
         self.btn_list = ctk.CTkButton(
             actions_frame,
             text="📋  Ver Veículos",
             width=200,
             height=45,
-            command=self._show_vehicles
+            command=self._show_vehicles,
+            state="disabled",
         )
         self.btn_list.grid(row=0, column=1, padx=5, pady=5)
     
     def _check_status_async(self):
         """Verifica status das conexões em background."""
+        # Desabilita "Ver Veículos" enquanto reinicializa — habilitamos
+        # de volta no fim do worker (com ou sem sucesso, contanto que
+        # exista um service utilizável para o botão).
+        self.btn_list.configure(state="disabled")
+
         def check():
+            wialon_ok = False
             # Wialon
             try:
                 self.service = VehicleService()
                 wialon_ok = self.service.test_connection()
-                
+
                 self.after(0, lambda: self.wialon_card.set_value(
                     "Conectado ✅" if wialon_ok else "Desconectado ❌",
                     "success" if wialon_ok else "error"
                 ))
-                
+
                 # Veículos (se conectou)
                 if wialon_ok:
                     vehicles = self.service.list_vehicles()
@@ -131,32 +142,43 @@ class HomeFrame(ctk.CTkFrame):
                     ))
                 else:
                     self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
-                    
+
             except Exception:
                 self.after(0, lambda: self.wialon_card.set_value("Erro ❌", "error"))
                 self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
-            
+
             # Google Drive
             try:
                 from src.services.uploader import DriveUploader
                 uploader = DriveUploader()
                 drive_ok = uploader.test_connection()
-                
+
                 self.after(0, lambda: self.drive_card.set_value(
                     "Conectado ✅" if drive_ok else "Não configurado",
                     "success" if drive_ok else "warning"
                 ))
             except Exception:
                 self.after(0, lambda: self.drive_card.set_value("Não configurado", "warning"))
-        
+
+            # Habilita "Ver Veículos" só se a conexão Wialon foi bem sucedida.
+            # Se falhou, deixa desabilitado — clicar não levaria a nada útil.
+            if wialon_ok:
+                self.after(0, lambda: self.btn_list.configure(state="normal"))
+
         thread = threading.Thread(target=check, daemon=True)
         thread.start()
-    
+
     def _show_vehicles(self):
         """Mostra lista de veículos em uma janela."""
+        # Defesa em profundidade: o botão começa desabilitado e só é habilitado
+        # após _check_status_async — mas algum estado inconsistente ainda pode
+        # cair aqui, então tratamos explicitamente.
         if not self.service:
+            self._show_warning(
+                "Conexão ainda inicializando. Aguarde alguns segundos e tente novamente."
+            )
             return
-        
+
         try:
             vehicles = self.service.list_vehicles()
             
@@ -190,6 +212,11 @@ class HomeFrame(ctk.CTkFrame):
         """Mostra mensagem de erro."""
         import tkinter.messagebox as mb
         mb.showerror("Erro", message)
+
+    def _show_warning(self, message: str):
+        """Mostra aviso (warning, não erro)."""
+        import tkinter.messagebox as mb
+        mb.showwarning("Aviso", message)
 
 
 class StatusCard(ctk.CTkFrame):

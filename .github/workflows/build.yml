@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: 📥 Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Configurar Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12" # Use 3.12 para compatibilidade máxima
           cache: "pip"
@@ -71,7 +71,7 @@ jobs:
 
       - name: 📤 Upload Artifact (Windows)
         if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: windows-build
           path: dist/MoviExporter.exe
@@ -79,7 +79,7 @@ jobs:
 
       - name: 📤 Upload Artifact (macOS)
         if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-build
           path: dist/MoviExporter-macOS.zip
@@ -92,16 +92,16 @@ jobs:
 
     steps:
       - name: 📥 Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📥 Download Windows Build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: windows-build
           path: artifacts/windows
 
       - name: 📥 Download macOS Build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: macos-build
           path: artifacts/macos
@@ -114,7 +114,7 @@ jobs:
           ls -la artifacts/macos/
 
       - name: 🚀 Criar Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             artifacts/windows/MoviExporter.exe
