@@ -27,6 +27,7 @@
 | 15 | CI — workflows + version sync + deps | G | — | S | ✅ Concluído | `ci.yml`, `build.yml`, `spec`, `requirements` |
 | 16 | Correção de regressões + 2 colunas de tensão | H | 🔴 sim | M | ✅ Concluído | `wialon_transformer.py`, `vehicle_service.py`, `normalizer.py`, `wialon_client.py`, `exporter.py`, testes + integração |
 | 17 | Perfis de tracker (Suntech ST380) | I | 🔴 sim | M | ✅ Concluído | `src/services/tracker_profiles/` ← NOVO, `wialon_transformer.py`, `wialon_client.py`, testes + integração |
+| 18 | Perfil Jimi VL03 + warning tracker desconhecido | I | 🔴 sim | S | ✅ Concluído | `tracker_profiles/jimi.py` ← NOVO, `registry.py`, `_normalize_sensor_name`, testes |
 
 **Legenda status:** ⬜ Todo · 🔄 Em andamento · ✅ Concluído · ⏸️ Bloqueado
 **Legenda TDD:** 🔴 sim = escrever teste antes de implementar · 🔴 parcial = só nos bugs com lógica testável · — = não aplicável
@@ -857,3 +858,65 @@ Modificados:
 **Backlog Onda 2 — itens fechados:** #37 (bateria do dispositivo), #38 (mode ignição), #39 (m_asgn1 odômetro), #40 (perfis de tracker).
 
 **Commit:** `feat: tracker profiles architecture with Suntech ST380 support`
+
+---
+
+## Fase 18 — Perfil Jimi VL03 + warning tracker desconhecido
+
+**Contexto:** cliente Movi confirmou frota mista — além dos Suntech (cobertos na Fase 17), tem também Jimi VL03 (OBD-II plug-and-play, mesma família da Concox). Matheus do cliente identificou veículo CVM0H79 como Jimi VL03 na Conta 2.
+
+**Captura de dados reais (CVM0H79, Conta 2, últimos 7 dias):**
+
+430 mensagens analisadas. Params Jimi VL03:
+
+| Conceito | Param | Onde |
+|----------|-------|------|
+| Ignição | `acc` (0/1) | toda msg GPS |
+| Tensão do veículo | `pwr_ext` (~14V) | msg data-only |
+| Bateria interna | `voltage` (~6V) | msg data-only |
+| Signature (detecção) | `serial` + `gps_real_up` + `data_mode` | toda msg GPS |
+| Odômetro | (ausente) | VL03 nessa config não reporta |
+
+**Detecção:** combinação de 3 params (`serial`, `gps_real_up`, `data_mode`) presente em **todas** as 259 msgs GPS. Nunca vista em outros fabricantes — assinatura forte do protocolo Jimi.
+
+**Item bônus (#41 do backlog Onda 2):** sistema de warning para tracker desconhecido. Quando uma mensagem cai no DefaultProfile e tem `model` ou `rep_type` populados (sinal de tracker identificável mas sem perfil próprio), `app.log` recebe um WARNING uma vez por combinação `(model, rep_type)`. Evita que problema tipo "CSV com N/D silenciosamente" passe despercebido como aconteceu com Suntech.
+
+**Bug bonus corrigido:** `_normalize_sensor_name` agora reconhece "Bateria Externa" (e "external battery") explicitamente — no veículo CVM0H79 o admin Wialon usou esse nome para `pwr_ext`. Antes funcionava por acidente (caía no fallback "bateria"); agora é intencional.
+
+**Validação em produção real:**
+
+CVM0H79 (Jimi VL03), Conta 2, últimos 7 dias — 258 linhas:
+
+| Coluna | Resultado |
+|--------|-----------|
+| Ignição | 246 Ligado / 12 Desligado |
+| Tensão do Veículo (V) | 14.26–14.38V (rodando), 12.96V (parado) |
+| Bateria Interna (V) | N/D (msgs data-only que reportariam não viram linha) |
+| Odômetro (km) | N/D (VL03 nessa config não reporta — esperado) |
+
+**Arquivos:**
+
+Novos:
+- `src/services/tracker_profiles/jimi.py` — JimiProfile baseado em dados reais
+- `tests/test_tracker_profiles.py` — 12 testes novos (Jimi) + 5 do warning
+
+Modificados:
+- `src/services/tracker_profiles/registry.py` — registra Jimi antes do default + sistema de warning
+- `src/services/tracker_profiles/__init__.py` — exporta JimiProfile e reset_unknown_tracker_cache
+- `src/clients/wialon_client.py` — adiciona "bateria externa" / "external battery" no mapping
+- `tests/test_wialon_client.py` — teste do novo mapping
+- `tests/test_pipeline_integration.py` — 3 cenários E2E Jimi (ignição ligada, desligada, voltage→bateria interna)
+
+**Testes:** 111 passando (95 antes + 16 novos). Ruff clean.
+
+**Backlog Onda 2 — itens fechados:** #41 (warning tracker desconhecido), #42 (perfil Jimi VL03).
+
+**Commit:** `feat: add Jimi VL03 profile based on real CVM0H79 message capture`
+
+**Como adicionar suporte a outro tracker no futuro:**
+
+1. Capturar 1 mensagem real via `c.get_history(...)` e inspecionar `params`
+2. Identificar assinatura única (params que outros fabricantes não têm)
+3. Criar `src/services/tracker_profiles/<nome>.py` implementando `TrackerProfile`
+4. Adicionar instância em `DEFAULT_PROFILES` (antes do `DefaultProfile`)
+5. Testes unitários + 1 E2E
