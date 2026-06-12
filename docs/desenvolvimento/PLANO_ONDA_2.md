@@ -13,7 +13,7 @@
 | # | Fase | Itens backlog | TDD | Esforço | Status |
 |---|------|---------------|-----|---------|--------|
 | 01 | Bugs e dívida CI urgente | #05, #46, #36 | 🔴 parcial | S | ✅ Concluído |
-| 02 | Quick wins — Export | #25, #26, #27, #12, #32 | — | S | ⬜ Todo |
+| 02 | Quick wins — Export | #25, #26, #27, #12, #32 | — | S | ✅ Concluído |
 | 03 | Quick wins — Settings | #28, #29, #30, #18 | — | S | ⬜ Todo |
 | 04 | Design tokens (foundation) | #06 | 🔴 parcial | S | ⬜ Todo |
 | 05 | Seletor de conta global na sidebar | #01, #04 | 🔴 parcial | M | ⬜ Todo |
