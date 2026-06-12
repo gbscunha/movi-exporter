@@ -126,11 +126,19 @@ class SettingsFrame(ctk.CTkFrame):
         )
         test_btn.grid(row=1, column=5, padx=(2, 15), pady=10)
 
-        # Status
+        # Status. Quando há token salvo mas ainda não testado, usamos amarelo
+        # (#28) para chamar atenção que vale clicar em Testar. Sem token, fica
+        # cinza neutro (não há o que testar ainda).
+        if existing:
+            status_text = "Status: ⚠️ Não testado — clique em 🔍 Testar"
+            status_color = "#f39c12"
+        else:
+            status_text = "Status: sem token configurado"
+            status_color = "gray"
         status_label = ctk.CTkLabel(
             section,
-            text="Status: (não testado)",
-            text_color="gray",
+            text=status_text,
+            text_color=status_color,
             font=ctk.CTkFont(size=12),
         )
         status_label.grid(
@@ -263,16 +271,37 @@ class SettingsFrame(ctk.CTkFrame):
         )
         self.browse_btn.grid(row=1, column=2, padx=(5, 15), pady=10)
 
-        # Page size
+        # Page size — slider de 100 a 5000 (passo 100) em vez de campo de
+        # texto livre, evitando valores inválidos (#18).
         ctk.CTkLabel(section, text="Registros por página:").grid(
             row=2, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
-        page_size = str(settings.WIALON_PAGE_SIZE or 1000)
+        page_size = settings.WIALON_PAGE_SIZE or 1000
 
-        self.page_size_entry = ctk.CTkEntry(section, width=100)
-        self.page_size_entry.grid(row=2, column=1, padx=10, pady=(10, 15), sticky="w")
-        self.page_size_entry.insert(0, page_size)
+        slider_row = ctk.CTkFrame(section, fg_color="transparent")
+        slider_row.grid(row=2, column=1, columnspan=2, padx=10, pady=(10, 15), sticky="w")
+
+        self.page_size_var = ctk.IntVar(value=page_size)
+        self.page_size_slider = ctk.CTkSlider(
+            slider_row,
+            from_=100,
+            to=5000,
+            number_of_steps=49,  # (5000-100)/100
+            variable=self.page_size_var,
+            width=240,
+            command=self._on_page_size_change,
+        )
+        self.page_size_slider.grid(row=0, column=0, padx=(0, 12))
+
+        self.page_size_value_label = ctk.CTkLabel(
+            slider_row, text=str(page_size), width=50, font=ctk.CTkFont(weight="bold")
+        )
+        self.page_size_value_label.grid(row=0, column=1)
+
+    def _on_page_size_change(self, value: float):
+        """Atualiza o label numérico ao arrastar o slider de page size."""
+        self.page_size_value_label.configure(text=str(int(value)))
 
     def _create_drive_section(self):
         """Cria seção de configuração do Google Drive."""
@@ -302,29 +331,62 @@ class SettingsFrame(ctk.CTkFrame):
         )
         self.creds_label.grid(row=1, column=1, columnspan=2, padx=10, pady=10, sticky="w")
 
-        # Folder ID
-        ctk.CTkLabel(section, text="Pasta ID:").grid(
+        # ID da pasta no Drive — mostrado por completo (não é segredo) com
+        # botões de copiar e abrir no navegador (#29).
+        ctk.CTkLabel(section, text="ID da pasta no Drive:").grid(
             row=2, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
         folder_id = settings.GOOGLE_DRIVE_FOLDER_ID or ""
-        masked_folder = folder_id[:15] + "..." if len(folder_id) > 15 else folder_id
 
         self.folder_entry = ctk.CTkEntry(
-            section, width=350, placeholder_text="ID da pasta no Google Drive"
+            section, width=300, placeholder_text="ID da pasta no Google Drive"
         )
         self.folder_entry.grid(row=2, column=1, padx=10, pady=(10, 15), sticky="w")
-        self.folder_entry.insert(0, masked_folder)
+        if folder_id:
+            self.folder_entry.insert(0, folder_id)
+
+        self.folder_copy_btn = ctk.CTkButton(
+            section, text="📋", width=40, command=self._copy_folder_id
+        )
+        self.folder_copy_btn.grid(row=2, column=2, padx=(0, 4), pady=(10, 15))
+
+        self.folder_open_btn = ctk.CTkButton(
+            section, text="🔗", width=40, command=self._open_drive_folder
+        )
+        self.folder_open_btn.grid(row=2, column=3, padx=(0, 15), pady=(10, 15))
+
+    def _copy_folder_id(self):
+        """Copia o ID da pasta do Drive para a área de transferência."""
+        folder_id = self.folder_entry.get().strip()
+        if not folder_id:
+            return
+        self.clipboard_clear()
+        self.clipboard_append(folder_id)
+
+    def _open_drive_folder(self):
+        """Abre a pasta do Drive no navegador a partir do ID."""
+        folder_id = self.folder_entry.get().strip()
+        if not folder_id:
+            messagebox.showwarning(
+                "Pasta não configurada", "Informe o ID da pasta do Drive primeiro."
+            )
+            return
+        webbrowser.open(f"https://drive.google.com/drive/folders/{folder_id}")
 
     def _create_appearance_section(self):
-        """Cria seção de aparência."""
+        """Cria seção 'Geral' — preferências do app.
+
+        Renomeada de 'Aparência' para 'Geral' (#30) pra acomodar futuras
+        preferências (idioma, escala da UI, atalhos) além do tema.
+        """
         section = ctk.CTkFrame(self.scroll_frame)
         section.pack(fill="x", pady=(0, 15))
         section.grid_columnconfigure(1, weight=1)
 
         # Título
         title = ctk.CTkLabel(
-            section, text="🎨  Aparência", font=ctk.CTkFont(size=16, weight="bold")
+            section, text="⚙️  Geral", font=ctk.CTkFont(size=16, weight="bold")
         )
         title.grid(row=0, column=0, columnspan=2, padx=15, pady=(15, 10), sticky="w")
 
