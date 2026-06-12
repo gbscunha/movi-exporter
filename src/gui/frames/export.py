@@ -84,65 +84,61 @@ class ExportFrame(ctk.CTkFrame):
         self._create_action_buttons()
     
     def _create_config_section(self):
-        """Cria seção de configuração."""
+        """Cria seção de configuração.
+
+        Layout em grid 4 colunas (label | campo | label | campo), linhas:
+          linha 0: Mês        | Ano
+          linha 1: Formato    | Conta (só quando há 2 contas)
+          linha 2: Opções (checkboxes)
+        """
         config_frame = ctk.CTkFrame(self)
         config_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15))
-        config_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        
-        # Mês
-        ctk.CTkLabel(config_frame, text="Mês:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        config_frame.grid_columnconfigure((1, 3), weight=1)
 
         now = datetime.now()
+
+        # --- Linha 0: Mês | Ano ---
+        ctk.CTkLabel(config_frame, text="Mês:").grid(
+            row=0, column=0, padx=(10, 6), pady=10, sticky="w"
+        )
         # Default: mês anterior (relatórios geralmente são do mês fechado).
         default_month_idx = (now.month - 2) % 12  # zero-based
-
         self.month_var = ctk.StringVar(value=MESES[default_month_idx])
         self.month_menu = ctk.CTkOptionMenu(
             config_frame,
             values=MESES,
             variable=self.month_var,
-            width=130,
+            width=140,
         )
-        self.month_menu.grid(row=0, column=1, padx=10, pady=10, sticky="w")
-        
-        # Ano
-        ctk.CTkLabel(config_frame, text="Ano:").grid(row=0, column=2, padx=10, pady=10, sticky="w")
-        
+        self.month_menu.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="w")
+
+        ctk.CTkLabel(config_frame, text="Ano:").grid(
+            row=0, column=2, padx=(10, 6), pady=10, sticky="w"
+        )
+        # Ano como dropdown dos últimos 5 anos — evita digitação inválida (#12).
         default_year = now.year if now.month > 1 else now.year - 1
-        
+        year_values = [str(default_year - i) for i in range(5)]
         self.year_var = ctk.StringVar(value=str(default_year))
-        self.year_entry = ctk.CTkEntry(config_frame, textvariable=self.year_var, width=80)
-        self.year_entry.grid(row=0, column=3, padx=10, pady=10, sticky="w")
-        
-        # Formato
-        ctk.CTkLabel(config_frame, text="Formato:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
-        
+        self.year_menu = ctk.CTkOptionMenu(
+            config_frame,
+            values=year_values,
+            variable=self.year_var,
+            width=100,
+        )
+        self.year_menu.grid(row=0, column=3, padx=(0, 10), pady=10, sticky="w")
+
+        # --- Linha 1: Formato | Conta ---
+        ctk.CTkLabel(config_frame, text="Formato:").grid(
+            row=1, column=0, padx=(10, 6), pady=10, sticky="w"
+        )
         self.format_var = ctk.StringVar(value="xlsx")
         self.format_menu = ctk.CTkOptionMenu(
             config_frame,
             values=["csv", "xlsx", "both"],
             variable=self.format_var,
-            width=100
+            width=140,
         )
-        self.format_menu.grid(row=1, column=1, padx=10, pady=10, sticky="w")
-        
-        # Opções
-        self.consolidated_var = ctk.BooleanVar(value=True)
-        self.consolidated_check = ctk.CTkCheckBox(
-            config_frame,
-            text="Gerar arquivo consolidado",
-            variable=self.consolidated_var
-        )
-        self.consolidated_check.grid(row=1, column=2, columnspan=2, padx=10, pady=10, sticky="w")
-        
-        # Upload Drive
-        self.upload_var = ctk.BooleanVar(value=False)
-        self.upload_check = ctk.CTkCheckBox(
-            config_frame,
-            text="Upload para Google Drive",
-            variable=self.upload_var
-        )
-        self.upload_check.grid(row=2, column=0, columnspan=2, padx=10, pady=10, sticky="w")
+        self.format_menu.grid(row=1, column=1, padx=(0, 10), pady=10, sticky="w")
 
         # Seletor de conta (só aparece se Conta 2 estiver configurada).
         # Mudar de conta limpa o cache de service/veículos para forçar
@@ -150,7 +146,7 @@ class ExportFrame(ctk.CTkFrame):
         self.account_var = ctk.StringVar(value="Conta 1")
         if settings.WIALON_TOKEN_2:
             ctk.CTkLabel(config_frame, text="Conta:").grid(
-                row=2, column=2, padx=10, pady=10, sticky="w"
+                row=1, column=2, padx=(10, 6), pady=10, sticky="w"
             )
             self.account_menu = ctk.CTkOptionMenu(
                 config_frame,
@@ -159,15 +155,38 @@ class ExportFrame(ctk.CTkFrame):
                 width=120,
                 command=self._on_account_changed,
             )
-            self.account_menu.grid(row=2, column=3, padx=10, pady=10, sticky="w")
+            self.account_menu.grid(row=1, column=3, padx=(0, 10), pady=10, sticky="w")
+
+        # --- Linha 2: Opções (checkboxes) ---
+        self.consolidated_var = ctk.BooleanVar(value=True)
+        self.consolidated_check = ctk.CTkCheckBox(
+            config_frame,
+            text="Gerar arquivo consolidado",
+            variable=self.consolidated_var,
+        )
+        self.consolidated_check.grid(
+            row=2, column=0, columnspan=2, padx=10, pady=(4, 12), sticky="w"
+        )
+
+        self.upload_var = ctk.BooleanVar(value=False)
+        self.upload_check = ctk.CTkCheckBox(
+            config_frame,
+            text="Upload para Google Drive",
+            variable=self.upload_var,
+        )
+        self.upload_check.grid(
+            row=2, column=2, columnspan=2, padx=10, pady=(4, 12), sticky="w"
+        )
 
     def _on_account_changed(self, _value: str):
-        """Limpa o serviço e veículos ao trocar de conta."""
+        """Limpa o serviço, veículos e log ao trocar de conta."""
         self.service = None
         self.vehicles = []
         for widget in self.vehicles_scroll.winfo_children():
             widget.destroy()
         self.vehicle_checkboxes.clear()
+        # Limpa o log para não misturar mensagens de contas diferentes (#25).
+        self._clear_log()
 
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
@@ -259,10 +278,11 @@ class ExportFrame(ctk.CTkFrame):
         # CTkTextbox usa tkinter Text internamente
         self._configure_log_tags()
         
-        # Barra de progresso
+        # Barra de progresso — escondida quando não há export rodando (#27).
         self.progress_bar = ctk.CTkProgressBar(progress_frame)
         self.progress_bar.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
         self.progress_bar.set(0)
+        self.progress_bar.grid_remove()  # idle: oculta
     
     def _configure_log_tags(self):
         """Configura tags de cor para o textbox."""
@@ -335,6 +355,8 @@ class ExportFrame(ctk.CTkFrame):
     def _load_vehicles(self):
         """Carrega lista de veículos."""
         self.load_btn.configure(state="disabled", text="Carregando...")
+        # Limpa o log para não acumular mensagens de carregamentos anteriores (#25).
+        self._clear_log()
         self._log("🔌 Conectando ao Wialon...", "INFO")
         
         def load():
@@ -393,10 +415,12 @@ class ExportFrame(ctk.CTkFrame):
         
         self.is_exporting = True
         self.export_btn.configure(state="disabled", text="⏳ Exportando...")
+        # Mostra a barra de progresso durante o export (#27).
+        self.progress_bar.grid()
         self.progress_bar.set(0)
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
-        self.log_text.delete("1.0", "end")
+        self._clear_log()
         self.progress_label.configure(text="Iniciando...")
         
         # Parâmetros
@@ -440,35 +464,59 @@ class ExportFrame(ctk.CTkFrame):
                 
                 # Para barra de progresso e define como completo
                 self.after(0, self._set_progress_complete)
-                
-                # Resultado final
-                self._log("", "INFO")
-                self._log("═" * 50, "SUCCESS")
-                self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
-                self._log("═" * 50, "SUCCESS")
-                self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO")
-                self._log(f"Registros: {result.total_records}", "INFO")
-                self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
-                
-                if result.exported_files:
-                    self._log("", "INFO")
-                    self._log("Arquivos gerados:", "INFO")
-                    for f in result.exported_files:
-                        self._log(f"  📄 {f}", "SUCCESS")
-                
-                if result.upload_result:
-                    ur = result.upload_result
-                    self._log("", "INFO")
-                    self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
-                
-                if result.errors:
+
+                # Caso especial: processou veículos mas nenhum dado no período.
+                # "Taxa de sucesso 100%" com 0 registros confunde — destacamos
+                # que não houve entrega e sugerimos a causa provável (#32).
+                if result.total_records == 0:
                     self._log("", "WARNING")
-                    self._log("Erros:", "WARNING")
-                    for e in result.errors:
-                        self._log(f"  {e}", "ERROR")
-                
-                if self.status_callback:
-                    self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
+                    self._log("═" * 50, "WARNING")
+                    self._log("⚠️  NENHUM DADO DISPONÍVEL PARA O PERÍODO", "WARNING")
+                    self._log("═" * 50, "WARNING")
+                    self._log(
+                        f"Veículos processados: {result.processed_vehicles}/{result.total_vehicles}",
+                        "INFO",
+                    )
+                    self._log("Possíveis causas:", "INFO")
+                    self._log("  • Veículos inativos no período selecionado", "INFO")
+                    self._log("  • Limite de retenção de histórico da conta Wialon", "INFO")
+                    self._log("  • Mês/ano muito antigos", "INFO")
+                    self.after(
+                        0, lambda: self.progress_label.configure(text="Sem dados")
+                    )
+                    if self.status_callback:
+                        self.status_callback(
+                            "Exportação sem dados para o período", "warning"
+                        )
+                else:
+                    # Resultado final
+                    self._log("", "INFO")
+                    self._log("═" * 50, "SUCCESS")
+                    self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
+                    self._log("═" * 50, "SUCCESS")
+                    self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO")
+                    self._log(f"Registros: {result.total_records}", "INFO")
+                    self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
+
+                    if result.exported_files:
+                        self._log("", "INFO")
+                        self._log("Arquivos gerados:", "INFO")
+                        for f in result.exported_files:
+                            self._log(f"  📄 {f}", "SUCCESS")
+
+                    if result.upload_result:
+                        ur = result.upload_result
+                        self._log("", "INFO")
+                        self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
+
+                    if result.errors:
+                        self._log("", "WARNING")
+                        self._log("Erros:", "WARNING")
+                        for e in result.errors:
+                            self._log(f"  {e}", "ERROR")
+
+                    if self.status_callback:
+                        self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
                 
             except Exception as e:
                 self._log(f"\n❌ Erro na exportação: {e}", "ERROR")
@@ -492,12 +540,17 @@ class ExportFrame(ctk.CTkFrame):
         """Reseta o estado do botão de exportação."""
         self.is_exporting = False
         self.export_btn.configure(state="normal", text="▶️  Iniciar Exportação")
-        # Garante que a barra de progresso está parada
+        # Garante que a barra de progresso está parada e a esconde (#27).
         try:
             self.progress_bar.stop()
             self.progress_bar.configure(mode="determinate")
-        except Exception:
-            pass
+            self.progress_bar.grid_remove()
+        except Exception as e:
+            logger.debug(f"Erro ao resetar barra de progresso: {e}")
+
+    def _clear_log(self):
+        """Limpa o textbox de log (thread-safe via after)."""
+        self.after(0, lambda: self.log_text.delete("1.0", "end"))
     
     def _log(self, message: str, level: str = "INFO"):
         """
