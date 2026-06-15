@@ -16,7 +16,7 @@
 | 02 | Quick wins — Export | #25, #26, #27, #12, #32 | — | S | ✅ Concluído |
 | 03 | Quick wins — Settings | #28, #29, #30, #18 | — | S | ✅ Concluído |
 | 04 | Design tokens (foundation) | #06 | 🔴 parcial | S | ✅ Concluído |
-| 05 | Seletor de conta global na sidebar | #01, #04 | 🔴 parcial | M | ⬜ Todo |
+| 05 | Seletor de conta global na sidebar | #01, #04 | 🔴 parcial | M | ✅ Concluído |
 | 06 | Cards refinados na Home | #08 (depende #06) | — | S | ⬜ Todo |
 
 **Total estimado:** ~10h de trabalho focado · 15 itens do backlog fechados.
