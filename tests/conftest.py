@@ -12,11 +12,19 @@ def ctk_root():
     """
     import customtkinter as ctk
 
+    from src.gui import icons
+
     try:
         root = ctk.CTk()
     except Exception as exc:  # noqa: BLE001 — sem display disponível
         pytest.skip(f"Tk indisponível neste ambiente: {exc}")
 
+    # O cache de imagens do icons guarda CTkImage ligados a um root Tk.
+    # Entre testes o root é destruído, então limpamos o cache para não
+    # reutilizar imagens órfãs (no app real há um único root vitalício).
+    icons._image_cache.clear()
+
     root.withdraw()
     yield root
+    icons._image_cache.clear()
     root.destroy()

@@ -11,7 +11,9 @@ import customtkinter as ctk
 from src.core.config import settings
 from src.gui import __version__
 from src.gui.account_state import AccountState
+from src.gui.components import toast
 from src.gui.components.status_bar import StatusBar
+from src.gui.components.toast import ToastManager
 from src.gui.frames.export import ExportFrame
 from src.gui.frames.home import HomeFrame
 from src.gui.frames.settings import SettingsFrame
@@ -30,8 +32,9 @@ class MoviExporterApp(ctk.CTk):
         self.geometry("1100x700")
         self.minsize(900, 600)
         
-        # Tema
-        ctk.set_appearance_mode("dark")
+        # Tema — lê a preferência salva (padrão "dark"). O usuário troca em
+        # Configurações e a escolha é lembrada no próximo boot.
+        ctk.set_appearance_mode(settings.APP_THEME)
         ctk.set_default_color_theme("blue")
         
         # Grid principal
@@ -45,6 +48,11 @@ class MoviExporterApp(ctk.CTk):
         # Estado global da conta Wialon selecionada (compartilhado entre
         # sidebar, Home e Export). A sidebar muda; os frames reagem.
         self.account_state = AccountState()
+
+        # Gerenciador de toasts (avisos no canto da janela). Registrado como
+        # singleton para os frames usarem via toast.show() sem plumbing.
+        self.toast_manager = ToastManager(self)
+        toast.set_manager(self.toast_manager)
 
         # Criar componentes
         self._create_sidebar()

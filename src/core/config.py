@@ -30,6 +30,7 @@ class Settings:
     WIALON_PAGE_SIZE: int
     GOOGLE_DRIVE_CREDENTIALS_FILE: str
     GOOGLE_DRIVE_FOLDER_ID: str
+    APP_THEME: str
 
     def __init__(self) -> None:
         self.reload()
@@ -48,6 +49,8 @@ class Settings:
             "GOOGLE_DRIVE_CREDENTIALS_FILE", "./client_secrets.json"
         )
         self.GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "")
+        # Tema da GUI: "dark" (padrão), "light" ou "system".
+        self.APP_THEME = os.getenv("APP_THEME", "dark")
 
 
 settings = Settings()

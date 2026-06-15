@@ -20,6 +20,7 @@ from src.core.config import settings
 from src.core.logger import GUILogHandler, logger
 from src.gui import icons
 from src.gui.account_state import AccountState
+from src.gui.components import toast
 from src.services.vehicle_service import VehicleService
 
 # Nomes dos meses em português brasileiro — usados no dropdown.
@@ -537,6 +538,13 @@ class ExportFrame(ctk.CTkFrame):
 
                     if self.status_callback:
                         self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
+                    self.after(
+                        0,
+                        lambda: toast.show(
+                            f"Exportação concluída — {result.total_records} registros",
+                            kind="success",
+                        ),
+                    )
                 
             except Exception as e:
                 self._log(f"\n❌ Erro na exportação: {e}", "ERROR")

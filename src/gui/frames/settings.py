@@ -14,6 +14,7 @@ from src.core.config import settings
 from src.core.env_writer import set_env_value
 from src.core.logger import logger
 from src.gui import icons
+from src.gui.components import toast
 from src.gui.design import Colors
 
 # Página de login do Wialon. Depois de logado, o usuário gera o token
@@ -220,6 +221,7 @@ class SettingsFrame(ctk.CTkFrame):
         self._set_token_status(
             account, "Status: Token salvo no .env", Colors.SUCCESS, icons.SAVE
         )
+        toast.show(f"Token da Conta {account} salvo", kind="success")
 
     def _test_wialon_token(self, account: int):
         """Testa o token da conta dada chamando authenticate() em background."""
@@ -397,6 +399,7 @@ class SettingsFrame(ctk.CTkFrame):
             return
         self.clipboard_clear()
         self.clipboard_append(folder_id)
+        toast.show("ID da pasta copiado", kind="success")
 
     def _open_drive_folder(self):
         """Abre a pasta do Drive no navegador a partir do ID."""
@@ -430,10 +433,16 @@ class SettingsFrame(ctk.CTkFrame):
             row=1, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
-        self.theme_var = ctk.StringVar(value="dark")
+        # Inicia com o tema salvo (padrão "dark"). Rótulos em PT-BR no menu,
+        # mapeados para os valores que o CustomTkinter entende.
+        self._theme_labels = {"dark": "Escuro", "light": "Claro", "system": "Sistema"}
+        self._theme_values = {v: k for k, v in self._theme_labels.items()}
+        current = settings.APP_THEME if settings.APP_THEME in self._theme_labels else "dark"
+
+        self.theme_var = ctk.StringVar(value=self._theme_labels[current])
         self.theme_menu = ctk.CTkOptionMenu(
             section,
-            values=["dark", "light", "system"],
+            values=list(self._theme_labels.values()),
             variable=self.theme_var,
             command=self._change_theme,
             width=150,
@@ -453,6 +462,13 @@ class SettingsFrame(ctk.CTkFrame):
             self.export_dir_entry.delete(0, "end")
             self.export_dir_entry.insert(0, directory)
 
-    def _change_theme(self, theme: str):
-        """Muda o tema da aplicação."""
+    def _change_theme(self, label: str):
+        """Aplica o tema escolhido e persiste a preferência no .env."""
+        theme = self._theme_values.get(label, "dark")
         ctk.set_appearance_mode(theme)
+        try:
+            set_env_value("APP_THEME", theme)
+            settings.reload()
+            toast.show(f"Tema alterado para {label}", kind="info")
+        except Exception as e:
+            logger.debug(f"Erro ao salvar tema: {e}")
