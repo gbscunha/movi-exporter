@@ -7,7 +7,7 @@ import threading
 from typing import Optional
 
 from src.gui.account_state import AccountState
-from src.gui.design import Colors
+from src.gui.design import Border, Colors, Font, Space
 from src.services.vehicle_service import VehicleService
 
 
@@ -247,30 +247,40 @@ class HomeFrame(ctk.CTkFrame):
 
 
 class StatusCard(ctk.CTkFrame):
-    """Card de status reutilizável."""
-    
+    """Card de status reutilizável.
+
+    Hierarquia tipográfica: rótulo discreto em maiúsculas (muted, pequeno) e
+    valor como protagonista (grande, bold). Cores e espaçamentos vêm dos
+    design tokens (Fase 04).
+    """
+
     def __init__(self, master, title: str, value: str, icon: str = "", **kwargs):
-        super().__init__(master, **kwargs)
-        
+        super().__init__(master, corner_radius=Border.RADIUS_MD, **kwargs)
+
         self.grid_columnconfigure(0, weight=1)
-        
-        # Ícone + Título
+
+        # Rótulo — discreto, maiúsculas para diferenciar do valor.
+        label_text = f"{icon}  {title.upper()}" if icon else title.upper()
         header = ctk.CTkLabel(
             self,
-            text=f"{icon}  {title}",
-            font=ctk.CTkFont(size=12),
-            text_color="gray"
+            text=label_text,
+            font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
+            text_color=Colors.MUTED,
         )
-        header.grid(row=0, column=0, padx=15, pady=(15, 5), sticky="w")
-        
-        # Valor
+        header.grid(
+            row=0, column=0, padx=Space.LG, pady=(Space.LG, Space.XS), sticky="w"
+        )
+
+        # Valor — protagonista do card.
         self.value_label = ctk.CTkLabel(
             self,
             text=value,
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=Font.SIZE_XL, weight=Font.WEIGHT_BOLD),
         )
-        self.value_label.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="w")
-    
+        self.value_label.grid(
+            row=1, column=0, padx=Space.LG, pady=(0, Space.LG), sticky="w"
+        )
+
     def set_value(self, value: str, status: str = "normal"):
         """Atualiza o valor do card."""
         self.value_label.configure(text=value)
