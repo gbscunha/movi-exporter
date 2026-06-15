@@ -13,7 +13,7 @@
 | # | Fase | Itens backlog | TDD | Esforço | Status |
 |---|------|---------------|-----|---------|--------|
 | 01 | Fundação: ícones (FontAwesome) | #03 | 🔴 parcial | S | ✅ Concluído |
-| 02 | Fundação: light mode + toast | #11, #10 | 🔴 parcial | M | ⬜ Todo |
+| 02 | Fundação: light mode + toast | #11, #10 | 🔴 parcial | M | ✅ Concluído |
 | 03 | Home + Sidebar + Sobre | #07, #09, #23 | 🔴 parcial | M | ⬜ Todo |
 | 04 | Redesign do Export | #15, #14, #13, #17 | 🔴 parcial | M | ⬜ Todo |
 | 05 | Settings polish | #20, #21 | — | S | ⬜ Todo |
