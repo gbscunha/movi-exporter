@@ -13,6 +13,7 @@ from src.clients.wialon_client import WialonClient, WialonError
 from src.core.config import settings
 from src.core.env_writer import set_env_value
 from src.core.logger import logger
+from src.gui import icons
 from src.gui.design import Colors
 
 # Página de login do Wialon. Depois de logado, o usuário gera o token
@@ -74,7 +75,9 @@ class SettingsFrame(ctk.CTkFrame):
         # Título
         title = ctk.CTkLabel(
             section,
-            text=f"🔌  Wialon API — Conta {account}",
+            text=f"  Wialon API — Conta {account}",
+            image=icons.get(icons.PLUG, size=18),
+            compound="left",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
         title.grid(row=0, column=0, columnspan=6, padx=15, pady=(15, 10), sticky="w")
@@ -95,9 +98,12 @@ class SettingsFrame(ctk.CTkFrame):
         if existing:
             entry.insert(0, existing)
 
+        self._eye_icon = icons.get(icons.EYE, size=16)
+        self._eye_slash_icon = icons.get(icons.EYE_SLASH, size=16)
         toggle_btn = ctk.CTkButton(
             section,
-            text="👁",
+            text="",
+            image=self._eye_icon,
             width=36,
             command=lambda a=account: self._toggle_token_visibility(a),
         )
@@ -105,24 +111,27 @@ class SettingsFrame(ctk.CTkFrame):
 
         open_btn = ctk.CTkButton(
             section,
-            text="🔗 Gerar",
-            width=80,
+            text=" Gerar",
+            image=icons.get(icons.LINK, size=16),
+            width=90,
             command=self._open_wialon_auth_page,
         )
         open_btn.grid(row=1, column=3, padx=2, pady=10)
 
         save_btn = ctk.CTkButton(
             section,
-            text="💾 Salvar",
-            width=90,
+            text=" Salvar",
+            image=icons.get(icons.SAVE, size=16),
+            width=100,
             command=lambda a=account: self._save_wialon_token(a),
         )
         save_btn.grid(row=1, column=4, padx=2, pady=10)
 
         test_btn = ctk.CTkButton(
             section,
-            text="🔍 Testar",
-            width=90,
+            text=" Testar",
+            image=icons.get(icons.SEARCH, size=16),
+            width=100,
             command=lambda a=account: self._test_wialon_token(a),
         )
         test_btn.grid(row=1, column=5, padx=(2, 15), pady=10)
@@ -130,17 +139,11 @@ class SettingsFrame(ctk.CTkFrame):
         # Status. Quando há token salvo mas ainda não testado, usamos amarelo
         # (#28) para chamar atenção que vale clicar em Testar. Sem token, fica
         # cinza neutro (não há o que testar ainda).
-        if existing:
-            status_text = "Status: ⚠️ Não testado — clique em 🔍 Testar"
-            status_color = Colors.WARNING
-        else:
-            status_text = "Status: sem token configurado"
-            status_color = Colors.MUTED
         status_label = ctk.CTkLabel(
             section,
-            text=status_text,
-            text_color=status_color,
+            text="",
             font=ctk.CTkFont(size=12),
+            compound="left",
         )
         status_label.grid(
             row=2, column=0, columnspan=6, padx=15, pady=(0, 15), sticky="w"
@@ -150,9 +153,21 @@ class SettingsFrame(ctk.CTkFrame):
         self._token_widgets[account] = {
             "entry": entry,
             "test_btn": test_btn,
+            "toggle_btn": toggle_btn,
             "status_label": status_label,
             "visible": False,
         }
+
+        # Estado inicial do status.
+        if existing:
+            self._set_token_status(
+                account,
+                "Status: Não testado — clique em Testar",
+                Colors.WARNING,
+                icons.TRIANGLE_WARNING,
+            )
+        else:
+            self._set_token_status(account, "Status: sem token configurado", Colors.MUTED)
 
         # Aliases para compatibilidade com testes/smoke da Fase 10 (Conta 1).
         if account == 1:
@@ -163,11 +178,21 @@ class SettingsFrame(ctk.CTkFrame):
             self.token_test_btn = test_btn
             self.token_status_label = status_label
 
+    def _set_token_status(self, account, text, color, icon=None):
+        """Atualiza o label de status com texto, cor e (opcional) ícone."""
+        w = self._token_widgets[account]
+        img = icons.get(icon, size=14, color=color) if icon else None
+        w["status_label"].configure(text=text, text_color=color, image=img)
+
     def _toggle_token_visibility(self, account: int):
         """Alterna entre mostrar e esconder o token da conta dada."""
         w = self._token_widgets[account]
         w["visible"] = not w["visible"]
         w["entry"].configure(show="" if w["visible"] else "*")
+        # Troca o ícone do botão (olho aberto/riscado) conforme a visibilidade.
+        w["toggle_btn"].configure(
+            image=self._eye_slash_icon if w["visible"] else self._eye_icon
+        )
 
     def _open_wialon_auth_page(self):
         """Abre a página de login do Wialon no navegador."""
@@ -192,8 +217,8 @@ class SettingsFrame(ctk.CTkFrame):
             messagebox.showerror("Erro", f"Não foi possível salvar o token: {e}")
             return
 
-        w["status_label"].configure(
-            text="Status: 💾 Token salvo no .env", text_color=Colors.SUCCESS
+        self._set_token_status(
+            account, "Status: Token salvo no .env", Colors.SUCCESS, icons.SAVE
         )
 
     def _test_wialon_token(self, account: int):
@@ -206,8 +231,8 @@ class SettingsFrame(ctk.CTkFrame):
             )
             return
 
-        w["status_label"].configure(
-            text="Status: 🔄 Testando conexão...", text_color=Colors.MUTED
+        self._set_token_status(
+            account, "Status: Testando conexão...", Colors.MUTED, icons.REFRESH
         )
         w["test_btn"].configure(state="disabled")
 
@@ -228,21 +253,19 @@ class SettingsFrame(ctk.CTkFrame):
 
     def _on_token_test_ok(self, account: int, username: str):
         """Callback executado na thread da GUI após teste bem-sucedido."""
-        w = self._token_widgets[account]
         if username:
-            text = f"Status: ✅ Conectado como \"{username}\""
+            text = f"Status: Conectado como \"{username}\""
         else:
-            text = "Status: ✅ Conectado"
-        w["status_label"].configure(text=text, text_color=Colors.SUCCESS)
-        w["test_btn"].configure(state="normal")
+            text = "Status: Conectado"
+        self._set_token_status(account, text, Colors.SUCCESS, icons.CIRCLE_CHECK)
+        self._token_widgets[account]["test_btn"].configure(state="normal")
 
     def _on_token_test_fail(self, account: int, error: str):
         """Callback executado na thread da GUI após teste falhar."""
-        w = self._token_widgets[account]
-        w["status_label"].configure(
-            text=f"Status: ❌ Falha — {error}", text_color=Colors.ERROR
+        self._set_token_status(
+            account, f"Status: Falha — {error}", Colors.ERROR, icons.CIRCLE_XMARK
         )
-        w["test_btn"].configure(state="normal")
+        self._token_widgets[account]["test_btn"].configure(state="normal")
 
     def _create_export_section(self):
         """Cria seção de configuração de exportação."""
@@ -252,7 +275,8 @@ class SettingsFrame(ctk.CTkFrame):
 
         # Título
         title = ctk.CTkLabel(
-            section, text="📁  Exportação", font=ctk.CTkFont(size=16, weight="bold")
+            section, text="  Exportação", image=icons.get(icons.FOLDER, size=18),
+            compound="left", font=ctk.CTkFont(size=16, weight="bold")
         )
         title.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 10), sticky="w")
 
@@ -268,7 +292,8 @@ class SettingsFrame(ctk.CTkFrame):
         self.export_dir_entry.insert(0, export_dir)
 
         self.browse_btn = ctk.CTkButton(
-            section, text="📂", width=40, command=self._browse_export_dir
+            section, text="", image=icons.get(icons.FOLDER_OPEN, size=16),
+            width=40, command=self._browse_export_dir
         )
         self.browse_btn.grid(row=1, column=2, padx=(5, 15), pady=10)
 
@@ -312,7 +337,8 @@ class SettingsFrame(ctk.CTkFrame):
 
         # Título
         title = ctk.CTkLabel(
-            section, text="☁️  Google Drive", font=ctk.CTkFont(size=16, weight="bold")
+            section, text="  Google Drive", image=icons.get(icons.CLOUD, size=18),
+            compound="left", font=ctk.CTkFont(size=16, weight="bold")
         )
         title.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 10), sticky="w")
 
@@ -324,11 +350,16 @@ class SettingsFrame(ctk.CTkFrame):
         creds_file = settings.GOOGLE_DRIVE_CREDENTIALS_FILE or "./client_secrets.json"
         file_exists = os.path.exists(creds_file)
 
-        status = "✅ Encontrado" if file_exists else "❌ Não encontrado"
+        status = "Encontrado" if file_exists else "Não encontrado"
         status_color = Colors.SUCCESS if file_exists else Colors.ERROR
+        status_icon = icons.CIRCLE_CHECK if file_exists else icons.CIRCLE_XMARK
 
         self.creds_label = ctk.CTkLabel(
-            section, text=f"{creds_file} ({status})", text_color=status_color
+            section,
+            text=f"{creds_file} ({status})",
+            text_color=status_color,
+            image=icons.get(status_icon, size=14, color=status_color),
+            compound="left",
         )
         self.creds_label.grid(row=1, column=1, columnspan=2, padx=10, pady=10, sticky="w")
 
@@ -348,12 +379,14 @@ class SettingsFrame(ctk.CTkFrame):
             self.folder_entry.insert(0, folder_id)
 
         self.folder_copy_btn = ctk.CTkButton(
-            section, text="📋", width=40, command=self._copy_folder_id
+            section, text="", image=icons.get(icons.COPY, size=16),
+            width=40, command=self._copy_folder_id
         )
         self.folder_copy_btn.grid(row=2, column=2, padx=(0, 4), pady=(10, 15))
 
         self.folder_open_btn = ctk.CTkButton(
-            section, text="🔗", width=40, command=self._open_drive_folder
+            section, text="", image=icons.get(icons.LINK, size=16),
+            width=40, command=self._open_drive_folder
         )
         self.folder_open_btn.grid(row=2, column=3, padx=(0, 15), pady=(10, 15))
 
@@ -387,7 +420,8 @@ class SettingsFrame(ctk.CTkFrame):
 
         # Título
         title = ctk.CTkLabel(
-            section, text="⚙️  Geral", font=ctk.CTkFont(size=16, weight="bold")
+            section, text="  Geral", image=icons.get(icons.GEAR, size=18),
+            compound="left", font=ctk.CTkFont(size=16, weight="bold")
         )
         title.grid(row=0, column=0, columnspan=2, padx=15, pady=(15, 10), sticky="w")
 

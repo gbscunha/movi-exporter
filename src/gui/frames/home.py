@@ -6,6 +6,7 @@ import customtkinter as ctk
 import threading
 from typing import Optional
 
+from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.design import Border, Colors, Font, Space
 from src.services.vehicle_service import VehicleService
@@ -110,19 +111,21 @@ class HomeFrame(ctk.CTkFrame):
         # Botão: Testar Conexão
         self.btn_test = ctk.CTkButton(
             actions_frame,
-            text="🔄  Testar Conexões",
+            text="  Testar Conexões",
+            image=icons.get(icons.REFRESH, size=18),
             width=200,
             height=45,
             command=self._check_status_async
         )
         self.btn_test.grid(row=0, column=0, padx=5, pady=5)
-        
+
         # Botão: Listar Veículos. Começa desabilitado e é habilitado quando
         # _check_status_async conclui — evita o silent fail relatado no QA
         # quando o usuário clica antes do boot terminar (#05).
         self.btn_list = ctk.CTkButton(
             actions_frame,
-            text="📋  Ver Veículos",
+            text="  Ver Veículos",
+            image=icons.get(icons.LIST, size=18),
             width=200,
             height=45,
             command=self._show_vehicles,
@@ -156,7 +159,7 @@ class HomeFrame(ctk.CTkFrame):
                 wialon_ok = self.service.test_connection()
 
                 self.after(0, lambda: self.wialon_card.set_value(
-                    "Conectado ✅" if wialon_ok else "Desconectado ❌",
+                    "Conectado" if wialon_ok else "Desconectado",
                     "success" if wialon_ok else "error"
                 ))
 
@@ -171,7 +174,7 @@ class HomeFrame(ctk.CTkFrame):
                     self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
 
             except Exception:
-                self.after(0, lambda: self.wialon_card.set_value("Erro ❌", "error"))
+                self.after(0, lambda: self.wialon_card.set_value("Erro", "error"))
                 self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
 
             # Google Drive
@@ -181,7 +184,7 @@ class HomeFrame(ctk.CTkFrame):
                 drive_ok = uploader.test_connection()
 
                 self.after(0, lambda: self.drive_card.set_value(
-                    "Conectado ✅" if drive_ok else "Não configurado",
+                    "Conectado" if drive_ok else "Não configurado",
                     "success" if drive_ok else "warning"
                 ))
             except Exception:
@@ -281,17 +284,28 @@ class StatusCard(ctk.CTkFrame):
             row=1, column=0, padx=Space.LG, pady=(0, Space.LG), sticky="w"
         )
 
-    def set_value(self, value: str, status: str = "normal"):
-        """Atualiza o valor do card."""
-        self.value_label.configure(text=value)
-        
-        colors = {
-            "success": Colors.SUCCESS,
-            "error": Colors.ERROR,
-            "warning": Colors.WARNING,
-            "normal": None,
-        }
+    # Mapeia status → (cor, ícone FontAwesome). "normal" não tem ícone.
+    _STATUS_STYLE = {
+        "success": (Colors.SUCCESS, icons.CIRCLE_CHECK),
+        "error": (Colors.ERROR, icons.CIRCLE_XMARK),
+        "warning": (Colors.WARNING, icons.TRIANGLE_WARNING),
+        "normal": (None, None),
+    }
 
-        color = colors.get(status)
+    def set_value(self, value: str, status: str = "normal"):
+        """Atualiza o valor do card com cor e ícone semânticos.
+
+        O ícone (verde/vermelho/amarelo) aparece à esquerda do texto, no lugar
+        dos emojis inline que existiam antes (✅❌⚠️).
+        """
+        self.value_label.configure(text=value)
+
+        color, icon = self._STATUS_STYLE.get(status, (None, None))
         if color:
             self.value_label.configure(text_color=color)
+        if icon:
+            self.value_label.configure(
+                image=icons.get(icon, size=18, color=color), compound="left"
+            )
+        else:
+            self.value_label.configure(image=None)

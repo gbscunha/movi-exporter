@@ -6,7 +6,7 @@ import customtkinter as ctk
 from typing import Callable, Optional
 
 from src.core.config import settings
-from src.gui import __version__
+from src.gui import __version__, icons
 from src.gui.account_state import AccountState
 
 
@@ -44,9 +44,9 @@ class SidebarFrame(ctk.CTkFrame):
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 30))
 
         # Botões de navegação
-        self._create_nav_button("home", "🏠  Início", row=1)
-        self._create_nav_button("export", "📤  Exportar", row=2)
-        self._create_nav_button("settings", "⚙️  Configurações", row=3)
+        self._create_nav_button("home", "  Início", icons.HOME, row=1)
+        self._create_nav_button("export", "  Exportar", icons.FILE_EXPORT, row=2)
+        self._create_nav_button("settings", "  Configurações", icons.GEAR, row=3)
 
         # Seletor de conta (só aparece se houver Conta 2 configurada).
         # Estado global — mudar aqui reflete na Home e no Export.
@@ -91,11 +91,12 @@ class SidebarFrame(ctk.CTkFrame):
         if self.account_state is not None:
             self.account_state.set_account(account)
     
-    def _create_nav_button(self, name: str, text: str, row: int):
-        """Cria um botão de navegação."""
+    def _create_nav_button(self, name: str, text: str, icon: str, row: int):
+        """Cria um botão de navegação com ícone FontAwesome."""
         button = ctk.CTkButton(
             self,
             text=text,
+            image=icons.get(icon, size=18),
             font=ctk.CTkFont(size=14),
             anchor="w",
             height=40,

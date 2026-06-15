@@ -28,8 +28,8 @@ customtkinter_datas = collect_data_files('customtkinter')
 datas = [
     # CustomTkinter assets
     *customtkinter_datas,
-    # Adicione outros arquivos se necessário:
-    # ('assets', 'assets'),
+    # Fonte FontAwesome (ícones da GUI) — deve ir junto no bundle.
+    ('src/gui/assets/fontawesome-solid.ttf', 'src/gui/assets'),
 ]
 
 # Módulos ocultos (imports dinâmicos)

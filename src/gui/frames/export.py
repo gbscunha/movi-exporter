@@ -18,6 +18,7 @@ import customtkinter as ctk
 from src.clients.wialon_client import WialonClient
 from src.core.config import settings
 from src.core.logger import GUILogHandler, logger
+from src.gui import icons
 from src.gui.account_state import AccountState
 from src.services.vehicle_service import VehicleService
 
@@ -248,8 +249,9 @@ class ExportFrame(ctk.CTkFrame):
         # Botão carregar
         self.load_btn = ctk.CTkButton(
             vehicles_frame,
-            text="🔄 Carregar",
-            width=100,
+            text=" Carregar",
+            image=icons.get(icons.REFRESH, size=16),
+            width=110,
             command=self._load_vehicles
         )
         self.load_btn.grid(row=0, column=3, padx=10, pady=10)
@@ -314,7 +316,8 @@ class ExportFrame(ctk.CTkFrame):
 
         self.open_folder_btn = ctk.CTkButton(
             actions_frame,
-            text="📂  Abrir pasta",
+            text="  Abrir pasta",
+            image=icons.get(icons.FOLDER_OPEN, size=18),
             width=140,
             height=45,
             command=self._open_export_folder,
@@ -323,7 +326,8 @@ class ExportFrame(ctk.CTkFrame):
 
         self.export_btn = ctk.CTkButton(
             actions_frame,
-            text="▶️  Iniciar Exportação",
+            text="  Iniciar Exportação",
+            image=icons.get(icons.PLAY, size=18),
             width=200,
             height=45,
             font=ctk.CTkFont(size=14, weight="bold"),
@@ -387,7 +391,7 @@ class ExportFrame(ctk.CTkFrame):
             except Exception as e:
                 self._log(f"Erro ao carregar veículos: {e}", "ERROR")
             finally:
-                self.after(0, lambda: self.load_btn.configure(state="normal", text="🔄 Carregar"))
+                self.after(0, lambda: self.load_btn.configure(state="normal", text=" Carregar"))
         
         thread = threading.Thread(target=load, daemon=True)
         thread.start()
@@ -555,7 +559,7 @@ class ExportFrame(ctk.CTkFrame):
     def _reset_export_button(self):
         """Reseta o estado do botão de exportação."""
         self.is_exporting = False
-        self.export_btn.configure(state="normal", text="▶️  Iniciar Exportação")
+        self.export_btn.configure(state="normal", text="  Iniciar Exportação")
         # Garante que a barra de progresso está parada e a esconde (#27).
         try:
             self.progress_bar.stop()
