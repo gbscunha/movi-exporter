@@ -18,6 +18,7 @@ import customtkinter as ctk
 from src.clients.wialon_client import WialonClient
 from src.core.config import settings
 from src.core.logger import GUILogHandler, logger
+from src.gui.account_state import AccountState
 from src.services.vehicle_service import VehicleService
 
 # Nomes dos meses em português brasileiro — usados no dropdown.
@@ -50,19 +51,26 @@ class ExportFrame(ctk.CTkFrame):
         "CRITICAL": "#FF5722",
     }
     
-    def __init__(self, master, status_callback: Optional[Callable] = None, **kwargs):
+    def __init__(
+        self,
+        master,
+        status_callback: Optional[Callable] = None,
+        account_state: Optional[AccountState] = None,
+        **kwargs,
+    ):
         super().__init__(master, fg_color="transparent", **kwargs)
-        
+
         self.status_callback = status_callback
+        self.account_state = account_state
         self.service: Optional[VehicleService] = None
         self.vehicles: List[dict] = []
         self.is_exporting = False
         self._log_handler: Optional[GUILogHandler] = None
-        
+
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
-        
+
         # Título
         self.title = ctk.CTkLabel(
             self,
@@ -70,26 +78,32 @@ class ExportFrame(ctk.CTkFrame):
             font=ctk.CTkFont(size=28, weight="bold")
         )
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
-        
+
         # Configurações
         self._create_config_section()
-        
+
         # Seleção de veículos
         self._create_vehicles_section()
-        
+
         # Log de progresso
         self._create_progress_section()
-        
+
         # Botões de ação
         self._create_action_buttons()
+
+        # Reage à troca de conta feita na sidebar (estado global).
+        if self.account_state is not None:
+            self.account_state.register(self._on_account_changed)
     
     def _create_config_section(self):
         """Cria seção de configuração.
 
         Layout em grid 4 colunas (label | campo | label | campo), linhas:
           linha 0: Mês        | Ano
-          linha 1: Formato    | Conta (só quando há 2 contas)
+          linha 1: Formato
           linha 2: Opções (checkboxes)
+
+        O seletor de conta vive na sidebar (estado global), não mais aqui.
         """
         config_frame = ctk.CTkFrame(self)
         config_frame.grid(row=1, column=0, sticky="ew", pady=(0, 15))
@@ -140,23 +154,6 @@ class ExportFrame(ctk.CTkFrame):
         )
         self.format_menu.grid(row=1, column=1, padx=(0, 10), pady=10, sticky="w")
 
-        # Seletor de conta (só aparece se Conta 2 estiver configurada).
-        # Mudar de conta limpa o cache de service/veículos para forçar
-        # reautenticação com o token correto.
-        self.account_var = ctk.StringVar(value="Conta 1")
-        if settings.WIALON_TOKEN_2:
-            ctk.CTkLabel(config_frame, text="Conta:").grid(
-                row=1, column=2, padx=(10, 6), pady=10, sticky="w"
-            )
-            self.account_menu = ctk.CTkOptionMenu(
-                config_frame,
-                values=["Conta 1", "Conta 2"],
-                variable=self.account_var,
-                width=120,
-                command=self._on_account_changed,
-            )
-            self.account_menu.grid(row=1, column=3, padx=(0, 10), pady=10, sticky="w")
-
         # --- Linha 2: Opções (checkboxes) ---
         self.consolidated_var = ctk.BooleanVar(value=True)
         self.consolidated_check = ctk.CTkCheckBox(
@@ -178,8 +175,14 @@ class ExportFrame(ctk.CTkFrame):
             row=2, column=2, columnspan=2, padx=10, pady=(4, 12), sticky="w"
         )
 
-    def _on_account_changed(self, _value: str):
-        """Limpa o serviço, veículos e log ao trocar de conta."""
+    def _on_account_changed(self, account: int):
+        """Reage à troca de conta global feita na sidebar.
+
+        Limpa o serviço/veículos em cache (forçando reautenticação com o token
+        correto) e o log. Se o usuário estava no modo "Selecionar veículos",
+        recarrega a lista automaticamente para não deixar a tela "presa" com
+        veículos da conta anterior (#04).
+        """
         self.service = None
         self.vehicles = []
         for widget in self.vehicles_scroll.winfo_children():
@@ -187,10 +190,23 @@ class ExportFrame(ctk.CTkFrame):
         self.vehicle_checkboxes.clear()
         # Limpa o log para não misturar mensagens de contas diferentes (#25).
         self._clear_log()
+        self._log(f"Conta alterada para {self._account_label()}.", "INFO")
+
+        # Auto-load se o usuário está escolhendo veículos manualmente (#04).
+        if not self.all_vehicles_var.get():
+            self._load_vehicles()
+
+    def _account(self) -> int:
+        """Conta selecionada (1 ou 2), do estado global."""
+        return self.account_state.account if self.account_state else 1
+
+    def _account_label(self) -> str:
+        """Nome humano da conta selecionada."""
+        return self.account_state.label if self.account_state else "Conta 1"
 
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
-        if self.account_var.get() == "Conta 2" and settings.WIALON_TOKEN_2:
+        if self._account() == 2 and settings.WIALON_TOKEN_2:
             client = WialonClient(token=settings.WIALON_TOKEN_2)
             return VehicleService(client=client)
         return VehicleService()
@@ -449,7 +465,7 @@ class ExportFrame(ctk.CTkFrame):
 
                 # Subpasta por conta só quando há duas contas configuradas.
                 account_name = (
-                    self.account_var.get() if settings.WIALON_TOKEN_2 else None
+                    self._account_label() if settings.WIALON_TOKEN_2 else None
                 )
 
                 result = self.service.export_monthly_data(

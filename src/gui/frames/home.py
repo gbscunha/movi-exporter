@@ -6,18 +6,20 @@ import customtkinter as ctk
 import threading
 from typing import Optional
 
+from src.gui.account_state import AccountState
 from src.gui.design import Colors
 from src.services.vehicle_service import VehicleService
 
 
 class HomeFrame(ctk.CTkFrame):
     """Tela inicial com status e ações rápidas."""
-    
-    def __init__(self, master, **kwargs):
+
+    def __init__(self, master, account_state: Optional[AccountState] = None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
-        
+
+        self.account_state = account_state
         self.service: Optional[VehicleService] = None
-        
+
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -48,6 +50,19 @@ class HomeFrame(ctk.CTkFrame):
         # Verificar status em background. Importante chamar DEPOIS dos botões
         # serem criados — `_check_status_async` desabilita `btn_list` enquanto
         # roda (#05).
+        self._check_status_async()
+
+        # Reage à troca de conta na sidebar: revalida status com o novo token.
+        if self.account_state is not None:
+            self.account_state.register(self._on_account_changed)
+
+    def _on_account_changed(self, _account: int):
+        """Recarrega o status quando a conta global muda.
+
+        `_check_status_async` recria o `self.service` do zero, que por sua vez
+        usa o token da conta agora ativa (resolvido em `_build_service`).
+        """
+        self.service = None
         self._check_status_async()
     
     def _create_status_cards(self):
@@ -115,6 +130,17 @@ class HomeFrame(ctk.CTkFrame):
         )
         self.btn_list.grid(row=0, column=1, padx=5, pady=5)
     
+    def _build_service(self) -> VehicleService:
+        """Cria um VehicleService usando o token da conta selecionada."""
+        if self.account_state is not None and self.account_state.account == 2:
+            from src.clients.wialon_client import WialonClient
+            from src.core.config import settings
+
+            if settings.WIALON_TOKEN_2:
+                client = WialonClient(token=settings.WIALON_TOKEN_2)
+                return VehicleService(client=client)
+        return VehicleService()
+
     def _check_status_async(self):
         """Verifica status das conexões em background."""
         # Desabilita "Ver Veículos" enquanto reinicializa — habilitamos
@@ -126,7 +152,7 @@ class HomeFrame(ctk.CTkFrame):
             wialon_ok = False
             # Wialon
             try:
-                self.service = VehicleService()
+                self.service = self._build_service()
                 wialon_ok = self.service.test_connection()
 
                 self.after(0, lambda: self.wialon_card.set_value(
