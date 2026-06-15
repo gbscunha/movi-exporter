@@ -6,6 +6,7 @@ import customtkinter as ctk
 import threading
 from typing import Optional
 
+from src.gui.design import Colors
 from src.services.vehicle_service import VehicleService
 
 
@@ -249,12 +250,12 @@ class StatusCard(ctk.CTkFrame):
         self.value_label.configure(text=value)
         
         colors = {
-            "success": "#2ecc71",
-            "error": "#e74c3c",
-            "warning": "#f39c12",
-            "normal": None
+            "success": Colors.SUCCESS,
+            "error": Colors.ERROR,
+            "warning": Colors.WARNING,
+            "normal": None,
         }
-        
+
         color = colors.get(status)
         if color:
             self.value_label.configure(text_color=color)

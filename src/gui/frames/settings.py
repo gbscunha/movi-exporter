@@ -13,6 +13,7 @@ from src.clients.wialon_client import WialonClient, WialonError
 from src.core.config import settings
 from src.core.env_writer import set_env_value
 from src.core.logger import logger
+from src.gui.design import Colors
 
 # Página de login do Wialon. Depois de logado, o usuário gera o token
 # em Configurações da conta → Aplicações → Tokens.
@@ -131,10 +132,10 @@ class SettingsFrame(ctk.CTkFrame):
         # cinza neutro (não há o que testar ainda).
         if existing:
             status_text = "Status: ⚠️ Não testado — clique em 🔍 Testar"
-            status_color = "#f39c12"
+            status_color = Colors.WARNING
         else:
             status_text = "Status: sem token configurado"
-            status_color = "gray"
+            status_color = Colors.MUTED
         status_label = ctk.CTkLabel(
             section,
             text=status_text,
@@ -192,7 +193,7 @@ class SettingsFrame(ctk.CTkFrame):
             return
 
         w["status_label"].configure(
-            text="Status: 💾 Token salvo no .env", text_color="#2ecc71"
+            text="Status: 💾 Token salvo no .env", text_color=Colors.SUCCESS
         )
 
     def _test_wialon_token(self, account: int):
@@ -206,7 +207,7 @@ class SettingsFrame(ctk.CTkFrame):
             return
 
         w["status_label"].configure(
-            text="Status: 🔄 Testando conexão...", text_color="gray"
+            text="Status: 🔄 Testando conexão...", text_color=Colors.MUTED
         )
         w["test_btn"].configure(state="disabled")
 
@@ -232,14 +233,14 @@ class SettingsFrame(ctk.CTkFrame):
             text = f"Status: ✅ Conectado como \"{username}\""
         else:
             text = "Status: ✅ Conectado"
-        w["status_label"].configure(text=text, text_color="#2ecc71")
+        w["status_label"].configure(text=text, text_color=Colors.SUCCESS)
         w["test_btn"].configure(state="normal")
 
     def _on_token_test_fail(self, account: int, error: str):
         """Callback executado na thread da GUI após teste falhar."""
         w = self._token_widgets[account]
         w["status_label"].configure(
-            text=f"Status: ❌ Falha — {error}", text_color="#e74c3c"
+            text=f"Status: ❌ Falha — {error}", text_color=Colors.ERROR
         )
         w["test_btn"].configure(state="normal")
 
@@ -324,7 +325,7 @@ class SettingsFrame(ctk.CTkFrame):
         file_exists = os.path.exists(creds_file)
 
         status = "✅ Encontrado" if file_exists else "❌ Não encontrado"
-        status_color = "#2ecc71" if file_exists else "#e74c3c"
+        status_color = Colors.SUCCESS if file_exists else Colors.ERROR
 
         self.creds_label = ctk.CTkLabel(
             section, text=f"{creds_file} ({status})", text_color=status_color
