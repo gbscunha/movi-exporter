@@ -30,25 +30,25 @@ _GAP = 8  # espaço vertical entre toasts empilhados
 
 
 class Toast(ctk.CTkFrame):
-    """Um único cartão de notificação."""
+    """Um único cartão de notificação — compacto, uma linha.
+
+    Acento visual fica na borda esquerda colorida (border só à esquerda não é
+    suportado pelo CTk, então usamos borda fina em volta + ícone colorido).
+    """
 
     def __init__(self, master, message: str, kind: str):
-        super().__init__(master, corner_radius=8, border_width=2)
-
         color, icon = _KIND_STYLE.get(kind, _KIND_STYLE["info"])
-        self.configure(border_color=color)
+        super().__init__(master, corner_radius=8, border_width=1, border_color=color)
 
-        # Barra de acento colorida à esquerda.
-        accent = ctk.CTkFrame(self, width=4, fg_color=color, corner_radius=2)
-        accent.grid(row=0, column=0, sticky="ns", padx=(Space.SM, 0), pady=Space.SM)
-
+        # Uma única label com ícone colorido + texto. O `pady` enxuto mantém
+        # o cartão na altura de uma linha (sem barra de acento que esticava).
         ctk.CTkLabel(
             self,
             text=f"  {message}",
             image=icons.get(icon, size=16, color=color),
             compound="left",
             anchor="w",
-        ).grid(row=0, column=1, padx=(Space.SM, Space.MD), pady=Space.SM, sticky="w")
+        ).grid(row=0, column=0, padx=Space.MD, pady=Space.SM, sticky="w")
 
 
 class ToastManager:
