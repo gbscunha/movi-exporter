@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manual de Uso — Movi Exporter</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --border: #e1e6ec;
+    --text: #1a2330;
+    --muted: #6b7785;
+    --brand: #2563eb;
+    --brand-soft: #eff5ff;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --shadow: 0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* Layout */
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; }
+  nav.toc {
+    position: sticky; top: 0; align-self: flex-start;
+    width: 250px; height: 100vh; overflow-y: auto;
+    padding: 28px 18px; border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+  nav.toc h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 14px; }
+  nav.toc a {
+    display: block; padding: 7px 12px; border-radius: 7px;
+    color: var(--text); text-decoration: none; font-size: 14px; margin-bottom: 2px;
+  }
+  nav.toc a:hover { background: var(--brand-soft); color: var(--brand); }
+  nav.toc .num { color: var(--muted); font-weight: 600; margin-right: 7px; }
+
+  main { flex: 1; padding: 40px 48px 80px; max-width: 820px; }
+
+  /* Header */
+  .hero {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #fff; border-radius: 16px; padding: 40px; margin-bottom: 40px;
+  }
+  .hero h1 { font-size: 30px; font-weight: 700; }
+  .hero p { font-size: 16px; opacity: .92; margin-top: 8px; }
+  .hero .ver { display:inline-block; margin-top:16px; background: rgba(255,255,255,.18); padding: 4px 14px; border-radius: 999px; font-size: 13px; }
+
+  section { margin-bottom: 48px; scroll-margin-top: 20px; }
+  h2 {
+    font-size: 24px; font-weight: 700; margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  h2 .step-n {
+    background: var(--brand); color: #fff; width: 36px; height: 36px;
+    border-radius: 10px; display: inline-flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  h3 { font-size: 18px; font-weight: 600; margin: 24px 0 10px; }
+  p { margin-bottom: 12px; }
+
+  /* Steps */
+  ol.steps { counter-reset: step; list-style: none; margin: 16px 0; }
+  ol.steps > li {
+    position: relative; padding: 0 0 18px 42px; margin-bottom: 4px;
+  }
+  ol.steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: -2px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--brand-soft); color: var(--brand);
+    font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps > li:not(:last-child)::after {
+    content: ""; position: absolute; left: 13px; top: 28px; bottom: 0;
+    width: 2px; background: var(--border);
+  }
+
+  /* Image slot */
+  figure { margin: 18px 0; }
+  .shot {
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+    box-shadow: var(--shadow); background: var(--surface);
+  }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot .placeholder {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 48px 24px; text-align: center;
+    background: repeating-linear-gradient(45deg, #fafbfc, #fafbfc 12px, #f0f2f5 12px, #f0f2f5 24px);
+    color: var(--muted); min-height: 200px;
+  }
+  .shot .placeholder .icon { font-size: 36px; opacity: .5; }
+  .shot .placeholder .fname {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--text); color: #fff; padding: 3px 10px; border-radius: 6px; font-size: 13px;
+  }
+  .shot .placeholder .hint { font-size: 13px; max-width: 380px; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: center; }
+
+  /* Callouts */
+  .box { border-radius: 10px; padding: 14px 18px; margin: 16px 0; font-size: 14.5px; }
+  .box.tip { background: #ecfdf5; border-left: 4px solid var(--green); }
+  .box.warn { background: #fffbeb; border-left: 4px solid var(--amber); }
+  .box.info { background: var(--brand-soft); border-left: 4px solid var(--brand); }
+  .box b { display: block; margin-bottom: 3px; }
+
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #eef1f5; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+  kbd { font-family: inherit; background: var(--surface); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 13px; }
+
+  ul.plain { margin: 10px 0 10px 22px; }
+  ul.plain li { margin-bottom: 6px; }
+
+  /* FAQ */
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+  details summary { font-weight: 600; cursor: pointer; }
+  details p { margin: 10px 0 0; color: var(--muted); }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 880px) {
+    nav.toc { display: none; }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ÍNDICE -->
+  <nav class="toc">
+    <h3>Índice</h3>
+    <a href="#intro"><span class="num">•</span>Introdução</a>
+    <a href="#instalar"><span class="num">1</span>Instalar o app</a>
+    <a href="#token"><span class="num">2</span>Configurar o token</a>
+    <a href="#inicio"><span class="num">3</span>Tela inicial</a>
+    <a href="#drive"><span class="num">4</span>Google Drive</a>
+    <a href="#conta2"><span class="num">5</span>Segunda conta</a>
+    <a href="#exportar"><span class="num">6</span>Fazer exportação</a>
+    <a href="#arquivos"><span class="num">7</span>Encontrar arquivos</a>
+    <a href="#faq"><span class="num">?</span>Dúvidas comuns</a>
+  </nav>
+
+  <main>
+    <div class="hero">
+      <h1>📘 Manual de Uso — Movi Exporter</h1>
+      <p>Guia passo a passo para extrair os relatórios mensais de rastreamento dos seus veículos.</p>
+      <span class="ver">Versão 1.1.0</span>
+    </div>
+
+    <!-- INTRODUÇÃO -->
+    <section id="intro">
+      <h2>Introdução</h2>
+      <p>O <b>Movi Exporter</b> é um aplicativo de computador que conecta na sua conta Wialon e gera relatórios mensais dos seus veículos em planilha (CSV ou Excel), com opção de enviar automaticamente para o Google Drive.</p>
+      <p>Este manual cobre desde a primeira configuração até a geração do relatório. Siga os passos na ordem na primeira vez que usar.</p>
+      <div class="box info">
+        <b>O que você vai precisar</b>
+        Um token de acesso da Wialon (explicamos como gerar no passo 2). Opcionalmente, as credenciais do Google Drive se quiser envio automático.
+      </div>
+    </section>
+
+    <!-- 1. INSTALAR -->
+    <section id="instalar">
+      <h2><span class="step-n">1</span>Instalar o aplicativo</h2>
+      <ol class="steps">
+        <li>Baixe o arquivo <code>MoviExporter.exe</code> (Windows) da página de versões.</li>
+        <li>Dê dois cliques no arquivo para abrir. Não precisa instalar — ele roda direto.</li>
+        <li>Na primeira vez, o Windows pode mostrar um aviso de segurança. Clique em <b>"Mais informações"</b> e depois <b>"Executar assim mesmo"</b>.</li>
+      </ol>
+
+      <figure>
+        <div class="shot">
+          <img src="img/01-abrir-app.png" alt="Abrindo o app"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/01-abrir-app.png</span>
+            <span class="hint">Print do ícone do app ou do aviso de segurança do Windows ao abrir pela primeira vez.</span>
+          </div>
+        </div>
+        <figcaption>Aviso do Windows na primeira execução</figcaption>
+      </figure>
+
+      <div class="box warn">
+        <b>Aviso de segurança é normal</b>
+        Como o app é distribuído internamente, o Windows não "reconhece" o desenvolvedor. Isso não significa que o arquivo é perigoso — é só um aviso padrão para programas sem certificado pago.
+      </div>
+    </section>
+
+    <!-- 2. TOKEN -->
+    <section id="token">
+      <h2><span class="step-n">2</span>Configurar o token da Wialon</h2>
+      <p>O token é a "chave" que permite o app acessar seus veículos na Wialon. Você gera ele uma vez e cola no app.</p>
+
+      <h3>2.1 — Abrir as Configurações</h3>
+      <ol class="steps">
+        <li>No menu lateral esquerdo, clique em <b>Configurações</b>.</li>
+        <li>Localize a seção <b>"🔌 Wialon API — Conta 1"</b>.</li>
+      </ol>
+
+      <figure>
+        <div class="shot">
+          <img src="img/02-config-wialon.png" alt="Seção Wialon nas Configurações"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/02-config-wialon.png</span>
+            <span class="hint">Print da tela de Configurações mostrando a seção "Wialon API — Conta 1" com o campo de token e os botões.</span>
+          </div>
+        </div>
+        <figcaption>Seção do token na tela de Configurações</figcaption>
+      </figure>
+
+      <h3>2.2 — Gerar o token na Wialon</h3>
+      <ol class="steps">
+        <li>Clique no botão <b>🔗 Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
+        <li>Faça login com seu usuário e senha da Wialon.</li>
+        <li>Na Wialon, vá em <b>Configurações da conta → Aplicativos e tokens</b> e crie um novo token com acesso de leitura aos veículos.</li>
+        <li>Copie o token gerado (uma sequência longa de letras e números).</li>
+      </ol>
+
+      <h3>2.3 — Salvar e testar no app</h3>
+      <ol class="steps">
+        <li>Volte ao Movi Exporter e cole o token no campo <b>Token</b>.</li>
+        <li>Clique em <b>💾 Salvar</b>.</li>
+        <li>Clique em <b>🔍 Testar</b>. Se tudo estiver certo, aparece <b style="color:var(--green)">✅ Conectado como "seu_nome"</b>.</li>
+      </ol>
+
+      <figure>
+        <div class="shot">
+          <img src="img/03-token-conectado.png" alt="Token testado com sucesso"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/03-token-conectado.png</span>
+            <span class="hint">Print mostrando a mensagem verde "✅ Conectado como..." após clicar em Testar.</span>
+          </div>
+        </div>
+        <figcaption>Confirmação de conexão bem-sucedida</figcaption>
+      </figure>
+
+      <div class="box tip">
+        <b>Dica</b>
+        O botão 👁️ ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
+      </div>
+    </section>
+
+    <!-- 3. TELA INICIAL -->
+    <section id="inicio">
+      <h2><span class="step-n">3</span>Entendendo a tela inicial</h2>
+      <p>A tela inicial mostra o status das conexões em três cartões.</p>
+
+      <figure>
+        <div class="shot">
+          <img src="img/04-tela-inicial.png" alt="Tela inicial"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/04-tela-inicial.png</span>
+            <span class="hint">Print da tela inicial (Home) com os três cartões: Wialon API, Veículos e Google Drive.</span>
+          </div>
+        </div>
+        <figcaption>Tela inicial com os cartões de status</figcaption>
+      </figure>
+
+      <ul class="plain">
+        <li><b>Wialon API</b> — mostra se o app está conectado. Verde = tudo certo.</li>
+        <li><b>Veículos</b> — quantidade de veículos encontrados na sua conta.</li>
+        <li><b>Google Drive</b> — se o envio automático está configurado.</li>
+      </ul>
+      <p>Os botões <b>🔄 Testar Conexões</b> e <b>📋 Ver Veículos</b> permitem reverificar o status e listar todos os veículos a qualquer momento.</p>
+    </section>
+
+    <!-- 4. DRIVE -->
+    <section id="drive">
+      <h2><span class="step-n">4</span>Google Drive <span style="font-size:14px;color:var(--muted);font-weight:400">(opcional)</span></h2>
+      <p>Se quiser que os relatórios sejam enviados automaticamente para uma pasta do Google Drive, configure esta seção. Caso contrário, pode pular.</p>
+
+      <figure>
+        <div class="shot">
+          <img src="img/05-config-drive.png" alt="Configuração do Google Drive"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/05-config-drive.png</span>
+            <span class="hint">Print da seção "☁️ Google Drive" nas Configurações.</span>
+          </div>
+        </div>
+        <figcaption>Seção Google Drive nas Configurações</figcaption>
+      </figure>
+
+      <ul class="plain">
+        <li><b>Credenciais</b> — o arquivo de autenticação do Google. Mostra "✅ Encontrado" quando está presente.</li>
+        <li><b>ID da pasta</b> — o identificador da pasta de destino no Drive.</li>
+      </ul>
+    </section>
+
+    <!-- 5. CONTA 2 -->
+    <section id="conta2">
+      <h2><span class="step-n">5</span>Segunda conta Wialon <span style="font-size:14px;color:var(--muted);font-weight:400">(opcional)</span></h2>
+      <p>Se você gerencia veículos em <b>duas contas Wialon diferentes</b>, pode configurar a segunda na seção <b>"Wialon API — Conta 2"</b>, seguindo os mesmos passos do passo 2.</p>
+      <div class="box info">
+        <b>Quando a Conta 2 está configurada</b>
+        Aparece um seletor de conta na tela de Exportação, e os relatórios de cada conta vão para subpastas separadas (<code>Conta 1/</code> e <code>Conta 2/</code>).
+      </div>
+
+      <figure>
+        <div class="shot">
+          <img src="img/06-conta-2.png" alt="Segunda conta"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/06-conta-2.png</span>
+            <span class="hint">Print da seção "Wialon API — Conta 2" preenchida (opcional, só se o cliente usa 2 contas).</span>
+          </div>
+        </div>
+        <figcaption>Configuração da segunda conta</figcaption>
+      </figure>
+    </section>
+
+    <!-- 6. EXPORTAR -->
+    <section id="exportar">
+      <h2><span class="step-n">6</span>Fazer uma exportação</h2>
+      <p>Este é o passo principal: gerar o relatório de um mês.</p>
+
+      <figure>
+        <div class="shot">
+          <img src="img/07-tela-exportar.png" alt="Tela de exportação"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/07-tela-exportar.png</span>
+            <span class="hint">Print da tela de Exportação completa, mostrando Mês, Ano, Formato e opções.</span>
+          </div>
+        </div>
+        <figcaption>Tela de Exportação</figcaption>
+      </figure>
+
+      <ol class="steps">
+        <li>No menu lateral, clique em <b>Exportar Dados</b>.</li>
+        <li>Escolha o <b>Mês</b> (por nome: Janeiro, Fevereiro…) e o <b>Ano</b>.</li>
+        <li>Escolha o <b>Formato</b>: <code>csv</code> (planilha simples), <code>xlsx</code> (Excel) ou <code>both</code> (os dois).</li>
+        <li>Se tiver duas contas, selecione a <b>Conta</b> desejada.</li>
+        <li>Marque <b>"Gerar arquivo consolidado"</b> se quiser um único arquivo com todos os veículos juntos.</li>
+        <li>Marque <b>"Upload para Google Drive"</b> se configurou o Drive e quer envio automático.</li>
+        <li>Para exportar <b>todos</b> os veículos, deixe "Todos os veículos" selecionado. Para escolher veículos específicos, marque "Selecionar veículos" e clique em <b>🔄 Carregar</b>.</li>
+        <li>Clique em <b>▶️ Iniciar Exportação</b>.</li>
+      </ol>
+
+      <figure>
+        <div class="shot">
+          <img src="img/08-exportacao-andamento.png" alt="Exportação em andamento"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/08-exportacao-andamento.png</span>
+            <span class="hint">Print durante a exportação, mostrando o registro de progresso (log) preenchendo.</span>
+          </div>
+        </div>
+        <figcaption>Acompanhe o progresso pelo registro na tela</figcaption>
+      </figure>
+
+      <div class="box tip">
+        <b>Quanto tempo leva?</b>
+        Depende da quantidade de veículos e de dados do mês. Frotas grandes podem levar alguns minutos. Acompanhe pelo registro de progresso na tela.
+      </div>
+
+      <figure>
+        <div class="shot">
+          <img src="img/09-exportacao-concluida.png" alt="Exportação concluída"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/09-exportacao-concluida.png</span>
+            <span class="hint">Print da mensagem "EXPORTAÇÃO CONCLUÍDA" com o resumo (veículos, registros, arquivos).</span>
+          </div>
+        </div>
+        <figcaption>Resumo ao final da exportação</figcaption>
+      </figure>
+    </section>
+
+    <!-- 7. ARQUIVOS -->
+    <section id="arquivos">
+      <h2><span class="step-n">7</span>Encontrar os arquivos gerados</h2>
+      <ol class="steps">
+        <li>Após a exportação, clique no botão <b>📂 Abrir pasta</b>.</li>
+        <li>A pasta do mês abre automaticamente no explorador de arquivos.</li>
+      </ol>
+      <p>Os arquivos ficam organizados por ano e mês, por exemplo:</p>
+      <ul class="plain">
+        <li><code>exports/2026-04/</code> — relatórios de Abril de 2026</li>
+        <li>Cada veículo tem seu arquivo (nomeado pela placa), mais o consolidado, se marcado.</li>
+      </ul>
+
+      <figure>
+        <div class="shot">
+          <img src="img/10-arquivos-gerados.png" alt="Arquivos gerados"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/10-arquivos-gerados.png</span>
+            <span class="hint">Print da pasta de exportação aberta no Windows Explorer, mostrando os arquivos CSV/Excel gerados.</span>
+          </div>
+        </div>
+        <figcaption>Arquivos organizados por mês</figcaption>
+      </figure>
+
+      <figure>
+        <div class="shot">
+          <img src="img/11-planilha-aberta.png" alt="Planilha aberta"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <div class="placeholder" style="display:none">
+            <span class="icon">📷</span>
+            <span class="fname">img/11-planilha-aberta.png</span>
+            <span class="hint">Print de um relatório aberto no Excel, mostrando as colunas (Data/Hora, Velocidade, Tensão do Veículo, etc).</span>
+          </div>
+        </div>
+        <figcaption>Exemplo de relatório aberto no Excel</figcaption>
+      </figure>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <h2>Dúvidas comuns</h2>
+
+      <details>
+        <summary>A exportação diz "0 registros". O que houve?</summary>
+        <p>Significa que não havia dados para o período escolhido. Pode ser que os veículos estivessem inativos no mês, ou que a conta Wialon não guarde histórico tão antigo. Tente um mês mais recente.</p>
+      </details>
+
+      <details>
+        <summary>O que significa "N/D" em algumas colunas?</summary>
+        <p>"N/D" = "Não Disponível". Indica que aquele sensor não enviou dado naquele momento (ex: um veículo parado pode não reportar tensão do motor). É normal e esperado.</p>
+      </details>
+
+      <details>
+        <summary>Qual a diferença entre "Tensão do Veículo" e "Bateria Interna"?</summary>
+        <p><b>Tensão do Veículo</b> (~12V a 28V) é a bateria do carro/caminhão. <b>Bateria Interna</b> (~4V) é a bateria de reserva do próprio rastreador. São informações diferentes.</p>
+      </details>
+
+      <details>
+        <summary>Preciso configurar o token toda vez?</summary>
+        <p>Não. Depois de salvar uma vez, o app lembra o token. Só precisa reconfigurar se trocar de conta ou se o token expirar.</p>
+      </details>
+
+      <details>
+        <summary>O Windows bloqueou o app. É vírus?</summary>
+        <p>Não. É um aviso padrão para programas sem certificado de desenvolvedor pago. Clique em "Mais informações" → "Executar assim mesmo".</p>
+      </details>
+    </section>
+
+    <footer>
+      Movi Exporter · Manual de Uso v1.1.0<br />
+      Em caso de dúvidas, entre em contato com o suporte.
+    </footer>
+
+  </main>
+</div>
+
+</body>
+</html>

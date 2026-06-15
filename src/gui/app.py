@@ -10,6 +10,7 @@ import customtkinter as ctk
 
 from src.core.config import settings
 from src.gui import __version__
+from src.gui.account_state import AccountState
 from src.gui.components.status_bar import StatusBar
 from src.gui.frames.export import ExportFrame
 from src.gui.frames.home import HomeFrame
@@ -40,7 +41,11 @@ class MoviExporterApp(ctk.CTk):
         # Frames
         self.frames: dict[str, ctk.CTkFrame] = {}
         self.current_frame: Optional[str] = None
-        
+
+        # Estado global da conta Wialon selecionada (compartilhado entre
+        # sidebar, Home e Export). A sidebar muda; os frames reagem.
+        self.account_state = AccountState()
+
         # Criar componentes
         self._create_sidebar()
         self._create_main_area()
@@ -62,10 +67,11 @@ class MoviExporterApp(ctk.CTk):
         self.sidebar = SidebarFrame(
             self,
             on_navigate=self.show_frame,
+            account_state=self.account_state,
             width=200
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-    
+
     def _create_main_area(self):
         """Cria a área principal com os frames."""
         # Container principal
@@ -73,12 +79,18 @@ class MoviExporterApp(ctk.CTk):
         self.main_container.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
         self.main_container.grid_columnconfigure(0, weight=1)
         self.main_container.grid_rowconfigure(0, weight=1)
-        
-        # Criar frames
-        self.frames["home"] = HomeFrame(self.main_container)
-        self.frames["export"] = ExportFrame(self.main_container, status_callback=self.update_status)
+
+        # Criar frames — Home e Export recebem o estado de conta compartilhado.
+        self.frames["home"] = HomeFrame(
+            self.main_container, account_state=self.account_state
+        )
+        self.frames["export"] = ExportFrame(
+            self.main_container,
+            status_callback=self.update_status,
+            account_state=self.account_state,
+        )
         self.frames["settings"] = SettingsFrame(self.main_container)
-        
+
         # Posicionar todos os frames (só um visível por vez)
         for frame in self.frames.values():
             frame.grid(row=0, column=0, sticky="nsew")

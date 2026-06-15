@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Movi Exporter — Roadmap</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --surface: #1a212b;
+    --surface-2: #232d3a;
+    --border: #2e3a48;
+    --text: #e6edf3;
+    --muted: #8b98a5;
+    --green: #2ecc71;
+    --amber: #f39c12;
+    --red: #e74c3c;
+    --blue: #4cb5f9;
+    --purple: #a371f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 0 0 64px;
+  }
+  header {
+    background: linear-gradient(135deg, #1a212b 0%, #131922 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 24px 32px;
+    text-align: center;
+  }
+  header h1 { font-size: 28px; font-weight: 700; }
+  header .ver { color: var(--blue); }
+  header p { color: var(--muted); margin-top: 8px; font-size: 15px; }
+  header .updated { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+  /* Progress overview */
+  .overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 32px 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .stat .num { font-size: 32px; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .stat.done .num { color: var(--green); }
+  .stat.progress .num { color: var(--amber); }
+  .stat.todo .num { color: var(--blue); }
+
+  .bar-track {
+    background: var(--surface-2);
+    border-radius: 999px;
+    height: 14px;
+    overflow: hidden;
+    margin: 8px 0 4px;
+    display: flex;
+  }
+  .bar-done { background: var(--green); height: 100%; }
+  .bar-prog { background: var(--amber); height: 100%; }
+  .bar-cap { color: var(--muted); font-size: 13px; text-align: center; }
+
+  section { margin-top: 40px; }
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .pill {
+    font-size: 12px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px;
+    background: var(--surface-2); color: var(--muted);
+  }
+
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .phase.is-done { border-left: 4px solid var(--green); }
+  .phase.is-next { border-left: 4px solid var(--amber); }
+  .phase.is-todo { border-left: 4px solid var(--blue); }
+  .phase-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .phase-title { font-size: 16px; font-weight: 600; }
+  .phase-title .n { color: var(--muted); font-weight: 700; margin-right: 8px; }
+  .badge {
+    font-size: 12px; font-weight: 600;
+    padding: 4px 12px; border-radius: 999px; white-space: nowrap;
+  }
+  .badge.done { background: rgba(46,204,113,.15); color: var(--green); }
+  .badge.next { background: rgba(243,156,18,.15); color: var(--amber); }
+  .badge.todo { background: rgba(76,181,249,.15); color: var(--blue); }
+  .phase-desc { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .items { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+  .item { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; }
+  .item .ic { flex-shrink: 0; width: 18px; text-align: center; }
+  .item.ok .ic { color: var(--green); }
+  .item.pend .ic { color: var(--muted); }
+  .item .txt { color: var(--text); }
+  .item.pend .txt { color: var(--muted); }
+
+  .legend {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; font-size: 13px;
+    color: var(--muted); margin-top: 8px;
+  }
+  .legend b { color: var(--text); }
+
+  .note {
+    background: rgba(76,181,249,.08);
+    border: 1px solid rgba(76,181,249,.25);
+    border-radius: 10px; padding: 14px 18px; font-size: 14px;
+    color: var(--text); margin-top: 14px;
+  }
+  .note b { color: var(--blue); }
+
+  footer {
+    text-align: center; color: var(--muted); font-size: 13px;
+    margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border);
+  }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tag {
+    font-size: 11px; padding: 2px 9px; border-radius: 6px;
+    background: var(--surface-2); color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚗 Movi Exporter <span class="ver">v1.2.0</span></h1>
+  <p>Exportação mensal de dados de rastreamento veicular — Roadmap de desenvolvimento</p>
+  <div class="updated">Atualizado em 02/06/2026</div>
+</header>
+
+<div class="wrap">
+
+  <!-- OVERVIEW -->
+  <div class="overview">
+    <div class="stat done"><div class="num">2</div><div class="lbl">Fases concluídas</div></div>
+    <div class="stat progress"><div class="num">1</div><div class="lbl">Fase em andamento</div></div>
+    <div class="stat todo"><div class="num">4</div><div class="lbl">Fases planejadas</div></div>
+    <div class="stat"><div class="num">120</div><div class="lbl">Testes automatizados</div></div>
+  </div>
+
+  <div class="bar-track">
+    <div class="bar-done" style="width:28%"></div>
+    <div class="bar-prog" style="width:6%"></div>
+  </div>
+  <div class="bar-cap">Onda 2 — aproximadamente 1/3 concluída</div>
+
+  <div class="legend">
+    <span><b>✅ Pronto</b> — entregue e testado</span>
+    <span><b>🔨 Em andamento</b> — sendo desenvolvido agora</span>
+    <span><b>🔲 Planejado</b> — na fila</span>
+  </div>
+
+  <!-- ENTREGUE -->
+  <section>
+    <h2>✅ Já entregue <span class="pill">v1.1.0 + Onda 2 Fase 1</span></h2>
+
+    <div class="phase is-done">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">v1.1.0</span> Base sólida e dados corretos</div>
+        <span class="badge done">Concluído</span>
+      </div>
+      <div class="phase-desc">Primeira grande entrega — correção de dados e novas funcionalidades, validada com a frota real.</div>
+      <div class="items">
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Odômetro, ignição e tensão corrigidos</b> — valores reais no relatório (antes vinham errados ou zerados)</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Suporte a rastreadores Suntech</b> (ST380, 4300, 4315, 340U, 8300, 8310) — validado em 21.813 registros reais</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Suporte a rastreador Jimi VL03</b> — validado no veículo CVM0H79</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Duas colunas de tensão</b> separadas: Tensão do Veículo e Bateria Interna</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Campos sem dado mostram "N/D"</b> — clareza no relatório, sem células vazias confusas</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Suporte a duas contas Wialon</b> — exportação separada por conta</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Configurar token pela tela</b> — sem editar arquivos manualmente</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt"><b>Mês por nome</b> (Janeiro…Dezembro) e botão <b>"Abrir pasta"</b></span></div>
+      </div>
+    </div>
+
+    <div class="phase is-done">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">Fase 1</span> Correção de bugs e manutenção</div>
+        <span class="badge done">Concluído</span>
+      </div>
+      <div class="items">
+        <div class="item ok"><span class="ic">✓</span><span class="txt">Botão "Ver Veículos" não falha mais em silêncio durante o carregamento</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt">Linha de comando agora permite escolher a conta (1 ou 2)</span></div>
+        <div class="item ok"><span class="ic">✓</span><span class="txt">Atualização da infraestrutura de build (geração dos instaladores)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EM ANDAMENTO -->
+  <section>
+    <h2>🔨 Em andamento</h2>
+
+    <div class="phase is-next">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">Fase 2</span> Melhorias na tela de Exportação</div>
+        <span class="badge next">Próxima</span>
+      </div>
+      <div class="phase-desc">Pequenos ajustes que deixam a tela de exportação mais clara e à prova de erros.</div>
+      <div class="items">
+        <div class="item pend"><span class="ic">○</span><span class="txt">Campo de <b>Ano vira lista de seleção</b> (impede digitar valor inválido)</span></div>
+        <div class="item pend"><span class="ic">○</span><span class="txt"><b>Aviso quando não há dados</b> no período (hoje diz "100% sucesso" mesmo com 0 registros)</span></div>
+        <div class="item pend"><span class="ic">○</span><span class="txt">Limpar o registro de log ao trocar de conta</span></div>
+        <div class="item pend"><span class="ic">○</span><span class="txt">Alinhamento dos campos e barra de progresso só quando exportando</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANEJADO -->
+  <section>
+    <h2>🔲 Planejado <span class="pill">próximas fases</span></h2>
+
+    <div class="phase is-todo">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">Fase 3</span> Melhorias na tela de Configurações</div>
+        <span class="badge todo">Planejado</span>
+      </div>
+      <div class="items">
+        <div class="item pend"><span class="ic">○</span><span class="txt">Status do token mais visível ("não testado" em destaque)</span></div>
+        <div class="item pend"><span class="ic">○</span><span class="txt">Botão de copiar o ID da pasta do Google Drive + atalho para abri-la</span></div>
+        <div class="item pend"><span class="ic">○</span><span class="txt">Controle deslizante para "registros por página"</span></div>
+      </div>
+    </div>
+
+    <div class="phase is-todo">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">Fase 4</span> Padronização visual</div>
+        <span class="badge todo">Planejado</span>
+      </div>
+      <div class="phase-desc">Base de cores e espaçamentos consistentes — fundação para o app ficar mais bonito.</div>
+    </div>
+
+    <div class="phase is-todo">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">Fase 5</span> Seletor de conta no menu lateral</div>
+        <span class="badge todo">Planejado</span>
+      </div>
+      <div class="phase-desc">Trocar de conta em um só lugar, refletindo em todas as telas (hoje só funciona na tela de Exportação).</div>
+    </div>
+
+    <div class="phase is-todo">
+      <div class="phase-head">
+        <div class="phase-title"><span class="n">Fase 6</span> Tela inicial mais informativa</div>
+        <span class="badge todo">Planejado</span>
+      </div>
+      <div class="phase-desc">Cartões de status redesenhados, com os números em destaque.</div>
+    </div>
+  </section>
+
+  <!-- IDEIAS FUTURAS -->
+  <section>
+    <h2>💡 Ideias para versões futuras <span class="pill">backlog</span></h2>
+    <div class="note">
+      Itens identificados mas que ficam para depois — sem data definida. Listados aqui para vocês priorizarem juntos.
+    </div>
+    <div class="tag-list">
+      <span class="tag">Ícones modernos (FontAwesome)</span>
+      <span class="tag">Modo claro/escuro refinado</span>
+      <span class="tag">Histórico de exportações</span>
+      <span class="tag">Barra de progresso com % real</span>
+      <span class="tag">Busca/filtro de veículos</span>
+      <span class="tag">Reautenticar Google Drive pela tela</span>
+      <span class="tag">Notificações no canto da tela</span>
+      <span class="tag">Atalhos de teclado</span>
+      <span class="tag">Tela "Sobre"</span>
+      <span class="tag">Confirmação antes de exportar tudo</span>
+      <span class="tag">Instalador macOS assinado</span>
+      <span class="tag">Pasta de exportação padrão mais acessível</span>
+    </div>
+  </section>
+
+  <footer>
+    Movi Exporter · Documento gerado para acompanhamento com o cliente<br />
+    Status: <b style="color:var(--green)">v1.1.0 em produção</b> · v1.2.0 em desenvolvimento
+  </footer>
+
+</div>
+</body>
+</html>

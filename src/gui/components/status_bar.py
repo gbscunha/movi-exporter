@@ -5,6 +5,8 @@ Barra de status da aplicação.
 import customtkinter as ctk
 from datetime import datetime
 
+from src.gui.design import Colors
+
 
 class StatusBar(ctk.CTkFrame):
     """Barra de status no rodapé da aplicação."""
@@ -19,7 +21,7 @@ class StatusBar(ctk.CTkFrame):
             self,
             text="●",
             font=ctk.CTkFont(size=10),
-            text_color="#2ecc71"  # Verde por padrão
+            text_color=Colors.SUCCESS  # Verde por padrão
         )
         self.status_icon.grid(row=0, column=0, padx=(10, 5), pady=5)
         
@@ -52,12 +54,12 @@ class StatusBar(ctk.CTkFrame):
             status_type: Tipo do status (info, success, warning, error)
         """
         colors = {
-            "info": "#3498db",      # Azul
-            "success": "#2ecc71",   # Verde
-            "warning": "#f39c12",   # Amarelo
-            "error": "#e74c3c"      # Vermelho
+            "info": Colors.INFO,
+            "success": Colors.SUCCESS,
+            "warning": Colors.WARNING,
+            "error": Colors.ERROR,
         }
-        
+
         color = colors.get(status_type, colors["info"])
         
         self.status_icon.configure(text_color=color)

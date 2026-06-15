@@ -6,17 +6,20 @@ import customtkinter as ctk
 import threading
 from typing import Optional
 
+from src.gui.account_state import AccountState
+from src.gui.design import Border, Colors, Font, Space
 from src.services.vehicle_service import VehicleService
 
 
 class HomeFrame(ctk.CTkFrame):
     """Tela inicial com status e ações rápidas."""
-    
-    def __init__(self, master, **kwargs):
+
+    def __init__(self, master, account_state: Optional[AccountState] = None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
-        
+
+        self.account_state = account_state
         self.service: Optional[VehicleService] = None
-        
+
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
@@ -40,9 +43,27 @@ class HomeFrame(ctk.CTkFrame):
         
         # Cards de status
         self._create_status_cards()
-        
+
         # Ações rápidas
         self._create_quick_actions()
+
+        # Verificar status em background. Importante chamar DEPOIS dos botões
+        # serem criados — `_check_status_async` desabilita `btn_list` enquanto
+        # roda (#05).
+        self._check_status_async()
+
+        # Reage à troca de conta na sidebar: revalida status com o novo token.
+        if self.account_state is not None:
+            self.account_state.register(self._on_account_changed)
+
+    def _on_account_changed(self, _account: int):
+        """Recarrega o status quando a conta global muda.
+
+        `_check_status_async` recria o `self.service` do zero, que por sua vez
+        usa o token da conta agora ativa (resolvido em `_build_service`).
+        """
+        self.service = None
+        self._check_status_async()
     
     def _create_status_cards(self):
         """Cria os cards de status."""
@@ -73,10 +94,7 @@ class HomeFrame(ctk.CTkFrame):
             value="Verificando...",
         )
         self.drive_card.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
-        
-        # Verificar status em background
-        self._check_status_async()
-    
+
     def _create_quick_actions(self):
         """Cria botões de ações rápidas."""
         actions_label = ctk.CTkLabel(
@@ -99,29 +117,49 @@ class HomeFrame(ctk.CTkFrame):
         )
         self.btn_test.grid(row=0, column=0, padx=5, pady=5)
         
-        # Botão: Listar Veículos
+        # Botão: Listar Veículos. Começa desabilitado e é habilitado quando
+        # _check_status_async conclui — evita o silent fail relatado no QA
+        # quando o usuário clica antes do boot terminar (#05).
         self.btn_list = ctk.CTkButton(
             actions_frame,
             text="📋  Ver Veículos",
             width=200,
             height=45,
-            command=self._show_vehicles
+            command=self._show_vehicles,
+            state="disabled",
         )
         self.btn_list.grid(row=0, column=1, padx=5, pady=5)
     
+    def _build_service(self) -> VehicleService:
+        """Cria um VehicleService usando o token da conta selecionada."""
+        if self.account_state is not None and self.account_state.account == 2:
+            from src.clients.wialon_client import WialonClient
+            from src.core.config import settings
+
+            if settings.WIALON_TOKEN_2:
+                client = WialonClient(token=settings.WIALON_TOKEN_2)
+                return VehicleService(client=client)
+        return VehicleService()
+
     def _check_status_async(self):
         """Verifica status das conexões em background."""
+        # Desabilita "Ver Veículos" enquanto reinicializa — habilitamos
+        # de volta no fim do worker (com ou sem sucesso, contanto que
+        # exista um service utilizável para o botão).
+        self.btn_list.configure(state="disabled")
+
         def check():
+            wialon_ok = False
             # Wialon
             try:
-                self.service = VehicleService()
+                self.service = self._build_service()
                 wialon_ok = self.service.test_connection()
-                
+
                 self.after(0, lambda: self.wialon_card.set_value(
                     "Conectado ✅" if wialon_ok else "Desconectado ❌",
                     "success" if wialon_ok else "error"
                 ))
-                
+
                 # Veículos (se conectou)
                 if wialon_ok:
                     vehicles = self.service.list_vehicles()
@@ -131,32 +169,43 @@ class HomeFrame(ctk.CTkFrame):
                     ))
                 else:
                     self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
-                    
+
             except Exception:
                 self.after(0, lambda: self.wialon_card.set_value("Erro ❌", "error"))
                 self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
-            
+
             # Google Drive
             try:
                 from src.services.uploader import DriveUploader
                 uploader = DriveUploader()
                 drive_ok = uploader.test_connection()
-                
+
                 self.after(0, lambda: self.drive_card.set_value(
                     "Conectado ✅" if drive_ok else "Não configurado",
                     "success" if drive_ok else "warning"
                 ))
             except Exception:
                 self.after(0, lambda: self.drive_card.set_value("Não configurado", "warning"))
-        
+
+            # Habilita "Ver Veículos" só se a conexão Wialon foi bem sucedida.
+            # Se falhou, deixa desabilitado — clicar não levaria a nada útil.
+            if wialon_ok:
+                self.after(0, lambda: self.btn_list.configure(state="normal"))
+
         thread = threading.Thread(target=check, daemon=True)
         thread.start()
-    
+
     def _show_vehicles(self):
         """Mostra lista de veículos em uma janela."""
+        # Defesa em profundidade: o botão começa desabilitado e só é habilitado
+        # após _check_status_async — mas algum estado inconsistente ainda pode
+        # cair aqui, então tratamos explicitamente.
         if not self.service:
+            self._show_warning(
+                "Conexão ainda inicializando. Aguarde alguns segundos e tente novamente."
+            )
             return
-        
+
         try:
             vehicles = self.service.list_vehicles()
             
@@ -191,43 +240,58 @@ class HomeFrame(ctk.CTkFrame):
         import tkinter.messagebox as mb
         mb.showerror("Erro", message)
 
+    def _show_warning(self, message: str):
+        """Mostra aviso (warning, não erro)."""
+        import tkinter.messagebox as mb
+        mb.showwarning("Aviso", message)
+
 
 class StatusCard(ctk.CTkFrame):
-    """Card de status reutilizável."""
-    
+    """Card de status reutilizável.
+
+    Hierarquia tipográfica: rótulo discreto em maiúsculas (muted, pequeno) e
+    valor como protagonista (grande, bold). Cores e espaçamentos vêm dos
+    design tokens (Fase 04).
+    """
+
     def __init__(self, master, title: str, value: str, icon: str = "", **kwargs):
-        super().__init__(master, **kwargs)
-        
+        super().__init__(master, corner_radius=Border.RADIUS_MD, **kwargs)
+
         self.grid_columnconfigure(0, weight=1)
-        
-        # Ícone + Título
+
+        # Rótulo — discreto, maiúsculas para diferenciar do valor.
+        label_text = f"{icon}  {title.upper()}" if icon else title.upper()
         header = ctk.CTkLabel(
             self,
-            text=f"{icon}  {title}",
-            font=ctk.CTkFont(size=12),
-            text_color="gray"
+            text=label_text,
+            font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
+            text_color=Colors.MUTED,
         )
-        header.grid(row=0, column=0, padx=15, pady=(15, 5), sticky="w")
-        
-        # Valor
+        header.grid(
+            row=0, column=0, padx=Space.LG, pady=(Space.LG, Space.XS), sticky="w"
+        )
+
+        # Valor — protagonista do card.
         self.value_label = ctk.CTkLabel(
             self,
             text=value,
-            font=ctk.CTkFont(size=16, weight="bold")
+            font=ctk.CTkFont(size=Font.SIZE_XL, weight=Font.WEIGHT_BOLD),
         )
-        self.value_label.grid(row=1, column=0, padx=15, pady=(0, 15), sticky="w")
-    
+        self.value_label.grid(
+            row=1, column=0, padx=Space.LG, pady=(0, Space.LG), sticky="w"
+        )
+
     def set_value(self, value: str, status: str = "normal"):
         """Atualiza o valor do card."""
         self.value_label.configure(text=value)
         
         colors = {
-            "success": "#2ecc71",
-            "error": "#e74c3c",
-            "warning": "#f39c12",
-            "normal": None
+            "success": Colors.SUCCESS,
+            "error": Colors.ERROR,
+            "warning": Colors.WARNING,
+            "normal": None,
         }
-        
+
         color = colors.get(status)
         if color:
             self.value_label.configure(text_color=color)

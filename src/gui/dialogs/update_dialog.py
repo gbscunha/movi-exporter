@@ -6,6 +6,7 @@ import customtkinter as ctk
 import threading
 from typing import Optional
 
+from src.gui.design import Colors
 from src.gui.updater import AutoUpdater
 
 
@@ -148,7 +149,7 @@ class UpdateDialog(ctk.CTkToplevel):
     
     def _show_error(self, message: str):
         """Mostra mensagem de erro."""
-        self.progress_label.configure(text=f"❌ {message}", text_color="#e74c3c")
+        self.progress_label.configure(text=f"❌ {message}", text_color=Colors.ERROR)
         self.progress_label.grid(row=0, column=0, pady=(0, 5))
         
         self.update_btn.configure(state="normal", text="📥  Tentar Novamente")
