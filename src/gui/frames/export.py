@@ -642,6 +642,12 @@ class ExportFrame(ctk.CTkFrame):
                         self.status_callback(
                             "Exportação sem dados para o período", "warning"
                         )
+                    self.after(
+                        0,
+                        lambda: toast.show(
+                            "Nenhum dado disponível para o período", kind="warning"
+                        ),
+                    )
                 else:
                     # Resultado final
                     self._log("", "INFO")
