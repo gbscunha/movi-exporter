@@ -112,7 +112,7 @@ class HomeFrame(ctk.CTkFrame):
         self.btn_test = ctk.CTkButton(
             actions_frame,
             text="  Testar Conexões",
-            image=icons.get(icons.REFRESH, size=18),
+            image=icons.get(icons.REFRESH, size=18, on_accent=True),
             width=200,
             height=45,
             command=self._check_status_async
@@ -125,7 +125,7 @@ class HomeFrame(ctk.CTkFrame):
         self.btn_list = ctk.CTkButton(
             actions_frame,
             text="  Ver Veículos",
-            image=icons.get(icons.LIST, size=18),
+            image=icons.get(icons.LIST, size=18, on_accent=True),
             width=200,
             height=45,
             command=self._show_vehicles,

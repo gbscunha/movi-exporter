@@ -92,11 +92,16 @@ def _render(codepoint: str, size: int, color: str) -> Image.Image:
     return img
 
 
+# Cor de ícone sobre fundo de acento (botões vermelhos) — branca nos 2 temas.
+ON_ACCENT = "#FFFFFF"
+
+
 def get(
     codepoint: str,
     size: int = DEFAULT_SIZE,
     color: Optional[str] = None,
     color_light: Optional[str] = None,
+    on_accent: bool = False,
 ) -> ctk.CTkImage:
     """Retorna um CTkImage do ícone, cacheado.
 
@@ -107,10 +112,14 @@ def get(
                passado e `color_light` não, usa a mesma cor nos dois temas —
                útil para ícones semânticos (success/error) que têm cor fixa.
         color_light: cor para o tema claro (default: quase-preto)
+        on_accent: se True, renderiza branco nos dois temas — para ícones
+                   sobre botões coloridos (vermelho), cujo texto é branco.
 
     Returns:
         CTkImage com variantes clara e escura.
     """
+    if on_accent:
+        color = ON_ACCENT
     dark = color or _DEFAULT_DARK
     light = color_light or (color if color else _DEFAULT_LIGHT)
 

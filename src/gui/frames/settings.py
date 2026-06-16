@@ -99,8 +99,8 @@ class SettingsFrame(ctk.CTkFrame):
         if existing:
             entry.insert(0, existing)
 
-        self._eye_icon = icons.get(icons.EYE, size=16)
-        self._eye_slash_icon = icons.get(icons.EYE_SLASH, size=16)
+        self._eye_icon = icons.get(icons.EYE, size=16, on_accent=True)
+        self._eye_slash_icon = icons.get(icons.EYE_SLASH, size=16, on_accent=True)
         toggle_btn = ctk.CTkButton(
             section,
             text="",
@@ -113,7 +113,7 @@ class SettingsFrame(ctk.CTkFrame):
         open_btn = ctk.CTkButton(
             section,
             text=" Gerar",
-            image=icons.get(icons.LINK, size=16),
+            image=icons.get(icons.LINK, size=16, on_accent=True),
             width=90,
             command=self._open_wialon_auth_page,
         )
@@ -122,7 +122,7 @@ class SettingsFrame(ctk.CTkFrame):
         save_btn = ctk.CTkButton(
             section,
             text=" Salvar",
-            image=icons.get(icons.SAVE, size=16),
+            image=icons.get(icons.SAVE, size=16, on_accent=True),
             width=100,
             command=lambda a=account: self._save_wialon_token(a),
         )
@@ -131,7 +131,7 @@ class SettingsFrame(ctk.CTkFrame):
         test_btn = ctk.CTkButton(
             section,
             text=" Testar",
-            image=icons.get(icons.SEARCH, size=16),
+            image=icons.get(icons.SEARCH, size=16, on_accent=True),
             width=100,
             command=lambda a=account: self._test_wialon_token(a),
         )
@@ -294,7 +294,7 @@ class SettingsFrame(ctk.CTkFrame):
         self.export_dir_entry.insert(0, export_dir)
 
         self.browse_btn = ctk.CTkButton(
-            section, text="", image=icons.get(icons.FOLDER_OPEN, size=16),
+            section, text="", image=icons.get(icons.FOLDER_OPEN, size=16, on_accent=True),
             width=40, command=self._browse_export_dir
         )
         self.browse_btn.grid(row=1, column=2, padx=(5, 15), pady=10)
@@ -381,13 +381,13 @@ class SettingsFrame(ctk.CTkFrame):
             self.folder_entry.insert(0, folder_id)
 
         self.folder_copy_btn = ctk.CTkButton(
-            section, text="", image=icons.get(icons.COPY, size=16),
+            section, text="", image=icons.get(icons.COPY, size=16, on_accent=True),
             width=40, command=self._copy_folder_id
         )
         self.folder_copy_btn.grid(row=2, column=2, padx=(0, 4), pady=(10, 15))
 
         self.folder_open_btn = ctk.CTkButton(
-            section, text="", image=icons.get(icons.LINK, size=16),
+            section, text="", image=icons.get(icons.LINK, size=16, on_accent=True),
             width=40, command=self._open_drive_folder
         )
         self.folder_open_btn.grid(row=2, column=3, padx=(0, 15), pady=(10, 15))

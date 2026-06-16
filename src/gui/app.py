@@ -18,6 +18,7 @@ from src.gui.frames.export import ExportFrame
 from src.gui.frames.home import HomeFrame
 from src.gui.frames.settings import SettingsFrame
 from src.gui.frames.sidebar import SidebarFrame
+from src.gui.theme import apply_movi_theme
 from src.gui.updater import AutoUpdater
 
 
@@ -36,6 +37,8 @@ class MoviExporterApp(ctk.CTk):
         # Configurações e a escolha é lembrada no próximo boot.
         ctk.set_appearance_mode(settings.APP_THEME)
         ctk.set_default_color_theme("blue")
+        # Sobrescreve o acento azul pelo vermelho da marca Movi.
+        apply_movi_theme()
         
         # Grid principal
         self.grid_columnconfigure(1, weight=1)

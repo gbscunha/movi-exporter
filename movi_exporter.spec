@@ -32,6 +32,10 @@ datas = [
     ('src/gui/assets/fontawesome-solid.ttf', 'src/gui/assets'),
 ]
 
+# Logo Movi (opcional) — incluída no bundle apenas se o arquivo existir.
+if os.path.exists('src/gui/assets/movi-logo.png'):
+    datas.append(('src/gui/assets/movi-logo.png', 'src/gui/assets'))
+
 # Módulos ocultos (imports dinâmicos)
 hiddenimports = [
     'customtkinter',
