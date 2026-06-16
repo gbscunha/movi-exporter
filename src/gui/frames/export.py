@@ -263,7 +263,8 @@ class ExportFrame(ctk.CTkFrame):
         self.vehicles_toolbar.grid_columnconfigure(0, weight=1)
 
         self.search_var = ctk.StringVar()
-        self.search_var.trace_add("write", lambda *_: self._render_vehicle_list())
+        # Ao mudar a busca, recomeça do primeiro lote (reseta o "Mostrar mais").
+        self.search_var.trace_add("write", lambda *_: self._on_search_changed())
         self.search_entry = ctk.CTkEntry(
             self.vehicles_toolbar,
             textvariable=self.search_var,
@@ -296,6 +297,8 @@ class ExportFrame(ctk.CTkFrame):
         # Estado: seleção por id (fonte da verdade) e checkboxes renderizados.
         self._selection: dict[int, bool] = {}
         self.vehicle_checkboxes: dict[int, ctk.CTkCheckBox] = {}
+        # Quantos itens do filtro atual estão renderizados (cresce com "Mostrar mais").
+        self._render_limit = self._MAX_RENDER
 
         # Começa escondido (modo "Todos" é o default).
         self.vehicles_toolbar.grid_remove()
@@ -445,6 +448,7 @@ class ExportFrame(ctk.CTkFrame):
         veículos". O usuário marca só os que precisa, podendo buscar antes.
         """
         self._selection = {v["id"]: False for v in self.vehicles}
+        self._render_limit = self._MAX_RENDER
         self._log(f"{len(self.vehicles)} veículos carregados", "SUCCESS")
         self._render_vehicle_list()
 
@@ -460,20 +464,32 @@ class ExportFrame(ctk.CTkFrame):
         haystack = f"{v.get('name', '')} {v.get('plate', '')} {v.get('id', '')}".lower()
         return query in haystack
 
-    def _render_vehicle_list(self):
-        """Renderiza apenas o subconjunto filtrado (limitado a _MAX_RENDER).
+    def _on_search_changed(self):
+        """Nova busca recomeça do primeiro lote (reseta o 'Mostrar mais')."""
+        self._render_limit = self._MAX_RENDER
+        self._render_vehicle_list()
 
-        Renderizar só os filtrados — e no máximo _MAX_RENDER — é o que evita o
-        congelamento que existia ao montar centenas de checkboxes de uma vez.
+    def _show_more(self):
+        """Renderiza o próximo lote de veículos do filtro atual."""
+        self._render_limit += self._MAX_RENDER
+        self._render_vehicle_list()
+
+    def _render_vehicle_list(self):
+        """Renderiza o subconjunto filtrado, limitado a `_render_limit`.
+
+        Renderizar só os filtrados — e em lotes — é o que evita o congelamento
+        que existia ao montar centenas de checkboxes de uma vez. Para alcançar
+        veículos além do lote, o usuário busca (nome/placa/ID) ou clica em
+        "Mostrar mais".
         """
-        # Limpa checkboxes atuais.
-        for cb in self.vehicle_checkboxes.values():
-            cb.destroy()
+        # Limpa o conteúdo atual da lista (checkboxes + widgets auxiliares).
+        for widget in self.vehicles_scroll.winfo_children():
+            widget.destroy()
         self.vehicle_checkboxes.clear()
 
         query = self.search_var.get().strip().lower()
         matches = [v for v in self.vehicles if self._matches_search(v, query)]
-        visible = matches[: self._MAX_RENDER]
+        visible = matches[: self._render_limit]
 
         for i, v in enumerate(visible):
             vid = v["id"]
@@ -487,17 +503,21 @@ class ExportFrame(ctk.CTkFrame):
             cb.grid(row=i // 2, column=i % 2, padx=5, pady=2, sticky="w")
             self.vehicle_checkboxes[vid] = cb
 
-        # Nota quando há mais resultados do que o limite renderizado.
-        if len(matches) > self._MAX_RENDER:
-            note = ctk.CTkLabel(
+        # Botão "Mostrar mais" quando há resultados além do lote renderizado.
+        if len(matches) > self._render_limit:
+            restantes = len(matches) - self._render_limit
+            mostrar = min(self._MAX_RENDER, restantes)
+            more_btn = ctk.CTkButton(
                 self.vehicles_scroll,
-                text=f"Mostrando {self._MAX_RENDER} de {len(matches)} — refine a busca",
-                font=ctk.CTkFont(size=11),
-                text_color=Colors.WARNING,
+                text=f"Mostrar mais (+{mostrar}) — {restantes} restantes",
+                fg_color="transparent",
+                text_color=Colors.PRIMARY,
+                hover=False,
+                command=self._show_more,
             )
-            note.grid(row=len(visible) // 2 + 1, column=0, columnspan=2, padx=5, pady=4, sticky="w")
-            # Guarda para ser limpo no próximo render.
-            self.vehicle_checkboxes[f"_note_{id(note)}"] = note
+            more_btn.grid(
+                row=len(visible) // 2 + 1, column=0, columnspan=2, padx=5, pady=6, sticky="w"
+            )
 
         self._update_selection_count()
 

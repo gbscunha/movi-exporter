@@ -89,6 +89,23 @@ def test_get_selected_ids_nenhum_marcado_retorna_none(ctk_root):
     assert ef._get_selected_vehicle_ids() is None
 
 
+def test_mostrar_mais_renderiza_proximo_lote(ctk_root):
+    """'Mostrar mais' renderiza +_MAX_RENDER sem precisar buscar (#121+)."""
+    ef = _frame_with_vehicles(ctk_root, n=839)
+    assert sum(1 for k in ef.vehicle_checkboxes if isinstance(k, int)) == ef._MAX_RENDER
+    ef._show_more()
+    assert sum(1 for k in ef.vehicle_checkboxes if isinstance(k, int)) == 2 * ef._MAX_RENDER
+
+
+def test_nova_busca_reseta_lote(ctk_root):
+    """Mudar a busca volta ao primeiro lote."""
+    ef = _frame_with_vehicles(ctk_root, n=839)
+    ef._show_more()
+    ef._show_more()
+    ef._on_search_changed()  # busca vazia, mas reseta o limite
+    assert sum(1 for k in ef.vehicle_checkboxes if isinstance(k, int)) == ef._MAX_RENDER
+
+
 def test_label_com_e_sem_placa(ctk_root):
     ef = ExportFrame(ctk_root)
     assert "ABC1234" in ef._vehicle_label({"id": 1, "name": "VTR01", "plate": "ABC1234"})
