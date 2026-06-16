@@ -103,6 +103,15 @@ def test_normalize_sensor_bateria_interna_vai_para_interna():
     assert _client()._normalize_sensor_name("Bateria Interna") == "internal_battery_voltage"
 
 
+def test_normalize_sensor_bateria_dispositivo_sem_do_vai_para_interna():
+    """Bug real (model 170): admin escreveu 'Bateria dispositivo' (sem 'do').
+
+    Antes caía no genérico 'bateria' → vehicle_voltage (errado). Agora a
+    palavra-chave 'dispositivo' garante internal_battery_voltage.
+    """
+    assert _client()._normalize_sensor_name("Bateria dispositivo") == "internal_battery_voltage"
+
+
 def test_normalize_sensor_device_battery_vai_para_interna():
     assert _client()._normalize_sensor_name("Device Battery") == "internal_battery_voltage"
 

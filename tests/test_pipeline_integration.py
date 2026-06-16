@@ -35,15 +35,16 @@ def pipeline(tmp_path):
     }
 
 
-def _run_pipeline(pipeline, wialon_messages):
+def _run_pipeline(pipeline, wialon_messages, sensor_map=None):
     """Roda os 3 estágios e exporta CSV. Retorna o DataFrame."""
     transformer = pipeline["transformer"]
     normalizer = pipeline["normalizer"]
     exporter = pipeline["exporter"]
 
+    sensor_map = sensor_map or {}
     transformed = []
     for msg in wialon_messages:
-        record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+        record = transformer.transform_message(msg, vehicle_id=1, sensor_map=sensor_map)
         if record is not None:
             transformed.append(record)
 
@@ -183,6 +184,12 @@ def test_pipeline_suntech_andando_ignicao_ligada(pipeline):
     Pré-Fase 17: Ignição vinha 'Desligado' mesmo com vel=20km/h porque o
     transformer procurava 'in'/'in1'/'din1' que não existem no Suntech.
     """
+    # sensor_map do admin (ST380): s_asgn1=veículo, s_asgn2=interna. É daqui
+    # que a voltagem vem — o perfil não chuta mais os slots.
+    sensor_map = {
+        "s_asgn1": {"name": "vehicle_voltage", "formula": "s_asgn1"},
+        "s_asgn2": {"name": "internal_battery_voltage", "formula": "s_asgn2"},
+    }
     msgs = [
         {
             "t": 1775136988,
@@ -197,16 +204,20 @@ def test_pipeline_suntech_andando_ignicao_ligada(pipeline):
             },
         }
     ]
-    df = _run_pipeline(pipeline, msgs)
+    df = _run_pipeline(pipeline, msgs, sensor_map=sensor_map)
     row = df.iloc[0]
-    assert row["Ignição"] == "Ligado"
-    assert float(row["Tensão do Veículo (V)"]) == 28.67
-    assert float(row["Bateria Interna (V)"]) == 4.1
-    assert float(row["Odômetro (km)"]) == 240141.15
+    assert row["Ignição"] == "Ligado"  # via mode (perfil)
+    assert float(row["Tensão do Veículo (V)"]) == 28.67  # via sensor_map
+    assert float(row["Bateria Interna (V)"]) == 4.1  # via sensor_map
+    assert float(row["Odômetro (km)"]) == 240141.15  # m_asgn1 (model 197)
 
 
 def test_pipeline_suntech_parado_ignicao_desligada(pipeline):
     """Msg Suntech com vel=0 e mode=0 → Ignição='Desligado'."""
+    sensor_map = {
+        "s_asgn1": {"name": "vehicle_voltage", "formula": "s_asgn1"},
+        "s_asgn2": {"name": "internal_battery_voltage", "formula": "s_asgn2"},
+    }
     msgs = [
         {
             "t": 1775023200,
@@ -221,11 +232,9 @@ def test_pipeline_suntech_parado_ignicao_desligada(pipeline):
             },
         }
     ]
-    df = _run_pipeline(pipeline, msgs)
+    df = _run_pipeline(pipeline, msgs, sensor_map=sensor_map)
     row = df.iloc[0]
     assert row["Ignição"] == "Desligado"
-    # Mesmo parado, Suntech reporta tensão do veículo (s_asgn1 = bateria
-    # de chumbo, lê sempre — não depende de motor ligado).
     assert float(row["Tensão do Veículo (V)"]) == 25.07
     assert float(row["Bateria Interna (V)"]) == 4.2
     assert float(row["Odômetro (km)"]) == 240099.54

@@ -117,41 +117,58 @@ def test_suntech_ignicao_em_mode():
     assert profile.known_params()["ignition"] == ["mode"]
 
 
-def test_suntech_voltagens_separadas_s_asgn1_s_asgn2():
+def test_suntech_nao_chuta_voltagem_nos_slots():
+    """Os slots s_asgn variam por modelo — o perfil NÃO os assume.
+
+    Voltagem vem do sensor_map do admin (correto por dispositivo). Manter o
+    perfil sem chute evita o bug de inverter veículo/interna entre modelos.
+    """
     profile = SuntechProfile()
     params = profile.known_params()
-    assert params["vehicle_voltage"] == ["s_asgn1"]
-    assert params["internal_battery_voltage"] == ["s_asgn2"]
+    assert params["vehicle_voltage"] == []
+    assert params["internal_battery_voltage"] == []
 
 
-def test_suntech_odometro_em_m_asgn1():
+def test_suntech_ignicao_em_mode():
     profile = SuntechProfile()
-    # m_asgn1 vem em metros (240131878 = 240131.878 km)
-    assert profile.extract_odometer_meters({"m_asgn1": 240131878}) == 240131878.0
+    assert profile.known_params()["ignition"] == ["mode"]
 
 
-def test_suntech_odometro_zero_preservado():
-    """Veículo novo Suntech: m_asgn1=0 não é dado ausente."""
+def test_suntech_odometro_m_asgn1_so_no_model_197():
+    """m_asgn1 é odômetro APENAS no ST380 (model 197), onde foi validado."""
     profile = SuntechProfile()
-    assert profile.extract_odometer_meters({"m_asgn1": 0}) == 0.0
+    # model 197 → usa m_asgn1
+    assert profile.extract_odometer_meters({"model": 197, "m_asgn1": 240131878}) == 240131878.0
+    # model 170 → m_asgn1 NÃO é odômetro, ignora
+    assert profile.extract_odometer_meters({"model": 170, "m_asgn1": 7}) is None
 
 
-def test_suntech_odometro_fallback_odometer_se_admin_configurou():
-    """Se admin do Wialon configurou sensor com nome `odometer`, aceitar."""
+def test_suntech_odometro_zero_preservado_no_197():
     profile = SuntechProfile()
-    assert profile.extract_odometer_meters({"odometer": 5000}) == 5000.0
+    assert profile.extract_odometer_meters({"model": 197, "m_asgn1": 0}) == 0.0
 
 
-def test_suntech_odometro_prefere_m_asgn1_sobre_odometer():
-    """Quando ambos existem, m_asgn1 é a fonte canônica do Suntech."""
+def test_suntech_odometro_fallback_odometer_simbolico():
+    """Nome simbólico `odometer` é aceito em qualquer modelo."""
     profile = SuntechProfile()
-    result = profile.extract_odometer_meters({"m_asgn1": 240131878, "odometer": 5000})
-    assert result == 240131878.0
+    assert profile.extract_odometer_meters({"model": 170, "odometer": 5000}) == 5000.0
 
 
 def test_suntech_odometro_none_quando_ausente():
     profile = SuntechProfile()
-    assert profile.extract_odometer_meters({}) is None
+    assert profile.extract_odometer_meters({"model": 170}) is None
+
+
+def test_suntech_matches_model_170():
+    profile = SuntechProfile()
+    assert profile.matches({"p": {"model": 170, "rep_type": "ALT"}}) is True
+
+
+def test_suntech_matches_report_types_universais():
+    """ALT, UEX, EMG etc. são report types Suntech e devem casar."""
+    profile = SuntechProfile()
+    for rep in ("ALT", "UEX", "EMG", "EVT", "ALV"):
+        assert profile.matches({"p": {"rep_type": rep}}) is True, rep
 
 
 # ---------- JimiProfile (VL03 e similares) ----------
