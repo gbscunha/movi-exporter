@@ -44,14 +44,16 @@ MESES = [
 class ExportFrame(ctk.CTkFrame):
     """Tela de configuração e execução de exportação."""
     
-    # Cores para diferentes níveis de log
+    # Cores do log por nível, como pares [claro, escuro] — a tag do tkinter
+    # aceita só uma cor, então resolvemos a do tema atual em _configure_log_tags.
+    # No claro, INFO era branco e sumia no fundo claro (bug reportado).
     LOG_COLORS = {
-        "DEBUG": "#888888",
-        "INFO": "#FFFFFF",
-        "SUCCESS": "#4CAF50",
-        "WARNING": "#FFC107",
-        "ERROR": "#F44336",
-        "CRITICAL": "#FF5722",
+        "DEBUG": ["#7A7A7A", "#888888"],
+        "INFO": ["#1A1A1A", "#DCE4EE"],  # texto principal — adapta ao tema
+        "SUCCESS": ["#1E8E4E", "#4CAF50"],
+        "WARNING": ["#B26A00", "#FFC107"],
+        "ERROR": ["#C62828", "#F44336"],
+        "CRITICAL": ["#C62828", "#FF5722"],
     }
     
     def __init__(
@@ -344,11 +346,16 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_bar.grid_remove()  # idle: oculta
     
     def _configure_log_tags(self):
-        """Configura tags de cor para o textbox."""
-        # Acessa o widget tkinter interno do CTkTextbox
+        """Configura as tags de cor do log conforme o tema atual.
+
+        Reaplicar as tags atualiza retroativamente o texto já inserido (o
+        tkinter recolore tudo que usa a tag), então chamar isto após uma troca
+        de tema corrige logs antigos também. Índice 0 = claro, 1 = escuro.
+        """
+        idx = 0 if ctk.get_appearance_mode() == "Light" else 1
         text_widget = self.log_text._textbox
-        for level, color in self.LOG_COLORS.items():
-            text_widget.tag_configure(level, foreground=color)
+        for level, pair in self.LOG_COLORS.items():
+            text_widget.tag_configure(level, foreground=pair[idx])
     
     def _create_action_buttons(self):
         """Cria botões de ação."""
@@ -716,8 +723,16 @@ class ExportFrame(ctk.CTkFrame):
             logger.debug(f"Erro ao resetar barra de progresso: {e}")
 
     def _clear_log(self):
-        """Limpa o textbox de log (thread-safe via after)."""
-        self.after(0, lambda: self.log_text.delete("1.0", "end"))
+        """Limpa o textbox de log (thread-safe via after).
+
+        Reaplica as tags de cor para acompanhar o tema atual — assim, se o
+        usuário trocou de tema, o próximo log já sai com as cores corretas.
+        """
+        def _do():
+            self.log_text.delete("1.0", "end")
+            self._configure_log_tags()
+
+        self.after(0, _do)
     
     def _log(self, message: str, level: str = "INFO"):
         """
