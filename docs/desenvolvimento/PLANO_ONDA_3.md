@@ -14,10 +14,13 @@
 |---|------|---------------|-----|---------|--------|
 | 01 | Fundação: ícones (FontAwesome) | #03 | 🔴 parcial | S | ✅ Concluído |
 | 02 | Fundação: light mode + toast | #11, #10 | 🔴 parcial | M | ✅ Concluído |
-| 03 | Home + Sidebar + Sobre | #07, #09, #23 | 🔴 parcial | M | ⬜ Todo |
-| 04 | Redesign do Export | #15, #14, #13, #17 | 🔴 parcial | M | ⬜ Todo |
-| 05 | Settings polish | #20, #21 | — | S | ⬜ Todo |
-| 06 | Atalhos de teclado | #22 | — | S | ⬜ Todo |
+| 03 | Identidade Movi + UX urgente (cliente) | #15 + paleta/logo/light-fix | 🔴 parcial | L | ✅ Concluído |
+| 04 | Home + Sidebar + Sobre | #07, #09, #23 | 🔴 parcial | M | ⬜ Todo |
+| 05 | Resto do Export | #14, #13, #17 | 🔴 parcial | M | ⬜ Todo |
+| 06 | Settings polish | #20, #21 | — | S | ⬜ Todo |
+| 07 | Atalhos de teclado | #22 | — | S | ⬜ Todo |
+
+> **Nota:** A Fase 03 foi inserida a pedido do cliente (4 melhorias com prints): paleta vermelha Movi, correção do light mode, suporte a logo, e o redesenho da seleção de veículos do Export (#15) — que também resolveu o **freeze ao trocar de conta** (839 checkboxes criados de uma vez). Os demais itens do Export (#14 progresso real, #13 checkboxes agrupados, #17 toolbar do log) seguem na Fase 05.
 
 **Total estimado:** ~3-4 dias de trabalho focado · 13 itens do backlog fechados.
 
