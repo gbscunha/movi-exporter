@@ -16,7 +16,7 @@
 | 02 | Fundação: light mode + toast | #11, #10 | 🔴 parcial | M | ✅ Concluído |
 | 03 | Identidade Movi + UX urgente (cliente) | #15 + paleta/logo/light-fix | 🔴 parcial | L | ✅ Concluído |
 | 04 | Home + Sidebar + Sobre + Manual | #07, #09, #23, #52 | 🔴 parcial | L | ✅ Concluído |
-| 05 | Resto do Export | #14, #13, #17 | 🔴 parcial | M | ⬜ Todo |
+| 05 | Resto do Export + fix consolidado | #14, #13, #17, #53 | 🔴 parcial | M | ✅ Concluído |
 | 06 | Settings polish | #20, #21 | — | S | ⬜ Todo |
 | 07 | Atalhos de teclado | #22 | — | S | ⬜ Todo |
 | 08 | Manual: revisão final + prints | #52 | — | S | ⬜ Todo |
