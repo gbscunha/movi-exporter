@@ -103,21 +103,21 @@ class HomeFrame(ctk.CTkFrame):
         )
         self.wialon_card.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         
-        # Card: Veículos
-        self.vehicles_card = StatusCard(
-            cards_frame,
-            title="Veículos",
-            value="--",
-        )
-        self.vehicles_card.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-        
         # Card: Google Drive
         self.drive_card = StatusCard(
             cards_frame,
             title="Google Drive",
             value="Verificando...",
         )
-        self.drive_card.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
+        self.drive_card.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # Card: Veículos
+        self.vehicles_card = StatusCard(
+            cards_frame,
+            title="Veículos",
+            value="--",
+        )
+        self.vehicles_card.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
     def _create_quick_actions(self):
         """Cria botões de ações rápidas."""
