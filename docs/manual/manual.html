@@ -414,6 +414,18 @@
         <li>Cada veículo tem seu arquivo (nomeado pela placa), mais o consolidado, se marcado.</li>
       </ul>
 
+      <div class="box info">
+        <b>Por que alguns arquivos têm um número no nome?</b>
+        O nome do arquivo vem da <b>placa cadastrada na Wialon</b> (campo
+        <i>registration_plate</i>) — por exemplo <code>RJG0H60_Histórico_Padrão_…</code>.
+        Quando <b>duas unidades têm a mesma placa cadastrada</b> (placa repetida por
+        engano, ou dois rastreadores no mesmo veículo), o app anexa o
+        <b>ID da unidade na Wialon</b> ao nome, ficando <code>RJG0H60_402231059_Histórico_…</code>.
+        Isso garante que um arquivo <b>nunca sobrescreva o outro</b> e que dê para
+        identificar exatamente a qual unidade cada relatório pertence. Se isso
+        aparecer com frequência, vale conferir o cadastro de placas na Wialon.
+      </div>
+
       <figure>
         <div class="shot">
           <img src="img/10-arquivos-gerados.png" alt="Arquivos gerados"
