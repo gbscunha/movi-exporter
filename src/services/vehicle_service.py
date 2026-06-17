@@ -342,31 +342,30 @@ class VehicleService:
                     result.errors.append(error_msg)
                     result.failed_vehicles += 1
 
-            # Exporta consolidado
+            # Exporta consolidado — SEMPRE em CSV, independente do formato
+            # escolhido para os arquivos individuais. O consolidado junta todos
+            # os veículos num único arquivo, que facilmente passa do limite de
+            # 1.048.576 linhas do Excel (.xlsx) — uma frota grande estoura esse
+            # teto e o xlsx falha. CSV não tem limite e é o formato adequado
+            # para um dataset desse porte (análise/BI).
             if consolidated and all_history:
-                logger.info("Gerando arquivo consolidado...")
-
-                if export_format in ("csv", "both"):
-                    file_path = self.exporter.export_consolidated_history_to_csv(
-                        all_history,
-                        month,
-                        year,
-                        vehicles_info=vehicles_info,
-                        account_name=account_name,
+                logger.info("Gerando arquivo consolidado (CSV)...")
+                if export_format == "xlsx":
+                    logger.info(
+                        "Obs: o consolidado é gerado em CSV mesmo com formato "
+                        "Excel selecionado — o Excel não suporta mais de ~1 "
+                        "milhão de linhas, e o consolidado da frota costuma "
+                        "passar disso. Os arquivos por veículo seguem em xlsx."
                     )
-                    if file_path:
-                        result.exported_files.append(file_path)
-
-                if export_format in ("xlsx", "both"):
-                    file_path = self.exporter.export_consolidated_history_to_excel(
-                        all_history,
-                        month,
-                        year,
-                        vehicles_info=vehicles_info,
-                        account_name=account_name,
-                    )
-                    if file_path:
-                        result.exported_files.append(file_path)
+                file_path = self.exporter.export_consolidated_history_to_csv(
+                    all_history,
+                    month,
+                    year,
+                    vehicles_info=vehicles_info,
+                    account_name=account_name,
+                )
+                if file_path:
+                    result.exported_files.append(file_path)
 
             # Upload para Google Drive
             if upload_to_drive and result.exported_files:

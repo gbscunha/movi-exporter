@@ -15,6 +15,10 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from src.core.logger import logger
 
+# Limite rígido de linhas de uma planilha .xlsx (formato OOXML/Excel),
+# incluindo o cabeçalho. Acima disso, o openpyxl falha ao escrever.
+EXCEL_MAX_ROWS = 1_048_576
+
 
 def _format_ignition(value: Any) -> Optional[str]:
     """
@@ -709,6 +713,19 @@ class DataExporter:
 
             if not all_records:
                 logger.warning("Nenhum registro encontrado no histórico consolidado")
+                return ""
+
+            # Guarda defensiva: o consolidado de uma frota grande passa do
+            # limite de linhas do Excel. A orquestração (VehicleService) já
+            # força CSV para o consolidado, mas se este método for chamado
+            # diretamente, abortamos com mensagem clara em vez de estourar.
+            # +1 pelo cabeçalho.
+            if len(all_records) + 1 > EXCEL_MAX_ROWS:
+                logger.error(
+                    f"Consolidado tem {len(all_records)} registros, acima do "
+                    f"limite do Excel ({EXCEL_MAX_ROWS} linhas). Use CSV para "
+                    f"o consolidado (export_consolidated_history_to_csv)."
+                )
                 return ""
 
             # Cria DataFrame
