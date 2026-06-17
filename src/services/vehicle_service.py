@@ -269,6 +269,19 @@ class VehicleService:
                 logger.warning("Nenhum veículo encontrado para processar")
                 return result
 
+            # Wialon é fonte não-confiável: registration_plate é texto livre,
+            # podendo vir vazio, com typo ou DUPLICADO/trocado entre unidades.
+            # Como o nome do arquivo é a placa, duas unidades com a mesma placa
+            # gerariam arquivos de mesmo nome — risco de sobrescrita silenciosa
+            # (e foi o que ocorreu em produção: TEP0B26 saiu como SYN3D86).
+            # Mapeia placas repetidas no lote para desambiguar o arquivo via ID.
+            plate_counts: Dict[str, int] = {}
+            for v in vehicles:
+                plate = (v.get("_plate") or "").strip()
+                if plate:
+                    plate_counts[plate] = plate_counts.get(plate, 0) + 1
+            duplicated_plates = {p for p, c in plate_counts.items() if c > 1}
+
             # Processa cada veículo
             all_history: Dict[str, List[Dict[str, Any]]] = {}
             vehicles_info: Dict[str, Dict[str, str]] = {}  # Para exportação consolidada
@@ -278,7 +291,19 @@ class VehicleService:
                 vehicle_name = vehicle.get("nm", f"Veículo {vehicle_id}")
                 vehicle_plate = (
                     vehicle.get("_plate") or ""
-                )  # Placa extraída do profile field
+                ).strip()  # Placa extraída do profile field
+
+                # Placa usada SÓ no nome do arquivo. Em caso de placa duplicada
+                # na conta, anexa o ID para manter o arquivo único e rastreável.
+                # O consolidado mantém a placa original (fidelidade ao dado).
+                plate_for_file = vehicle_plate
+                if vehicle_plate and vehicle_plate in duplicated_plates:
+                    plate_for_file = f"{vehicle_plate}_{vehicle_id}"
+                    logger.warning(
+                        f"Placa '{vehicle_plate}' duplicada na conta Wialon — "
+                        f"anexando ID {vehicle_id} ao arquivo do veículo "
+                        f"'{vehicle_name}' para evitar sobrescrita."
+                    )
 
                 # Notifica a GUI do progresso (veículo atual / total).
                 if on_progress is not None:
@@ -315,7 +340,7 @@ class VehicleService:
                             month,
                             year,
                             vehicle_name=vehicle_name,
-                            vehicle_plate=vehicle_plate,
+                            vehicle_plate=plate_for_file,
                             account_name=account_name,
                         )
                         if file_path:
@@ -328,7 +353,7 @@ class VehicleService:
                             month,
                             year,
                             vehicle_name=vehicle_name,
-                            vehicle_plate=vehicle_plate,
+                            vehicle_plate=plate_for_file,
                             account_name=account_name,
                         )
                         if file_path:

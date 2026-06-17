@@ -123,6 +123,48 @@ def test_on_progress_emitido_por_veiculo(tmp_path):
     assert calls == [(1, 3, "V1"), (2, 3, "V2"), (3, 3, "V3")]
 
 
+def test_placa_duplicada_anexa_id_ao_arquivo(tmp_path):
+    """Duas unidades com a MESMA placa na Wialon não podem sobrescrever arquivo.
+
+    Reproduz o caso de produção (TEP0B26 com registration_plate='SYN3D86'):
+    o app deve anexar o vehicle_id para manter os dois arquivos únicos.
+    """
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    # Duas unidades distintas com a MESMA placa cadastrada.
+    mock_client.list_vehicles.return_value = [
+        {"id": 10, "nm": "SYN3D86", "_plate": "SYN3D86"},
+        {"id": 20, "nm": "TEP0B26", "_plate": "SYN3D86"},
+    ]
+    mock_client.get_vehicle_sensors.return_value = {}
+    # side_effect: iterator novo por veículo (return_value esgotaria no 1º).
+    mock_client.get_history.side_effect = lambda *a, **k: iter(
+        [[{"t": 1775000000, "pos": {"y": -22, "x": -43, "s": 5}, "p": {}}]]
+    )
+    svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
+    result = svc.export_monthly_data(
+        month=4, year=2026, export_format="csv", consolidated=False
+    )
+
+    nomes = [f.split("/")[-1] for f in result.exported_files]
+    # Cada arquivo carrega o ID para desambiguar — nenhum colide.
+    assert any(n.startswith("SYN3D86_10_") for n in nomes), nomes
+    assert any(n.startswith("SYN3D86_20_") for n in nomes), nomes
+    assert len(set(nomes)) == len(nomes), "arquivos não podem ter nome repetido"
+
+
+def test_placa_unica_nao_recebe_id(tmp_path):
+    """Placa não-duplicada mantém o nome limpo (sem ID anexado)."""
+    svc = _service_with_one_vehicle("csv", tmp_path)
+    result = svc.export_monthly_data(
+        month=4, year=2026, export_format="csv", consolidated=False
+    )
+    nome = result.exported_files[0].split("/")[-1]
+    assert nome.startswith("ABC1234_"), nome
+    assert "_1_" not in nome, "ID não deve ser anexado quando a placa é única"
+
+
 def test_export_sem_on_progress_funciona(tmp_path):
     """on_progress é opcional — ausência não deve quebrar o export."""
     svc = _service_with_one_vehicle("csv", tmp_path)
