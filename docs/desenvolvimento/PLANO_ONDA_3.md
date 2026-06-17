@@ -15,12 +15,15 @@
 | 01 | Fundação: ícones (FontAwesome) | #03 | 🔴 parcial | S | ✅ Concluído |
 | 02 | Fundação: light mode + toast | #11, #10 | 🔴 parcial | M | ✅ Concluído |
 | 03 | Identidade Movi + UX urgente (cliente) | #15 + paleta/logo/light-fix | 🔴 parcial | L | ✅ Concluído |
-| 04 | Home + Sidebar + Sobre | #07, #09, #23 | 🔴 parcial | M | ⬜ Todo |
+| 04 | Home + Sidebar + Sobre + Manual | #07, #09, #23, #52 | 🔴 parcial | L | ✅ Concluído |
 | 05 | Resto do Export | #14, #13, #17 | 🔴 parcial | M | ⬜ Todo |
 | 06 | Settings polish | #20, #21 | — | S | ⬜ Todo |
 | 07 | Atalhos de teclado | #22 | — | S | ⬜ Todo |
+| 08 | Manual: revisão final + prints | #52 | — | S | ⬜ Todo |
 
-> **Nota:** A Fase 03 foi inserida a pedido do cliente (4 melhorias com prints): paleta vermelha Movi, correção do light mode, suporte a logo, e o redesenho da seleção de veículos do Export (#15) — que também resolveu o **freeze ao trocar de conta** (839 checkboxes criados de uma vez). Os demais itens do Export (#14 progresso real, #13 checkboxes agrupados, #17 toolbar do log) seguem na Fase 05.
+> **Nota Fase 03:** inserida a pedido do cliente (4 melhorias com prints): paleta vermelha Movi, correção do light mode, suporte a logo, e o redesenho da seleção de veículos do Export (#15) — que também resolveu o **freeze ao trocar de conta** (839 checkboxes criados de uma vez). Os demais itens do Export (#14 progresso real, #13 checkboxes agrupados, #17 toolbar do log) seguem na Fase 05.
+
+> **Nota Fase 04 (manual #52):** a pedido do cliente, a Fase 04 ganhou um **manual do usuário em HTML embarcado** + botão na sidebar que abre no navegador. Decisões: HTML **embarcado** no bundle (consistência versão↔manual, offline, sem setup); conteúdo **vivo** (cada fase que muda a UI atualiza a seção); **prints por último** (Fase 08, quando a UI congelar — printar tela que ainda muda = retrabalho). Na Fase 04 entra a infraestrutura (botão + carregar HTML + spec) e a reescrita do texto para a UI atual, com placeholders de imagem.
 
 **Total estimado:** ~3-4 dias de trabalho focado · 13 itens do backlog fechados.
 
