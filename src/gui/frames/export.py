@@ -620,6 +620,7 @@ class ExportFrame(ctk.CTkFrame):
                     export_format=format_type,
                     consolidated=consolidated,
                     upload_to_drive=upload,
+                    on_progress=self._on_export_progress,
                     account_name=account_name,
                 )
                 
@@ -703,6 +704,25 @@ class ExportFrame(ctk.CTkFrame):
         thread = threading.Thread(target=export, daemon=True)
         thread.start()
     
+    def _on_export_progress(self, current: int, total: int, vehicle_name: str):
+        """Callback chamado pelo serviço a cada veículo (thread de trabalho).
+
+        Na primeira chamada, troca a barra indeterminada (pulsando) por uma
+        barra determinada e passa a refletir a fração real (atual/total).
+        """
+        def update():
+            # Primeira vez: para o "pulsar" e vira barra de progresso real.
+            if self.progress_bar.cget("mode") != "determinate":
+                self.progress_bar.stop()
+                self.progress_bar.configure(mode="determinate")
+            fraction = current / total if total else 0
+            self.progress_bar.set(fraction)
+            self.progress_label.configure(
+                text=f"Processando {current}/{total} — {vehicle_name}"
+            )
+
+        self.after(0, update)
+
     def _set_progress_complete(self):
         """Define a barra de progresso como completa."""
         self.progress_bar.stop()

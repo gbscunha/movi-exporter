@@ -16,7 +16,7 @@ A transformação de dados brutos acontece aqui, antes da normalização.
 import calendar
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from src.clients.protocols import TrackingClient
 from src.clients.wialon_client import WialonClient, WialonError
@@ -223,6 +223,7 @@ class VehicleService:
         consolidated: bool = True,
         upload_to_drive: bool = False,
         account_name: Optional[str] = None,
+        on_progress: Optional[Callable[[int, int, str], None]] = None,
     ) -> ExportResult:
         """
         Exporta dados mensais de todos os veículos (ou lista específica).
@@ -237,6 +238,9 @@ class VehicleService:
             account_name: Se fornecido, exports vão para subpasta `YYYY-MM/<name>/`
                           em vez de `YYYY-MM/` — útil quando há mais de uma conta
                           Wialon configurada.
+            on_progress: Callback opcional `(atual, total, nome_veiculo)` chamado
+                         ao iniciar o processamento de cada veículo — usado pela
+                         GUI para mostrar progresso real (barra determinada).
 
         Returns:
             Resultado da exportação com estatísticas
@@ -269,12 +273,16 @@ class VehicleService:
             all_history: Dict[str, List[Dict[str, Any]]] = {}
             vehicles_info: Dict[str, Dict[str, str]] = {}  # Para exportação consolidada
 
-            for vehicle in vehicles:
+            for index, vehicle in enumerate(vehicles, start=1):
                 vehicle_id = vehicle.get("id")
                 vehicle_name = vehicle.get("nm", f"Veículo {vehicle_id}")
                 vehicle_plate = (
                     vehicle.get("_plate") or ""
                 )  # Placa extraída do profile field
+
+                # Notifica a GUI do progresso (veículo atual / total).
+                if on_progress is not None:
+                    on_progress(index, result.total_vehicles, vehicle_name)
 
                 try:
                     # Processa histórico

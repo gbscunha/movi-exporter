@@ -102,6 +102,34 @@ def test_consolidado_sempre_csv_mesmo_com_formato_xlsx(tmp_path):
     )
 
 
+def test_on_progress_emitido_por_veiculo(tmp_path):
+    """on_progress deve ser chamado uma vez por veículo, com (atual, total, nome)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.list_vehicles.return_value = [
+        {"id": i, "nm": f"V{i}", "_plate": f"P{i}"} for i in range(1, 4)
+    ]
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.get_history.return_value = iter(
+        [[{"t": 1775000000, "pos": {"y": -22, "x": -43, "s": 5}, "p": {}}]]
+    )
+    calls = []
+    svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
+    svc.export_monthly_data(
+        month=4, year=2026, export_format="csv", consolidated=False,
+        on_progress=lambda c, t, n: calls.append((c, t, n)),
+    )
+    assert calls == [(1, 3, "V1"), (2, 3, "V2"), (3, 3, "V3")]
+
+
+def test_export_sem_on_progress_funciona(tmp_path):
+    """on_progress é opcional — ausência não deve quebrar o export."""
+    svc = _service_with_one_vehicle("csv", tmp_path)
+    result = svc.export_monthly_data(month=4, year=2026, consolidated=False)
+    assert result.processed_vehicles == 1
+
+
 def test_export_consolidated_excel_aborta_acima_do_limite(tmp_path):
     """Guard defensivo: chamar o consolidado-xlsx acima do limite retorna '' (não estoura)."""
     from src.services import exporter as exporter_mod
