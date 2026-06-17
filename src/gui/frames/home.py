@@ -2,13 +2,22 @@
 Tela inicial (Home).
 """
 
-import customtkinter as ctk
+import subprocess
+import sys
 import threading
+from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
+import customtkinter as ctk
+
+from src.core.config import settings
+from src.core.logger import logger
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.design import Border, Colors, Font, Space
+from src.gui.frames.export import MESES  # nomes dos meses (fonte única)
+from src.services import export_history
 from src.services.vehicle_service import VehicleService
 
 
@@ -48,6 +57,9 @@ class HomeFrame(ctk.CTkFrame):
         # Ações rápidas
         self._create_quick_actions()
 
+        # Resumo de exportações (última exportação, sugestão, stats do ano)
+        self._create_export_summary()
+
         # Verificar status em background. Importante chamar DEPOIS dos botões
         # serem criados — `_check_status_async` desabilita `btn_list` enquanto
         # roda (#05).
@@ -58,13 +70,24 @@ class HomeFrame(ctk.CTkFrame):
             self.account_state.register(self._on_account_changed)
 
     def _on_account_changed(self, _account: int):
-        """Recarrega o status quando a conta global muda.
+        """Recarrega o status e o resumo quando a conta global muda.
 
         `_check_status_async` recria o `self.service` do zero, que por sua vez
         usa o token da conta agora ativa (resolvido em `_build_service`).
         """
         self.service = None
         self._check_status_async()
+        self._refresh_export_summary()
+
+    def _active_account_label(self) -> Optional[str]:
+        """Label da conta ativa para filtrar exports, ou None (conta única).
+
+        Só faz sentido filtrar por conta quando há uma segunda conta
+        configurada — caso contrário os exports ficam direto na pasta do mês.
+        """
+        if self.account_state is not None and settings.WIALON_TOKEN_2:
+            return self.account_state.label
+        return None
     
     def _create_status_cards(self):
         """Cria os cards de status."""
@@ -132,7 +155,124 @@ class HomeFrame(ctk.CTkFrame):
             state="disabled",
         )
         self.btn_list.grid(row=0, column=1, padx=5, pady=5)
-    
+
+    # ------------------------------------------------------------------
+    # Resumo de exportações (#07)
+    # ------------------------------------------------------------------
+
+    def _create_export_summary(self):
+        """Cria a seção 'Resumo de Exportações' e a popula."""
+        label = ctk.CTkLabel(
+            self,
+            text="Resumo de Exportações",
+            font=ctk.CTkFont(size=Font.SIZE_LG, weight=Font.WEIGHT_BOLD),
+        )
+        label.grid(row=5, column=0, columnspan=2, pady=(Space.XL, Space.SM), sticky="w")
+
+        self.summary_frame = ctk.CTkFrame(self, corner_radius=Border.RADIUS_MD)
+        self.summary_frame.grid(row=6, column=0, columnspan=2, sticky="ew")
+        self.summary_frame.grid_columnconfigure(0, weight=1)
+
+        self._refresh_export_summary()
+
+    def _refresh_export_summary(self):
+        """Recarrega o conteúdo do resumo lendo as pastas de export."""
+        for widget in self.summary_frame.winfo_children():
+            widget.destroy()
+
+        base = settings.EXPORT_DIR or "./exports"
+        account = self._active_account_label()
+        last = export_history.last_export(base, account)
+
+        row = 0
+        if last is None:
+            ctk.CTkLabel(
+                self.summary_frame,
+                text="Nenhuma exportação realizada ainda.",
+                text_color=Colors.MUTED,
+            ).grid(row=row, column=0, padx=Space.LG, pady=Space.LG, sticky="w")
+        else:
+            # Bloco "Última exportação"
+            info = ctk.CTkFrame(self.summary_frame, fg_color="transparent")
+            info.grid(row=row, column=0, padx=Space.LG, pady=Space.MD, sticky="ew")
+            info.grid_columnconfigure(0, weight=1)
+
+            ctk.CTkLabel(
+                info,
+                text="ÚLTIMA EXPORTAÇÃO",
+                font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
+                text_color=Colors.MUTED,
+            ).grid(row=0, column=0, sticky="w")
+
+            periodo = f"{MESES[last.month - 1]}/{last.year}"
+            if last.account:
+                periodo += f"  ·  {last.account}"
+            ctk.CTkLabel(
+                info,
+                text=periodo,
+                font=ctk.CTkFont(size=Font.SIZE_XL, weight=Font.WEIGHT_BOLD),
+            ).grid(row=1, column=0, sticky="w")
+
+            quando = last.last_modified.strftime("%d/%m/%Y %H:%M")
+            ctk.CTkLabel(
+                info,
+                text=f"{last.file_count} arquivo(s)  ·  {quando}",
+                font=ctk.CTkFont(size=Font.SIZE_BASE),
+                text_color=Colors.MUTED,
+            ).grid(row=2, column=0, sticky="w")
+
+            ctk.CTkButton(
+                info,
+                text="  Abrir pasta",
+                image=icons.get(icons.FOLDER_OPEN, size=16, on_accent=True),
+                width=130,
+                command=lambda p=last.folder: self._open_folder(p),
+            ).grid(row=0, column=1, rowspan=3, padx=(Space.LG, 0))
+            row += 1
+
+        # Sugestão de mês não exportado
+        suggestion = export_history.suggest_unexported_month(
+            base, datetime.now(), account
+        )
+        if suggestion is not None:
+            sy, sm = suggestion
+            ctk.CTkLabel(
+                self.summary_frame,
+                text=f"Você ainda não exportou {MESES[sm - 1]}/{sy}.",
+                image=icons.get(icons.TRIANGLE_WARNING, size=14, color=Colors.WARNING),
+                compound="left",
+                text_color=Colors.WARNING,
+                font=ctk.CTkFont(size=Font.SIZE_BASE),
+            ).grid(row=row, column=0, padx=Space.LG, pady=(0, Space.SM), sticky="w")
+            row += 1
+
+        # Estatísticas do ano corrente
+        ano = datetime.now().year
+        n_exports, n_files = export_history.year_stats(base, ano, account)
+        if n_exports:
+            stats = f"Em {ano}: {n_exports} exportação(ões), {n_files} arquivo(s)."
+            ctk.CTkLabel(
+                self.summary_frame,
+                text=stats,
+                font=ctk.CTkFont(size=Font.SIZE_BASE),
+                text_color=Colors.MUTED,
+            ).grid(row=row, column=0, padx=Space.LG, pady=(0, Space.MD), sticky="w")
+
+    def _open_folder(self, path):
+        """Abre uma pasta no explorador de arquivos do sistema."""
+        path = Path(path)
+        if not path.exists():
+            return
+        try:
+            if sys.platform == "win32":
+                subprocess.Popen(["explorer", str(path)])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", str(path)])
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as e:
+            logger.debug(f"Erro ao abrir pasta: {e}")
+
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
         if self.account_state is not None and self.account_state.account == 2:

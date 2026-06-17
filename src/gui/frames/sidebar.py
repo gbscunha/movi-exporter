@@ -41,30 +41,50 @@ class SidebarFrame(ctk.CTkFrame):
         self.normal_color = "transparent"
         self.nav_text_color = ("gray10", "gray90")
 
-        # Configurar grid
-        self.grid_rowconfigure(10, weight=1)  # Espaço flexível
+        # Grid: a linha 20 é o espaçador flexível que empurra o grupo de
+        # rodapé (ações + versão) para baixo, separado da navegação no topo.
+        self.grid_rowconfigure(20, weight=1)
 
-        # Logo (imagem) ou título textual como fallback.
+        # --- Topo: logo ---
         self._create_logo()
+        self._create_separator(row=1)
 
-        # Botões de navegação
-        self._create_nav_button("home", "  Início", icons.HOME, row=1)
-        self._create_nav_button("export", "  Exportar", icons.FILE_EXPORT, row=2)
-        self._create_nav_button("settings", "  Configurações", icons.GEAR, row=3)
+        # --- Grupo: navegação ---
+        self._create_nav_button("home", "  Início", icons.HOME, row=2)
+        self._create_nav_button("export", "  Exportar", icons.FILE_EXPORT, row=3)
+        self._create_nav_button("settings", "  Configurações", icons.GEAR, row=4)
 
-        # Seletor de conta (só aparece se houver Conta 2 configurada).
-        # Estado global — mudar aqui reflete na Home e no Export.
+        # --- Grupo: conta (só aparece se houver Conta 2 configurada) ---
         if self.account_state is not None and settings.WIALON_TOKEN_2:
-            self._create_account_selector(row=4)
+            self._create_separator(row=5)
+            self._create_account_selector(row=6)
 
-        # Versão (no rodapé)
-        self.version_label = ctk.CTkLabel(
+        # --- Rodapé: ações (abaixo do espaçador) ---
+        self._create_separator(row=21)
+        self._create_action_button(
+            "  Manual", icons.BOOK, self._open_manual, row=22
+        )
+        self._create_action_button(
+            "  Sobre", icons.INFO_CIRCLE, self._open_about, row=23
+        )
+
+        # Versão (no rodapé) — clicável, abre as notas de versão.
+        self.version_button = ctk.CTkButton(
             self,
             text=f"v{__version__}",
             font=ctk.CTkFont(size=11),
-            text_color="gray"
+            text_color="gray",
+            fg_color="transparent",
+            hover_color=self.hover_color,
+            height=24,
+            command=self._open_release_notes,
         )
-        self.version_label.grid(row=11, column=0, padx=20, pady=10)
+        self.version_button.grid(row=24, column=0, padx=20, pady=(4, 12))
+
+    def _create_separator(self, row: int):
+        """Linha fina divisória entre grupos da sidebar."""
+        sep = ctk.CTkFrame(self, height=1, fg_color=("gray80", "gray30"))
+        sep.grid(row=row, column=0, padx=16, pady=8, sticky="ew")
 
     def _create_logo(self):
         """Exibe a logo Movi (imagem) no topo, ou o título textual se ausente."""
@@ -143,7 +163,47 @@ class SidebarFrame(ctk.CTkFrame):
         )
         button.grid(row=row, column=0, padx=10, pady=5, sticky="ew")
         self.buttons[name] = button
-    
+
+    def _create_action_button(self, text: str, icon: str, command, row: int):
+        """Botão de ação do rodapé (Manual, Sobre) — sem estado ativo."""
+        button = ctk.CTkButton(
+            self,
+            text=text,
+            image=icons.get(icon, size=16),
+            font=ctk.CTkFont(size=13),
+            anchor="w",
+            height=34,
+            corner_radius=8,
+            fg_color=self.normal_color,
+            hover_color=self.hover_color,
+            text_color=self.nav_text_color,
+            command=command,
+        )
+        button.grid(row=row, column=0, padx=10, pady=3, sticky="ew")
+        return button
+
+    def _open_manual(self):
+        """Abre o manual do usuário no navegador."""
+        from src.gui.components import toast
+        from src.gui.manual import open_manual
+
+        if not open_manual():
+            toast.show("Manual não encontrado", kind="warning")
+
+    def _open_about(self):
+        """Abre o diálogo Sobre."""
+        from src.gui.dialogs.about_dialog import AboutDialog
+
+        AboutDialog(self.winfo_toplevel())
+
+    def _open_release_notes(self):
+        """Abre as notas de versão no navegador."""
+        import webbrowser
+
+        from src.gui.updater import GITHUB_OWNER, GITHUB_REPO
+
+        webbrowser.open(f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases")
+
     def _on_click(self, name: str):
         """Handler de clique no botão."""
         self.set_active(name)

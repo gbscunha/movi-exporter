@@ -61,6 +61,8 @@ COPY = ""
 LINK = ""  # arrow-up-right-from-square (abrir externo)
 TRUCK = ""
 CALENDAR = ""
+BOOK = ""  # manual / ajuda
+INFO_CIRCLE = ""  # circle-info (sobre)
 
 # Cache de fontes por tamanho e de imagens por (cp, size, dark, light).
 _font_cache: Dict[int, ImageFont.FreeTypeFont] = {}

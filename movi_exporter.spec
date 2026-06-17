@@ -30,6 +30,8 @@ datas = [
     *customtkinter_datas,
     # Fonte FontAwesome (ícones da GUI) — deve ir junto no bundle.
     ('src/gui/assets/fontawesome-solid.ttf', 'src/gui/assets'),
+    # Manual do usuário (HTML embarcado) — aberto pelo botão na sidebar.
+    ('docs/manual', 'docs/manual'),
 ]
 
 # Logo Movi (opcional) — incluída no bundle apenas se o arquivo existir.

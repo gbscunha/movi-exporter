@@ -154,7 +154,7 @@
     <div class="hero">
       <h1>📘 Manual de Uso — Movi Exporter</h1>
       <p>Guia passo a passo para extrair os relatórios mensais de rastreamento dos seus veículos.</p>
-      <span class="ver">Versão 1.1.0</span>
+      <span class="ver">Versão 1.3.0</span>
     </div>
 
     <!-- INTRODUÇÃO -->
@@ -204,7 +204,7 @@
       <h3>2.1 — Abrir as Configurações</h3>
       <ol class="steps">
         <li>No menu lateral esquerdo, clique em <b>Configurações</b>.</li>
-        <li>Localize a seção <b>"🔌 Wialon API — Conta 1"</b>.</li>
+        <li>Localize a seção <b>"Wialon API — Conta 1"</b>.</li>
       </ol>
 
       <figure>
@@ -222,7 +222,7 @@
 
       <h3>2.2 — Gerar o token na Wialon</h3>
       <ol class="steps">
-        <li>Clique no botão <b>🔗 Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
+        <li>Clique no botão <b>Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
         <li>Faça login com seu usuário e senha da Wialon.</li>
         <li>Na Wialon, vá em <b>Configurações da conta → Aplicativos e tokens</b> e crie um novo token com acesso de leitura aos veículos.</li>
         <li>Copie o token gerado (uma sequência longa de letras e números).</li>
@@ -231,8 +231,8 @@
       <h3>2.3 — Salvar e testar no app</h3>
       <ol class="steps">
         <li>Volte ao Movi Exporter e cole o token no campo <b>Token</b>.</li>
-        <li>Clique em <b>💾 Salvar</b>.</li>
-        <li>Clique em <b>🔍 Testar</b>. Se tudo estiver certo, aparece <b style="color:var(--green)">✅ Conectado como "seu_nome"</b>.</li>
+        <li>Clique em <b>Salvar</b>.</li>
+        <li>Clique em <b>Testar</b>. Se tudo estiver certo, aparece <b style="color:var(--green)">Conectado como "seu_nome"</b> com um ícone verde.</li>
       </ol>
 
       <figure>
@@ -250,7 +250,7 @@
 
       <div class="box tip">
         <b>Dica</b>
-        O botão 👁️ ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
+        O botão de olho ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
       </div>
     </section>
 
@@ -277,7 +277,7 @@
         <li><b>Veículos</b> — quantidade de veículos encontrados na sua conta.</li>
         <li><b>Google Drive</b> — se o envio automático está configurado.</li>
       </ul>
-      <p>Os botões <b>🔄 Testar Conexões</b> e <b>📋 Ver Veículos</b> permitem reverificar o status e listar todos os veículos a qualquer momento.</p>
+      <p>Os botões <b>Testar Conexões</b> e <b>Ver Veículos</b> permitem reverificar o status e listar todos os veículos a qualquer momento. Abaixo, o bloco <b>Resumo de Exportações</b> mostra a última exportação realizada (com botão para abrir a pasta), sugere o mês que ainda falta exportar e exibe estatísticas do ano.</p>
     </section>
 
     <!-- 4. DRIVE -->
@@ -292,7 +292,7 @@
           <div class="placeholder" style="display:none">
             <span class="icon">📷</span>
             <span class="fname">img/05-config-drive.png</span>
-            <span class="hint">Print da seção "☁️ Google Drive" nas Configurações.</span>
+            <span class="hint">Print da seção "Google Drive" nas Configurações.</span>
           </div>
         </div>
         <figcaption>Seção Google Drive nas Configurações</figcaption>
@@ -310,7 +310,7 @@
       <p>Se você gerencia veículos em <b>duas contas Wialon diferentes</b>, pode configurar a segunda na seção <b>"Wialon API — Conta 2"</b>, seguindo os mesmos passos do passo 2.</p>
       <div class="box info">
         <b>Quando a Conta 2 está configurada</b>
-        Aparece um seletor de conta na tela de Exportação, e os relatórios de cada conta vão para subpastas separadas (<code>Conta 1/</code> e <code>Conta 2/</code>).
+        Aparece um <b>seletor de conta no menu lateral (esquerda)</b>. Trocar a conta ali reflete em todas as telas — a tela inicial e a de exportação passam a usar a conta escolhida. Os relatórios de cada conta vão para subpastas separadas (<code>Conta 1/</code> e <code>Conta 2/</code>).
       </div>
 
       <figure>
@@ -346,15 +346,20 @@
       </figure>
 
       <ol class="steps">
-        <li>No menu lateral, clique em <b>Exportar Dados</b>.</li>
-        <li>Escolha o <b>Mês</b> (por nome: Janeiro, Fevereiro…) e o <b>Ano</b>.</li>
+        <li>No menu lateral, clique em <b>Exportar</b>.</li>
+        <li>Escolha o <b>Mês</b> (por nome: Janeiro, Fevereiro…) e o <b>Ano</b> (ambos em listas suspensas).</li>
         <li>Escolha o <b>Formato</b>: <code>csv</code> (planilha simples), <code>xlsx</code> (Excel) ou <code>both</code> (os dois).</li>
-        <li>Se tiver duas contas, selecione a <b>Conta</b> desejada.</li>
+        <li>Se você tem duas contas, confirme no menu lateral qual <b>Conta</b> está selecionada.</li>
         <li>Marque <b>"Gerar arquivo consolidado"</b> se quiser um único arquivo com todos os veículos juntos.</li>
         <li>Marque <b>"Upload para Google Drive"</b> se configurou o Drive e quer envio automático.</li>
-        <li>Para exportar <b>todos</b> os veículos, deixe "Todos os veículos" selecionado. Para escolher veículos específicos, marque "Selecionar veículos" e clique em <b>🔄 Carregar</b>.</li>
-        <li>Clique em <b>▶️ Iniciar Exportação</b>.</li>
+        <li>Para exportar <b>todos</b> os veículos, deixe <b>"Todos os veículos"</b> selecionado. Para escolher veículos específicos, marque <b>"Selecionar veículos"</b> e clique em <b>Carregar</b> (veja a busca abaixo).</li>
+        <li>Clique em <b>Iniciar Exportação</b>.</li>
       </ol>
+
+      <div class="box tip">
+        <b>Buscando veículos específicos (frotas grandes)</b>
+        Ao marcar "Selecionar veículos", <b>nenhum vem marcado por padrão</b>. Use o campo de <b>busca</b> para filtrar por nome, placa ou ID e marque só os que quer. Os botões <b>"Marcar todos"</b> / <b>"Desmarcar todos"</b> agem sobre o resultado da busca atual. Em listas muito grandes, aparece <b>"Mostrar mais"</b> para carregar o próximo lote. Um contador mostra quantos estão selecionados.
+      </div>
 
       <figure>
         <div class="shot">
@@ -392,7 +397,7 @@
     <section id="arquivos">
       <h2><span class="step-n">7</span>Encontrar os arquivos gerados</h2>
       <ol class="steps">
-        <li>Após a exportação, clique no botão <b>📂 Abrir pasta</b>.</li>
+        <li>Após a exportação, clique no botão <b>Abrir pasta</b>.</li>
         <li>A pasta do mês abre automaticamente no explorador de arquivos.</li>
       </ol>
       <p>Os arquivos ficam organizados por ano e mês, por exemplo:</p>
@@ -456,10 +461,20 @@
         <summary>O Windows bloqueou o app. É vírus?</summary>
         <p>Não. É um aviso padrão para programas sem certificado de desenvolvedor pago. Clique em "Mais informações" → "Executar assim mesmo".</p>
       </details>
+
+      <details>
+        <summary>Como mudo entre tema claro e escuro?</summary>
+        <p>Em <b>Configurações → Geral → Tema</b>, escolha <b>Escuro</b>, <b>Claro</b> ou <b>Sistema</b> (segue o tema do seu computador). A escolha é lembrada na próxima vez que abrir o app.</p>
+      </details>
+
+      <details>
+        <summary>Onde abro este manual de dentro do app?</summary>
+        <p>No rodapé do menu lateral há os botões <b>Manual</b> (abre este guia no navegador) e <b>Sobre</b> (versão do app, links e verificação de atualização).</p>
+      </details>
     </section>
 
     <footer>
-      Movi Exporter · Manual de Uso v1.1.0<br />
+      Movi Exporter · Manual de Uso v1.3.0<br />
       Em caso de dúvidas, entre em contato com o suporte.
     </footer>
 
