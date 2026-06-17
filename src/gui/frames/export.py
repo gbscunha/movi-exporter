@@ -21,7 +21,7 @@ from src.core.logger import GUILogHandler, logger
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.components import toast
-from src.gui.design import Colors
+from src.gui.design import Colors, Font, Space
 from src.services.vehicle_service import VehicleService
 
 # Nomes dos meses em português brasileiro — usados no dropdown.
@@ -159,25 +159,37 @@ class ExportFrame(ctk.CTkFrame):
         )
         self.format_menu.grid(row=1, column=1, padx=(0, 10), pady=10, sticky="w")
 
-        # --- Linha 2: Opções (checkboxes) ---
+        # --- Linha 2: sub-card "Opções" agrupando os checkboxes (#13) ---
+        options_card = ctk.CTkFrame(config_frame)
+        options_card.grid(
+            row=2, column=0, columnspan=4, padx=10, pady=(4, 12), sticky="ew"
+        )
+
+        ctk.CTkLabel(
+            options_card,
+            text="OPÇÕES",
+            font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
+            text_color=Colors.MUTED,
+        ).grid(row=0, column=0, columnspan=2, padx=Space.MD, pady=(Space.SM, 2), sticky="w")
+
         self.consolidated_var = ctk.BooleanVar(value=True)
         self.consolidated_check = ctk.CTkCheckBox(
-            config_frame,
+            options_card,
             text="Gerar arquivo consolidado",
             variable=self.consolidated_var,
         )
         self.consolidated_check.grid(
-            row=2, column=0, columnspan=2, padx=10, pady=(4, 12), sticky="w"
+            row=1, column=0, padx=Space.MD, pady=(0, Space.SM), sticky="w"
         )
 
         self.upload_var = ctk.BooleanVar(value=False)
         self.upload_check = ctk.CTkCheckBox(
-            config_frame,
+            options_card,
             text="Upload para Google Drive",
             variable=self.upload_var,
         )
         self.upload_check.grid(
-            row=2, column=2, columnspan=2, padx=10, pady=(4, 12), sticky="w"
+            row=1, column=1, padx=Space.MD, pady=(0, Space.SM), sticky="w"
         )
 
     def _on_account_changed(self, account: int):
@@ -313,24 +325,40 @@ class ExportFrame(ctk.CTkFrame):
         progress_frame.grid_columnconfigure(0, weight=1)
         progress_frame.grid_rowconfigure(1, weight=1)
         
-        # Header com título e contador
+        # Header com título, contador e toolbar do log (#17)
         header_frame = ctk.CTkFrame(progress_frame, fg_color="transparent")
         header_frame.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="ew")
         header_frame.grid_columnconfigure(1, weight=1)
-        
+
         ctk.CTkLabel(
             header_frame,
             text="Progresso:",
             font=ctk.CTkFont(weight="bold")
         ).grid(row=0, column=0, sticky="w")
-        
+
         self.progress_label = ctk.CTkLabel(
             header_frame,
             text="",
             font=ctk.CTkFont(size=12),
-            text_color="#888888"
+            text_color=Colors.MUTED,
         )
-        self.progress_label.grid(row=0, column=1, sticky="e")
+        self.progress_label.grid(row=0, column=1, sticky="e", padx=(0, Space.SM))
+
+        # Toolbar: limpar · copiar · salvar o log (útil p/ suporte).
+        toolbar = ctk.CTkFrame(header_frame, fg_color="transparent")
+        toolbar.grid(row=0, column=2, sticky="e")
+        ctk.CTkButton(
+            toolbar, text="", image=icons.get(icons.TRASH, size=14),
+            width=30, command=self._clear_log,
+        ).grid(row=0, column=0, padx=2)
+        ctk.CTkButton(
+            toolbar, text="", image=icons.get(icons.COPY, size=14),
+            width=30, command=self._copy_log,
+        ).grid(row=0, column=1, padx=2)
+        ctk.CTkButton(
+            toolbar, text="", image=icons.get(icons.SAVE, size=14),
+            width=30, command=self._save_log,
+        ).grid(row=0, column=2, padx=2)
         
         self.log_text = ctk.CTkTextbox(progress_frame, height=200)
         self.log_text.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
@@ -753,7 +781,40 @@ class ExportFrame(ctk.CTkFrame):
             self._configure_log_tags()
 
         self.after(0, _do)
-    
+
+    def _copy_log(self):
+        """Copia todo o texto do log para a área de transferência."""
+        conteudo = self.log_text.get("1.0", "end").strip()
+        if not conteudo:
+            return
+        self.clipboard_clear()
+        self.clipboard_append(conteudo)
+        toast.show("Log copiado", kind="success")
+
+    def _save_log(self):
+        """Salva o log num arquivo .txt escolhido pelo usuário."""
+        from tkinter import filedialog
+
+        conteudo = self.log_text.get("1.0", "end").strip()
+        if not conteudo:
+            toast.show("Log vazio — nada para salvar", kind="warning")
+            return
+        path = filedialog.asksaveasfilename(
+            title="Salvar log",
+            defaultextension=".txt",
+            filetypes=[("Arquivo de texto", "*.txt")],
+            initialfile="movi-exporter-log.txt",
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(conteudo)
+            toast.show("Log salvo", kind="success")
+        except Exception as e:
+            logger.debug(f"Erro ao salvar log: {e}")
+            messagebox.showerror("Erro", f"Não foi possível salvar o log: {e}")
+
     def _log(self, message: str, level: str = "INFO"):
         """
         Adiciona mensagem ao log com cor baseada no nível.

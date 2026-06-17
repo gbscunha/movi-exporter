@@ -63,6 +63,7 @@ TRUCK = ""
 CALENDAR = ""
 BOOK = ""  # manual / ajuda
 INFO_CIRCLE = ""  # circle-info (sobre)
+TRASH = ""  # lixeira (limpar log)
 
 # Cache de fontes por tamanho e de imagens por (cp, size, dark, light).
 _font_cache: Dict[int, ImageFont.FreeTypeFont] = {}
