@@ -6,13 +6,15 @@
 <title>Manual de Uso — Movi Exporter</title>
 <style>
   :root {
+    /* Identidade visual Movi — vermelho #FF0E10 (primária) + branco */
     --bg: #f5f7fa;
     --surface: #ffffff;
     --border: #e1e6ec;
     --text: #1a2330;
     --muted: #6b7785;
-    --brand: #2563eb;
-    --brand-soft: #eff5ff;
+    --brand: #FF0E10;        /* vermelho Movi */
+    --brand-dark: #C70C0E;   /* vermelho escuro p/ gradiente/hover */
+    --brand-soft: #fff0f0;   /* vermelho bem claro p/ fundos suaves */
     --green: #16a34a;
     --amber: #d97706;
     --red: #dc2626;
@@ -46,7 +48,7 @@
 
   /* Header */
   .hero {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
     color: #fff; border-radius: 16px; padding: 40px; margin-bottom: 40px;
   }
   .hero h1 { font-size: 30px; font-weight: 700; }
