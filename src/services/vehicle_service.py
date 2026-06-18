@@ -172,6 +172,7 @@ class VehicleService:
             # Processa histórico em páginas
             all_records = []
             last_pwr_ext: Optional[float] = None
+            last_ignition: Optional[bool] = None
 
             page_size = settings.WIALON_PAGE_SIZE or 1000
             for page in self.client.get_history(
@@ -196,6 +197,17 @@ class VehicleService:
                         and last_pwr_ext is not None
                     ):
                         transformed["vehicle_voltage"] = last_pwr_ext
+
+                    # Carry-forward de ignição: o painel Wialon mantém o último
+                    # estado conhecido entre mensagens sem sinal de ignição.
+                    # Sem isso, marcávamos "Desligado" em mensagens que apenas
+                    # não repetem o sinal (ex.: Suntech model 170 alterna STT
+                    # com `mode` e ALT só com evento `alert_id`).
+                    ignition = transformed.get("ignition")
+                    if ignition is None:
+                        transformed["ignition"] = last_ignition
+                    else:
+                        last_ignition = ignition
 
                     all_records.append(transformed)
 

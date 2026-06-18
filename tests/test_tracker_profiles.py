@@ -335,3 +335,23 @@ def test_warning_loga_para_cada_combinacao_distinta(captured_warnings):
     detect_profile({"pos": {}, "p": {"model": 999, "rep_type": "FOO"}})
     detect_profile({"pos": {}, "p": {"model": 888, "rep_type": "BAR"}})
     assert len(captured_warnings) == 2
+
+
+# ---------- Suntech: ignição por evento (alert_id) ----------
+
+
+def test_suntech_ignicao_evento_alert_33_liga():
+    p = SuntechProfile()
+    assert p.resolve_ignition_event({"alert_id": 33}) is True
+
+
+def test_suntech_ignicao_evento_alert_34_desliga():
+    p = SuntechProfile()
+    assert p.resolve_ignition_event({"alert_id": 34}) is False
+
+
+def test_suntech_ignicao_evento_outro_alert_e_none():
+    """alert_id não relacionado a ignição não altera estado (retorna None)."""
+    p = SuntechProfile()
+    assert p.resolve_ignition_event({"alert_id": 99}) is None
+    assert p.resolve_ignition_event({}) is None

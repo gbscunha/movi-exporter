@@ -146,3 +146,53 @@ def test_ambos_voltagens_quando_msg_tem_pwr_ext_e_pwr_int():
     record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
     assert record["vehicle_voltage"] == 14.0
     assert record["internal_battery_voltage"] == 4.1
+
+
+# ----- Ignição por evento (Suntech alert_id) -----
+
+
+def test_ignicao_por_evento_alert_33_quando_sem_mode():
+    """Mensagem Suntech ALT (sem `mode`, com alert_id=33) deve sair ignição ligada."""
+    transformer = _make_transformer()
+    msg = {
+        "t": 1700000000,
+        "pos": {"y": -22.8, "x": -43.5, "s": 0},
+        "p": {"model": 170, "rep_type": "ALT", "alert_id": 33, "s_asgn2": 13.5},
+    }
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["ignition"] is True
+
+
+def test_ignicao_por_evento_alert_34_desliga():
+    transformer = _make_transformer()
+    msg = {
+        "t": 1700000000,
+        "pos": {"y": -22.8, "x": -43.5, "s": 0},
+        "p": {"model": 170, "rep_type": "ALT", "alert_id": 34, "s_asgn2": 13.5},
+    }
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["ignition"] is False
+
+
+def test_ignicao_none_quando_sem_mode_e_sem_evento():
+    """Sem `mode` e sem alert de ignição → None (será herdado por carry-forward)."""
+    transformer = _make_transformer()
+    msg = {
+        "t": 1700000000,
+        "pos": {"y": -22.8, "x": -43.5, "s": 0},
+        "p": {"model": 170, "rep_type": "STT", "s_asgn2": 13.5},
+    }
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["ignition"] is None
+
+
+def test_ignicao_mode_tem_prioridade_sobre_evento():
+    """STT com `mode` resolve direto, sem depender do evento."""
+    transformer = _make_transformer()
+    msg = {
+        "t": 1700000000,
+        "pos": {"y": -22.8, "x": -43.5, "s": 0},
+        "p": {"model": 170, "rep_type": "STT", "mode": 1},
+    }
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["ignition"] is True

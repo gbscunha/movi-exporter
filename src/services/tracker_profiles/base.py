@@ -34,3 +34,13 @@ class TrackerProfile(Protocol):
     def extract_odometer_meters(self, params: Dict[str, Any]) -> Optional[float]:
         """Extrai odômetro em metros (cada tracker pode usar param próprio)."""
         ...
+
+    def resolve_ignition_event(self, params: Dict[str, Any]) -> Optional[bool]:
+        """Traduz um evento de ignição (quando há) em estado on/off.
+
+        OPCIONAL — perfis cujo tracker reporta ignição só por evento de
+        transição (ex.: Suntech `alert_id` 33/34) implementam isto. Retorna
+        True (ligou), False (desligou) ou None (sem evento de ignição). O
+        transformer só consulta isto quando o sinal contínuo está ausente.
+        """
+        ...
