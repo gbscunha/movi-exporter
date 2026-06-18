@@ -46,12 +46,52 @@ class SettingsFrame(ctk.CTkFrame):
         # Estado dos campos de cada conta — preenchido por _create_wialon_section.
         self._token_widgets: dict[int, dict] = {}
 
+        # Valores atualmente persistidos (baseline) dos campos editáveis sem
+        # botão próprio. Comparados com o que está na tela para detectar
+        # "alterações não salvas" (#20).
+        self._saved_export_dir = settings.EXPORT_DIR or "./exports"
+        self._saved_page_size = settings.WIALON_PAGE_SIZE or 1000
+
         # Seções
         self._create_wialon_section(account=1)
         self._create_wialon_section(account=2)
         self._create_export_section()
         self._create_drive_section()
         self._create_appearance_section()
+
+        # Rodapé fixo com o botão "Salvar alterações" (#20).
+        self._create_save_bar()
+        self._recompute_dirty()
+
+    def _create_save_bar(self):
+        """Cria a barra inferior fixa com o botão 'Salvar alterações'.
+
+        Fica fora do scroll para estar sempre visível. O botão só habilita
+        quando há alterações pendentes nos campos sem salvar-próprio
+        (diretório de exportação e registros por página).
+        """
+        bar = ctk.CTkFrame(self, fg_color="transparent")
+        bar.grid(row=2, column=0, sticky="ew", pady=(4, 0))
+        bar.grid_columnconfigure(0, weight=1)
+
+        self.unsaved_label = ctk.CTkLabel(
+            bar,
+            text="",
+            font=ctk.CTkFont(size=12),
+            text_color=Colors.WARNING,
+            image=icons.get(icons.TRIANGLE_WARNING, size=14, color=Colors.WARNING),
+            compound="left",
+        )
+        self.unsaved_label.grid(row=0, column=0, sticky="e", padx=(0, 12))
+
+        self.save_changes_btn = ctk.CTkButton(
+            bar,
+            text="  Salvar alterações",
+            image=icons.get(icons.SAVE, size=16, on_accent=True),
+            width=170,
+            command=self._save_changes,
+        )
+        self.save_changes_btn.grid(row=0, column=1, sticky="e")
 
     def _env_key_for_account(self, account: int) -> str:
         """Retorna o nome da variável de ambiente para a conta dada (1 ou 2)."""
@@ -204,8 +244,9 @@ class SettingsFrame(ctk.CTkFrame):
         w = self._token_widgets[account]
         token = w["entry"].get().strip()
         if not token:
-            messagebox.showwarning(
-                "Token vazio", "Cole um token válido antes de salvar."
+            self._set_token_status(
+                account, "Cole um token válido antes de salvar.",
+                Colors.ERROR, icons.TRIANGLE_WARNING,
             )
             return
 
@@ -228,8 +269,9 @@ class SettingsFrame(ctk.CTkFrame):
         w = self._token_widgets[account]
         token = w["entry"].get().strip()
         if not token:
-            messagebox.showwarning(
-                "Token vazio", "Cole um token antes de testar a conexão."
+            self._set_token_status(
+                account, "Cole um token antes de testar a conexão.",
+                Colors.ERROR, icons.TRIANGLE_WARNING,
             )
             return
 
@@ -292,23 +334,45 @@ class SettingsFrame(ctk.CTkFrame):
         self.export_dir_entry = ctk.CTkEntry(section, width=350)
         self.export_dir_entry.grid(row=1, column=1, padx=10, pady=10, sticky="w")
         self.export_dir_entry.insert(0, export_dir)
+        # Cor de borda padrão, para restaurar após um erro de validação.
+        self._entry_default_border = self.export_dir_entry.cget("border_color")
+        # Recalcula "alterações não salvas" a cada tecla digitada.
+        self.export_dir_entry.bind("<KeyRelease>", lambda _e: self._recompute_dirty())
 
         self.browse_btn = ctk.CTkButton(
             section, text="", image=icons.get(icons.FOLDER_OPEN, size=16, on_accent=True),
             width=40, command=self._browse_export_dir
         )
-        self.browse_btn.grid(row=1, column=2, padx=(5, 15), pady=10)
+        self.browse_btn.grid(row=1, column=2, padx=(5, 4), pady=10)
+
+        # Ponto laranja indicando que este campo tem alteração não salva (#20).
+        self.export_dir_dot = ctk.CTkLabel(
+            section, text="●", text_color=Colors.WARNING,
+            font=ctk.CTkFont(size=16), width=16,
+        )
+        self.export_dir_dot.grid(row=1, column=3, padx=(0, 15), pady=10)
+        self.export_dir_dot.grid_remove()  # escondido até haver alteração
+
+        # Erro de validação inline, abaixo do campo (#21).
+        self.export_dir_error = ctk.CTkLabel(
+            section, text="", text_color=Colors.ERROR, font=ctk.CTkFont(size=12),
+            compound="left",
+        )
+        self.export_dir_error.grid(
+            row=2, column=1, columnspan=3, padx=10, pady=(0, 4), sticky="w"
+        )
+        self.export_dir_error.grid_remove()
 
         # Page size — slider de 100 a 5000 (passo 100) em vez de campo de
         # texto livre, evitando valores inválidos (#18).
         ctk.CTkLabel(section, text="Registros por página:").grid(
-            row=2, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
+            row=3, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
         page_size = settings.WIALON_PAGE_SIZE or 1000
 
         slider_row = ctk.CTkFrame(section, fg_color="transparent")
-        slider_row.grid(row=2, column=1, columnspan=2, padx=10, pady=(10, 15), sticky="w")
+        slider_row.grid(row=3, column=1, columnspan=3, padx=10, pady=(10, 15), sticky="w")
 
         self.page_size_var = ctk.IntVar(value=page_size)
         self.page_size_slider = ctk.CTkSlider(
@@ -327,9 +391,74 @@ class SettingsFrame(ctk.CTkFrame):
         )
         self.page_size_value_label.grid(row=0, column=1)
 
+        self.page_size_dot = ctk.CTkLabel(
+            slider_row, text="●", text_color=Colors.WARNING,
+            font=ctk.CTkFont(size=16), width=16,
+        )
+        self.page_size_dot.grid(row=0, column=2, padx=(8, 0))
+        self.page_size_dot.grid_remove()
+
     def _on_page_size_change(self, value: float):
         """Atualiza o label numérico ao arrastar o slider de page size."""
         self.page_size_value_label.configure(text=str(int(value)))
+        self._recompute_dirty()
+
+    def _recompute_dirty(self):
+        """Recalcula campos alterados e atualiza pontos + botão do rodapé (#20)."""
+        dir_changed = self.export_dir_entry.get().strip() != self._saved_export_dir
+        size_changed = int(self.page_size_var.get()) != self._saved_page_size
+
+        self._toggle_dot(self.export_dir_dot, dir_changed)
+        self._toggle_dot(self.page_size_dot, size_changed)
+
+        # Some que o campo voltou a ser válido enquanto o usuário digita.
+        if self.export_dir_entry.get().strip():
+            self.export_dir_error.grid_remove()
+            self.export_dir_entry.configure(border_color=self._entry_default_border)
+
+        any_changed = dir_changed or size_changed
+        self.save_changes_btn.configure(state="normal" if any_changed else "disabled")
+        self.unsaved_label.configure(
+            text="Você tem alterações não salvas" if any_changed else ""
+        )
+
+    @staticmethod
+    def _toggle_dot(dot, show: bool):
+        """Mostra/esconde um ponto-indicador de alteração."""
+        if show:
+            dot.grid()
+        else:
+            dot.grid_remove()
+
+    def _save_changes(self):
+        """Valida e persiste diretório de exportação e registros por página (#20/#21)."""
+        from src.gui.validation import validate_export_dir
+
+        export_dir = self.export_dir_entry.get().strip()
+        error = validate_export_dir(export_dir)
+        if error:
+            self.export_dir_error.configure(text=error)
+            self.export_dir_error.grid()
+            self.export_dir_entry.configure(border_color=Colors.ERROR)
+            return
+
+        self.export_dir_error.grid_remove()
+        self.export_dir_entry.configure(border_color=self._entry_default_border)
+
+        page_size = int(self.page_size_var.get())
+        try:
+            set_env_value("EXPORT_DIR", export_dir)
+            set_env_value("WIALON_PAGE_SIZE", str(page_size))
+            settings.reload()
+        except Exception as e:
+            logger.debug(f"Erro ao salvar configurações: {e}")
+            messagebox.showerror("Erro", f"Não foi possível salvar: {e}")
+            return
+
+        self._saved_export_dir = export_dir
+        self._saved_page_size = page_size
+        self._recompute_dirty()
+        toast.show("Configurações salvas", kind="success")
 
     def _create_drive_section(self):
         """Cria seção de configuração do Google Drive."""
@@ -461,6 +590,7 @@ class SettingsFrame(ctk.CTkFrame):
         if directory:
             self.export_dir_entry.delete(0, "end")
             self.export_dir_entry.insert(0, directory)
+            self._recompute_dirty()
 
     def _change_theme(self, label: str):
         """Aplica o tema escolhido e persiste a preferência no .env."""
