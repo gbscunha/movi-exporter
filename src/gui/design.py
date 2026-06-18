@@ -15,11 +15,23 @@ Uso:
 
 
 class Colors:
-    """Cores semânticas. Tons escolhidos para bom contraste no tema escuro."""
+    """Cores da marca Movi + cores semânticas.
 
+    Marca: vermelho #FF0E10 (primária) e branco (secundária). O vermelho é o
+    acento de ações/seleção (botões, abas ativas). As cores semânticas de
+    status (sucesso/aviso) são mantidas distintas para não confundir com a
+    cor de marca; o erro usa um vermelho mais alaranjado que o da marca.
+    """
+
+    # Marca Movi
+    PRIMARY = "#FF0E10"  # vermelho Movi — cor de ação/acento
+    PRIMARY_HOVER = "#C70C0E"  # vermelho mais escuro para hover/pressed
+    ON_PRIMARY = "#FFFFFF"  # texto/ícone sobre o vermelho
+
+    # Semânticas de status
     SUCCESS = "#2ecc71"  # verde — operação bem-sucedida, conectado
     WARNING = "#f39c12"  # amarelo/laranja — atenção, não testado, sem dados
-    ERROR = "#e74c3c"  # vermelho — falha, desconectado
+    ERROR = "#e74c3c"  # vermelho-alaranjado — falha (distinto do vermelho-marca)
     INFO = "#3498db"  # azul — informação neutra
     MUTED = "#888888"  # cinza — texto secundário, placeholders
 

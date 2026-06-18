@@ -28,9 +28,15 @@ customtkinter_datas = collect_data_files('customtkinter')
 datas = [
     # CustomTkinter assets
     *customtkinter_datas,
-    # Adicione outros arquivos se necessário:
-    # ('assets', 'assets'),
+    # Fonte FontAwesome (ícones da GUI) — deve ir junto no bundle.
+    ('src/gui/assets/fontawesome-solid.ttf', 'src/gui/assets'),
+    # Manual do usuário (HTML embarcado) — aberto pelo botão na sidebar.
+    ('docs/manual', 'docs/manual'),
 ]
+
+# Logo Movi (opcional) — incluída no bundle apenas se o arquivo existir.
+if os.path.exists('src/gui/assets/movi-logo.png'):
+    datas.append(('src/gui/assets/movi-logo.png', 'src/gui/assets'))
 
 # Módulos ocultos (imports dinâmicos)
 hiddenimports = [

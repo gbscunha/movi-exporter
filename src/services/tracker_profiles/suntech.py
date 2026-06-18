@@ -27,35 +27,47 @@ class SuntechProfile:
     name = "suntech"
 
     # `model` 197 é o ST380. Famílias próximas (ST300, ST340) também usam
-    # `rep_type='STT'` — manter o match por rep_type como rede de segurança.
-    SUNTECH_MODELS = {197}
+    # Modelos Suntech conhecidos. A detecção por rep_type (abaixo) é a rede
+    # principal, já que toda a família usa o protocolo "Universal".
+    SUNTECH_MODELS = {170, 197}
+
+    # Report types do protocolo Universal da Suntech. Além do STT (status),
+    # os dispositivos enviam alertas (ALT), emergência (EMG), eventos (EVT/ALV)
+    # e dados expandidos/RFID (UEX). Todos são Suntech e devem usar este perfil.
+    SUNTECH_REPORT_TYPES = {"STT", "EMG", "EVT", "ALT", "ALV", "UEX", "BLE", "HBR"}
 
     def matches(self, message: Dict[str, Any]) -> bool:
         params = message.get("p", {}) or {}
         if params.get("model") in self.SUNTECH_MODELS:
             return True
-        if params.get("rep_type") == "STT":
+        if params.get("rep_type") in self.SUNTECH_REPORT_TYPES:
             return True
         return False
 
     def known_params(self) -> Dict[str, List[str]]:
+        # Só assumimos o que é CONSISTENTE no protocolo Suntech: `mode` é a
+        # ignição (1=ligado, 0=desligado) nas mensagens STT. Voltagens e
+        # odômetro vivem em slots `s_asgn`/`m_asgn` cujo significado VARIA por
+        # modelo/firmware (ex: no ST380 s_asgn1=veículo; no model 170 s_asgn1=
+        # interna). Por isso NÃO chutamos esses slots aqui — eles vêm do
+        # sensor_map configurado pelo admin, que é correto por dispositivo.
         return {
-            # Suntech ST380 não envia `in`/`in1`/`din1`. Ignição vem via
-            # `mode` (1 = motor ligado, 0 = desligado). Confirmado no QA:
-            # mensagens com vel > 0 sempre têm `mode=1`, parado sempre `mode=0`.
             "ignition": ["mode"],
-            "fuel_level": [],  # Frota atual não reporta combustível.
-            "rpm": [],  # Frota atual não reporta RPM.
-            "vehicle_voltage": ["s_asgn1"],
-            "internal_battery_voltage": ["s_asgn2"],
-            "engine_hours": [],  # `m_asgn2`/`m_asgn3` ainda não decodificados.
+            "fuel_level": [],
+            "rpm": [],
+            "vehicle_voltage": [],
+            "internal_battery_voltage": [],
+            "engine_hours": [],
         }
 
     def extract_odometer_meters(self, params: Dict[str, Any]) -> Optional[float]:
-        # Suntech: odômetro em `m_asgn1` (em metros). Aceitar `odometer`
-        # como fallback caso admin tenha configurado sensor manualmente
-        # apontando para esse nome simbólico no Wialon.
-        for key in ("m_asgn1", "odometer"):
+        # `m_asgn1` é odômetro em metros — VALIDADO apenas no ST380 (model 197,
+        # ex: 240.131.878 m). Em outros modelos o slot tem outro significado
+        # (no model 170, m_asgn1 são valores pequenos, não quilometragem), então
+        # só confiamos nele para o 197. Demais: nome simbólico se o admin mapeou.
+        if params.get("model") == 197 and params.get("m_asgn1") is not None:
+            return float(params["m_asgn1"])
+        for key in ("odometer", "mileage"):
             value = params.get(key)
             if value is not None:
                 return float(value)

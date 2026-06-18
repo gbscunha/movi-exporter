@@ -4,15 +4,22 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Manual de Uso — Movi Exporter</title>
+<!-- IBM Plex (Sans + Mono) — tipografia técnica, coerente com telemetria.
+     Cai para fontes do sistema se o manual for aberto sem internet. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root {
+    /* Identidade visual Movi — vermelho #FF0E10 (primária) + branco */
     --bg: #f5f7fa;
     --surface: #ffffff;
     --border: #e1e6ec;
     --text: #1a2330;
     --muted: #6b7785;
-    --brand: #2563eb;
-    --brand-soft: #eff5ff;
+    --brand: #FF0E10;        /* vermelho Movi */
+    --brand-dark: #C70C0E;   /* vermelho escuro p/ gradiente/hover */
+    --brand-soft: #fff0f0;   /* vermelho bem claro p/ fundos suaves */
     --green: #16a34a;
     --amber: #d97706;
     --red: #dc2626;
@@ -20,7 +27,8 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "ss01";  /* alternativas estilísticas do Plex */
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
@@ -46,16 +54,16 @@
 
   /* Header */
   .hero {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
     color: #fff; border-radius: 16px; padding: 40px; margin-bottom: 40px;
   }
-  .hero h1 { font-size: 30px; font-weight: 700; }
+  .hero h1 { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
   .hero p { font-size: 16px; opacity: .92; margin-top: 8px; }
   .hero .ver { display:inline-block; margin-top:16px; background: rgba(255,255,255,.18); padding: 4px 14px; border-radius: 999px; font-size: 13px; }
 
   section { margin-bottom: 48px; scroll-margin-top: 20px; }
   h2 {
-    font-size: 24px; font-weight: 700; margin-bottom: 16px;
+    font-size: 24px; font-weight: 700; margin-bottom: 16px; letter-spacing: -0.015em;
     padding-bottom: 10px; border-bottom: 2px solid var(--border);
     display: flex; align-items: center; gap: 12px;
   }
@@ -100,7 +108,7 @@
   }
   .shot .placeholder .icon { font-size: 36px; opacity: .5; }
   .shot .placeholder .fname {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     background: var(--text); color: #fff; padding: 3px 10px; border-radius: 6px; font-size: 13px;
   }
   .shot .placeholder .hint { font-size: 13px; max-width: 380px; }
@@ -113,7 +121,7 @@
   .box.info { background: var(--brand-soft); border-left: 4px solid var(--brand); }
   .box b { display: block; margin-bottom: 3px; }
 
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #eef1f5; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+  code { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; background: #eef1f5; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
   kbd { font-family: inherit; background: var(--surface); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 13px; }
 
   ul.plain { margin: 10px 0 10px 22px; }
@@ -154,7 +162,7 @@
     <div class="hero">
       <h1>📘 Manual de Uso — Movi Exporter</h1>
       <p>Guia passo a passo para extrair os relatórios mensais de rastreamento dos seus veículos.</p>
-      <span class="ver">Versão 1.1.0</span>
+      <span class="ver">Versão 1.3.0</span>
     </div>
 
     <!-- INTRODUÇÃO -->
@@ -204,7 +212,7 @@
       <h3>2.1 — Abrir as Configurações</h3>
       <ol class="steps">
         <li>No menu lateral esquerdo, clique em <b>Configurações</b>.</li>
-        <li>Localize a seção <b>"🔌 Wialon API — Conta 1"</b>.</li>
+        <li>Localize a seção <b>"Wialon API — Conta 1"</b>.</li>
       </ol>
 
       <figure>
@@ -222,7 +230,7 @@
 
       <h3>2.2 — Gerar o token na Wialon</h3>
       <ol class="steps">
-        <li>Clique no botão <b>🔗 Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
+        <li>Clique no botão <b>Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
         <li>Faça login com seu usuário e senha da Wialon.</li>
         <li>Na Wialon, vá em <b>Configurações da conta → Aplicativos e tokens</b> e crie um novo token com acesso de leitura aos veículos.</li>
         <li>Copie o token gerado (uma sequência longa de letras e números).</li>
@@ -231,8 +239,8 @@
       <h3>2.3 — Salvar e testar no app</h3>
       <ol class="steps">
         <li>Volte ao Movi Exporter e cole o token no campo <b>Token</b>.</li>
-        <li>Clique em <b>💾 Salvar</b>.</li>
-        <li>Clique em <b>🔍 Testar</b>. Se tudo estiver certo, aparece <b style="color:var(--green)">✅ Conectado como "seu_nome"</b>.</li>
+        <li>Clique em <b>Salvar</b>.</li>
+        <li>Clique em <b>Testar</b>. Se tudo estiver certo, aparece <b style="color:var(--green)">Conectado como "seu_nome"</b> com um ícone verde.</li>
       </ol>
 
       <figure>
@@ -250,7 +258,7 @@
 
       <div class="box tip">
         <b>Dica</b>
-        O botão 👁️ ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
+        O botão de olho ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
       </div>
     </section>
 
@@ -277,7 +285,7 @@
         <li><b>Veículos</b> — quantidade de veículos encontrados na sua conta.</li>
         <li><b>Google Drive</b> — se o envio automático está configurado.</li>
       </ul>
-      <p>Os botões <b>🔄 Testar Conexões</b> e <b>📋 Ver Veículos</b> permitem reverificar o status e listar todos os veículos a qualquer momento.</p>
+      <p>Os botões <b>Testar Conexões</b> e <b>Ver Veículos</b> permitem reverificar o status e listar todos os veículos a qualquer momento. Abaixo, o bloco <b>Resumo de Exportações</b> mostra a última exportação realizada (com botão para abrir a pasta), sugere o mês que ainda falta exportar e exibe estatísticas do ano.</p>
     </section>
 
     <!-- 4. DRIVE -->
@@ -292,7 +300,7 @@
           <div class="placeholder" style="display:none">
             <span class="icon">📷</span>
             <span class="fname">img/05-config-drive.png</span>
-            <span class="hint">Print da seção "☁️ Google Drive" nas Configurações.</span>
+            <span class="hint">Print da seção "Google Drive" nas Configurações.</span>
           </div>
         </div>
         <figcaption>Seção Google Drive nas Configurações</figcaption>
@@ -310,7 +318,7 @@
       <p>Se você gerencia veículos em <b>duas contas Wialon diferentes</b>, pode configurar a segunda na seção <b>"Wialon API — Conta 2"</b>, seguindo os mesmos passos do passo 2.</p>
       <div class="box info">
         <b>Quando a Conta 2 está configurada</b>
-        Aparece um seletor de conta na tela de Exportação, e os relatórios de cada conta vão para subpastas separadas (<code>Conta 1/</code> e <code>Conta 2/</code>).
+        Aparece um <b>seletor de conta no menu lateral (esquerda)</b>. Trocar a conta ali reflete em todas as telas — a tela inicial e a de exportação passam a usar a conta escolhida. Os relatórios de cada conta vão para subpastas separadas (<code>Conta 1/</code> e <code>Conta 2/</code>).
       </div>
 
       <figure>
@@ -346,15 +354,20 @@
       </figure>
 
       <ol class="steps">
-        <li>No menu lateral, clique em <b>Exportar Dados</b>.</li>
-        <li>Escolha o <b>Mês</b> (por nome: Janeiro, Fevereiro…) e o <b>Ano</b>.</li>
+        <li>No menu lateral, clique em <b>Exportar</b>.</li>
+        <li>Escolha o <b>Mês</b> (por nome: Janeiro, Fevereiro…) e o <b>Ano</b> (ambos em listas suspensas).</li>
         <li>Escolha o <b>Formato</b>: <code>csv</code> (planilha simples), <code>xlsx</code> (Excel) ou <code>both</code> (os dois).</li>
-        <li>Se tiver duas contas, selecione a <b>Conta</b> desejada.</li>
+        <li>Se você tem duas contas, confirme no menu lateral qual <b>Conta</b> está selecionada.</li>
         <li>Marque <b>"Gerar arquivo consolidado"</b> se quiser um único arquivo com todos os veículos juntos.</li>
         <li>Marque <b>"Upload para Google Drive"</b> se configurou o Drive e quer envio automático.</li>
-        <li>Para exportar <b>todos</b> os veículos, deixe "Todos os veículos" selecionado. Para escolher veículos específicos, marque "Selecionar veículos" e clique em <b>🔄 Carregar</b>.</li>
-        <li>Clique em <b>▶️ Iniciar Exportação</b>.</li>
+        <li>Para exportar <b>todos</b> os veículos, deixe <b>"Todos os veículos"</b> selecionado. Para escolher veículos específicos, marque <b>"Selecionar veículos"</b> e clique em <b>Carregar</b> (veja a busca abaixo).</li>
+        <li>Clique em <b>Iniciar Exportação</b>.</li>
       </ol>
+
+      <div class="box tip">
+        <b>Buscando veículos específicos (frotas grandes)</b>
+        Ao marcar "Selecionar veículos", <b>nenhum vem marcado por padrão</b>. Use o campo de <b>busca</b> para filtrar por nome, placa ou ID e marque só os que quer. Os botões <b>"Marcar todos"</b> / <b>"Desmarcar todos"</b> agem sobre o resultado da busca atual. Em listas muito grandes, aparece <b>"Mostrar mais"</b> para carregar o próximo lote. Um contador mostra quantos estão selecionados.
+      </div>
 
       <figure>
         <div class="shot">
@@ -392,7 +405,7 @@
     <section id="arquivos">
       <h2><span class="step-n">7</span>Encontrar os arquivos gerados</h2>
       <ol class="steps">
-        <li>Após a exportação, clique no botão <b>📂 Abrir pasta</b>.</li>
+        <li>Após a exportação, clique no botão <b>Abrir pasta</b>.</li>
         <li>A pasta do mês abre automaticamente no explorador de arquivos.</li>
       </ol>
       <p>Os arquivos ficam organizados por ano e mês, por exemplo:</p>
@@ -400,6 +413,18 @@
         <li><code>exports/2026-04/</code> — relatórios de Abril de 2026</li>
         <li>Cada veículo tem seu arquivo (nomeado pela placa), mais o consolidado, se marcado.</li>
       </ul>
+
+      <div class="box info">
+        <b>Por que alguns arquivos têm um número no nome?</b>
+        O nome do arquivo vem da <b>placa cadastrada na Wialon</b> (campo
+        <i>registration_plate</i>) — por exemplo <code>RJG0H60_Histórico_Padrão_…</code>.
+        Quando <b>duas unidades têm a mesma placa cadastrada</b> (placa repetida por
+        engano, ou dois rastreadores no mesmo veículo), o app anexa o
+        <b>ID da unidade na Wialon</b> ao nome, ficando <code>RJG0H60_402231059_Histórico_…</code>.
+        Isso garante que um arquivo <b>nunca sobrescreva o outro</b> e que dê para
+        identificar exatamente a qual unidade cada relatório pertence. Se isso
+        aparecer com frequência, vale conferir o cadastro de placas na Wialon.
+      </div>
 
       <figure>
         <div class="shot">
@@ -456,10 +481,20 @@
         <summary>O Windows bloqueou o app. É vírus?</summary>
         <p>Não. É um aviso padrão para programas sem certificado de desenvolvedor pago. Clique em "Mais informações" → "Executar assim mesmo".</p>
       </details>
+
+      <details>
+        <summary>Como mudo entre tema claro e escuro?</summary>
+        <p>Em <b>Configurações → Geral → Tema</b>, escolha <b>Escuro</b>, <b>Claro</b> ou <b>Sistema</b> (segue o tema do seu computador). A escolha é lembrada na próxima vez que abrir o app.</p>
+      </details>
+
+      <details>
+        <summary>Onde abro este manual de dentro do app?</summary>
+        <p>No rodapé do menu lateral há os botões <b>Manual</b> (abre este guia no navegador) e <b>Sobre</b> (versão do app, links e verificação de atualização).</p>
+      </details>
     </section>
 
     <footer>
-      Movi Exporter · Manual de Uso v1.1.0<br />
+      Movi Exporter · Manual de Uso v1.3.0<br />
       Em caso de dúvidas, entre em contato com o suporte.
     </footer>
 

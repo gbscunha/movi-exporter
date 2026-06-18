@@ -414,9 +414,22 @@ class WialonClient:
         """
         name_lower = name.lower()
 
-        # Mapeamentos conhecidos. ORDEM IMPORTA: chaves mais específicas
-        # (ex: "bateria interna") precisam vir antes das mais genéricas
-        # ("bateria") porque "if key in name_lower" pega o primeiro match.
+        # Bateria/tensão é decidida por PALAVRA-CHAVE (não frase exata), porque
+        # os admins variam muito a nomenclatura: "Bateria do dispositivo",
+        # "Bateria dispositivo", "Bateria interna"... Se houver qualquer pista
+        # de "interno/dispositivo/rastreador", é a bateria do tracker (~4V);
+        # caso contrário, assume tensão do veículo (~12-28V).
+        battery_terms = ("bateria", "battery", "voltagem", "voltage", "tensão", "tensao")
+        if any(t in name_lower for t in battery_terms):
+            internal_hints = (
+                "interna", "interno", "dispositivo", "rastreador",
+                "device", "tracker", "backup",
+            )
+            if any(h in name_lower for h in internal_hints):
+                return "internal_battery_voltage"
+            return "vehicle_voltage"
+
+        # Demais sensores — match por substring, do mais específico ao genérico.
         mappings = {
             "ignicao": "ignition",
             "ignição": "ignition",
@@ -427,34 +440,6 @@ class WialonClient:
             "nivel combustivel": "fuel_level",
             "rpm": "rpm",
             "rotacao": "rpm",
-            # Bateria interna do tracker (~4V) — chaves mais específicas
-            # PRIMEIRO; "bateria"/"battery" sozinhas são ambíguas e ficam
-            # no fim. Cliente Movi nomeou "Bateria do dispositivo" no
-            # Wialon — esse case foi visto em produção.
-            "bateria do dispositivo": "internal_battery_voltage",
-            "bateria do rastreador": "internal_battery_voltage",
-            "bateria interna": "internal_battery_voltage",
-            "internal battery": "internal_battery_voltage",
-            "device battery": "internal_battery_voltage",
-            "tracker battery": "internal_battery_voltage",
-            "backup battery": "internal_battery_voltage",
-            # Tensão do veículo (~12-28V) — termos explícitos.
-            "bateria do veículo": "vehicle_voltage",
-            "bateria do veiculo": "vehicle_voltage",
-            "bateria externa": "vehicle_voltage",  # Movi/CVM0H79 nomeou assim
-            "tensão do veículo": "vehicle_voltage",
-            "tensao do veiculo": "vehicle_voltage",
-            "vehicle voltage": "vehicle_voltage",
-            "vehicle battery": "vehicle_voltage",
-            "external battery": "vehicle_voltage",
-            "tensão externa": "vehicle_voltage",
-            "tensao externa": "vehicle_voltage",
-            # Termos ambíguos — fallback para tensão do veículo. Bateria
-            # interna SEMPRE é nomeada explicitamente pelo admin (acima).
-            "voltagem": "vehicle_voltage",
-            "bateria": "vehicle_voltage",
-            "battery": "vehicle_voltage",
-            "voltage": "vehicle_voltage",
             "horas motor": "engine_hours",
             "engine hours": "engine_hours",
             "horimetro": "engine_hours",
