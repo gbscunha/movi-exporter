@@ -222,3 +222,36 @@ def test_ignicao_carry_forward_mantem_estado_suntech(tmp_path):
     )
     estados = [r["ignition"] for r in records]
     assert estados == [False, True, True, False, False], estados
+
+
+def test_aviso_tensao_trocada_emitido():
+    """Avisa quando tensão do veículo < bateria interna (padrão de sensor trocado)."""
+    from src.services.vehicle_service import VehicleService
+
+    records = [
+        {"vehicle_voltage": 4.1, "internal_battery_voltage": 13.5},
+        {"vehicle_voltage": 4.2, "internal_battery_voltage": 13.6},
+    ]
+    assert VehicleService._warn_if_voltages_swapped("TXO1I94", records) is True
+
+
+def test_aviso_tensao_nao_emitido_quando_coerente():
+    """Não avisa quando tensão do veículo > bateria interna (normal)."""
+    from src.services.vehicle_service import VehicleService
+
+    records = [
+        {"vehicle_voltage": 13.5, "internal_battery_voltage": 4.1},
+        {"vehicle_voltage": 28.4, "internal_battery_voltage": 4.2},
+    ]
+    assert VehicleService._warn_if_voltages_swapped("FXI2D14", records) is False
+
+
+def test_aviso_tensao_nao_emitido_quando_veiculo_zero():
+    """Tensão do veículo=0 (caso legítimo model 170) não dispara falso-positivo."""
+    from src.services.vehicle_service import VehicleService
+
+    records = [
+        {"vehicle_voltage": 0, "internal_battery_voltage": 4.1},
+        {"vehicle_voltage": 0, "internal_battery_voltage": 4.1},
+    ]
+    assert VehicleService._warn_if_voltages_swapped("SYO4E10", records) is False

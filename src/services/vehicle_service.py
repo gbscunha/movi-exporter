@@ -16,6 +16,7 @@ A transformação de dados brutos acontece aqui, antes da normalização.
 import calendar
 from dataclasses import dataclass, field
 from datetime import datetime
+from statistics import median
 from typing import Any, Callable, Dict, List, Optional
 
 from src.clients.protocols import TrackingClient
@@ -213,6 +214,12 @@ class VehicleService:
 
                 stats.total_messages += len(page)
 
+            # Sanity-check de tensão (não-destrutivo): em alguns veículos o
+            # cadastro de sensores na Wialon troca "tensão do veículo" com
+            # "bateria interna". NÃO alteramos o dado (é fiel à fonte), apenas
+            # avisamos no log para o cliente corrigir o cadastro na Wialon.
+            self._warn_if_voltages_swapped(vehicle_name, all_records)
+
             logger.success(
                 f"Veículo {vehicle_name}: {stats.total_messages} mensagens processadas"
             )
@@ -225,6 +232,44 @@ class VehicleService:
             stats.errors.append(error_msg)
             stats.success = False
             return [], stats
+
+    @staticmethod
+    def _warn_if_voltages_swapped(
+        vehicle_name: str, records: List[Dict[str, Any]]
+    ) -> bool:
+        """Avisa (sem alterar dado) se tensão do veículo e bateria interna
+        parecem trocadas no cadastro Wialon.
+
+        Padrão claro de inversão: a "bateria interna" lê como tensão de veículo
+        (>10V) e a "tensão do veículo" lê como bateria interna (<6V). O limiar
+        evita falso-positivo do caso legítimo "tensão do veículo = 0".
+
+        Returns:
+            True se emitiu o aviso (usado nos testes).
+        """
+        veic = [
+            r["vehicle_voltage"]
+            for r in records
+            if isinstance(r.get("vehicle_voltage"), (int, float))
+        ]
+        intern = [
+            r["internal_battery_voltage"]
+            for r in records
+            if isinstance(r.get("internal_battery_voltage"), (int, float))
+        ]
+        if not veic or not intern:
+            return False
+
+        med_veic = median(veic)
+        med_intern = median(intern)
+        if med_intern > 10 and med_veic < 6:
+            logger.warning(
+                f"{vehicle_name}: tensão do veículo (~{med_veic:.1f}V) menor que "
+                f"a bateria interna (~{med_intern:.1f}V) — provável sensor trocado "
+                f"no cadastro da Wialon. Dado exportado como está (fiel à fonte)."
+            )
+            return True
+        return False
 
     def export_monthly_data(
         self,
