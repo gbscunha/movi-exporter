@@ -17,13 +17,15 @@
 | 03 | Identidade Movi + UX urgente (cliente) | #15 + paleta/logo/light-fix | 🔴 parcial | L | ✅ Concluído |
 | 04 | Home + Sidebar + Sobre + Manual | #07, #09, #23, #52 | 🔴 parcial | L | ✅ Concluído |
 | 05 | Resto do Export + fix consolidado | #14, #13, #17, #53 | 🔴 parcial | M | ✅ Concluído |
-| 06 | Settings polish | #20, #21 | — | S | ⬜ Todo |
+| 06 | Settings polish | #20, #21 | 🔴 parcial | S | ✅ Concluído |
 | 07 | Atalhos de teclado | #22 | — | S | ⬜ Todo |
 | 08 | Manual: revisão final + prints | #52 | — | S | ⬜ Todo |
 
 > **Nota Fase 03:** inserida a pedido do cliente (4 melhorias com prints): paleta vermelha Movi, correção do light mode, suporte a logo, e o redesenho da seleção de veículos do Export (#15) — que também resolveu o **freeze ao trocar de conta** (839 checkboxes criados de uma vez). Os demais itens do Export (#14 progresso real, #13 checkboxes agrupados, #17 toolbar do log) seguem na Fase 05.
 
 > **Nota Fase 04 (manual #52):** a pedido do cliente, a Fase 04 ganhou um **manual do usuário em HTML embarcado** + botão na sidebar que abre no navegador. Decisões: HTML **embarcado** no bundle (consistência versão↔manual, offline, sem setup); conteúdo **vivo** (cada fase que muda a UI atualiza a seção); **prints por último** (Fase 08, quando a UI congelar — printar tela que ainda muda = retrabalho). Na Fase 04 entra a infraestrutura (botão + carregar HTML + spec) e a reescrita do texto para a UI atual, com placeholders de imagem.
+
+> **Nota Fase 06:** além de #20 (indicador de não salvas + botão "Salvar alterações") e #21 (validação inline), a fase corrigiu um **bug latente**: o diretório de exportação e o "registros por página" eram editáveis na tela mas **nunca eram persistidos** (não havia botão salvar para eles). Agora o botão do rodapé grava ambos no `.env`. Validação inline reaproveita a linha de status do token (sem `messagebox`).
 
 **Total estimado:** ~3-4 dias de trabalho focado · 13 itens do backlog fechados.
 
