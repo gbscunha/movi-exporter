@@ -15,7 +15,11 @@ o firmware padrão atribui:
     m_asgn1 → odômetro em metros
 
 Ignição NÃO vem em `in`/`in1` (esses params nem existem nas msgs Suntech).
-Vem em `mode` (1 = motor ligado, 0 = motor desligado).
+Nas mensagens de status (`STT`) vem em `mode` (1 = ligado, 0 = desligado).
+Já as mensagens de alerta (`ALT`) não trazem `mode` — trazem só o EVENTO de
+transição em `alert_id` (33 = ignição ligou, 34 = ignição desligou). O painel
+Wialon usa esses eventos e mantém o estado entre mensagens; nós espelhamos isso
+via `resolve_ignition_event` + carry-forward no vehicle_service.
 """
 
 from typing import Any, Dict, List, Optional
@@ -25,6 +29,14 @@ class SuntechProfile:
     """Detecta e mapeia mensagens de trackers Suntech."""
 
     name = "suntech"
+
+    # Eventos de ignição do protocolo Suntech (mensagens ALT), validados em
+    # frota real do cliente (model 170, FXI2D14): alert_id 33 = ignição ligou,
+    # 34 = ignição desligou. Demais alert_id não alteram o estado de ignição.
+    # NOTA: inferido por correlação 100% com o painel web (a doc Wialon não
+    # cobre códigos de evento do firmware Suntech).
+    IGNITION_ON_ALERTS = {33}
+    IGNITION_OFF_ALERTS = {34}
 
     # `model` 197 é o ST380. Famílias próximas (ST300, ST340) também usam
     # Modelos Suntech conhecidos. A detecção por rep_type (abaixo) é a rede
@@ -59,6 +71,23 @@ class SuntechProfile:
             "internal_battery_voltage": [],
             "engine_hours": [],
         }
+
+    def resolve_ignition_event(self, params: Dict[str, Any]) -> Optional[bool]:
+        """Traduz o evento de ignição (alert_id) em estado on/off.
+
+        Usado pelo transformer quando a mensagem não traz o sinal contínuo
+        (`mode`) — caso das mensagens de alerta (ALT) do Suntech.
+
+        Returns:
+            True (ligou), False (desligou) ou None (evento não relacionado a
+            ignição — o estado deve ser herdado por carry-forward).
+        """
+        alert_id = params.get("alert_id")
+        if alert_id in self.IGNITION_ON_ALERTS:
+            return True
+        if alert_id in self.IGNITION_OFF_ALERTS:
+            return False
+        return None
 
     def extract_odometer_meters(self, params: Dict[str, Any]) -> Optional[float]:
         # `m_asgn1` é odômetro em metros — VALIDADO apenas no ST380 (model 197,

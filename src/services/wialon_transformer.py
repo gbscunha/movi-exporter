@@ -112,6 +112,14 @@ class WialonTransformer:
         # Aplica fallback de parâmetros conhecidos para valores não resolvidos
         sensor_values = self._apply_param_fallbacks(params, sensor_values, profile)
 
+        # Ignição por EVENTO: algumas mensagens não trazem o sinal contínuo de
+        # ignição (`in`/`mode`), só o evento de transição (ex.: Suntech ALT
+        # alert_id 33=liga/34=desliga). O perfil traduz o evento em on/off.
+        if sensor_values.get("ignition") is None:
+            resolver = getattr(profile, "resolve_ignition_event", None)
+            if resolver is not None:
+                sensor_values["ignition"] = resolver(params)
+
         # Odômetro vem em metros; converter para km.
         odometer_m = profile.extract_odometer_meters(params)
         odometer_km = round(odometer_m / 1000, 2) if odometer_m is not None else None

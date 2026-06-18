@@ -196,3 +196,62 @@ def test_export_consolidated_excel_aborta_acima_do_limite(tmp_path):
         assert path == "", "deveria abortar (retornar '') acima do limite"
     finally:
         exporter_mod.EXCEL_MAX_ROWS = original
+
+
+def test_ignicao_carry_forward_mantem_estado_suntech(tmp_path):
+    """Suntech model 170: evento alert_id=33 liga e o estado persiste nas
+    mensagens seguintes sem sinal de ignição (espelha o painel Wialon)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    # Sequência: STT desligado(mode 0) -> ALT liga(alert 33) -> STT sem sinal
+    # -> ALT desliga(alert 34) -> STT sem sinal.
+    base = {"y": -22.8, "x": -43.5, "s": 0}
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": base, "p": {"model": 170, "rep_type": "STT", "mode": 0}},
+        {"t": 2, "pos": base, "p": {"model": 170, "rep_type": "ALT", "alert_id": 33}},
+        {"t": 3, "pos": base, "p": {"model": 170, "rep_type": "STT", "s_asgn2": 13.5}},
+        {"t": 4, "pos": base, "p": {"model": 170, "rep_type": "ALT", "alert_id": 34}},
+        {"t": 5, "pos": base, "p": {"model": 170, "rep_type": "STT", "s_asgn2": 13.5}},
+    ]])
+
+    svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
+    records, _ = svc.process_vehicle_history(
+        vehicle={"id": 1, "nm": "FXI2D14"}, month=5, year=2026
+    )
+    estados = [r["ignition"] for r in records]
+    assert estados == [False, True, True, False, False], estados
+
+
+def test_aviso_tensao_trocada_emitido():
+    """Avisa quando tensão do veículo < bateria interna (padrão de sensor trocado)."""
+    from src.services.vehicle_service import VehicleService
+
+    records = [
+        {"vehicle_voltage": 4.1, "internal_battery_voltage": 13.5},
+        {"vehicle_voltage": 4.2, "internal_battery_voltage": 13.6},
+    ]
+    assert VehicleService._warn_if_voltages_swapped("TXO1I94", records) is True
+
+
+def test_aviso_tensao_nao_emitido_quando_coerente():
+    """Não avisa quando tensão do veículo > bateria interna (normal)."""
+    from src.services.vehicle_service import VehicleService
+
+    records = [
+        {"vehicle_voltage": 13.5, "internal_battery_voltage": 4.1},
+        {"vehicle_voltage": 28.4, "internal_battery_voltage": 4.2},
+    ]
+    assert VehicleService._warn_if_voltages_swapped("FXI2D14", records) is False
+
+
+def test_aviso_tensao_nao_emitido_quando_veiculo_zero():
+    """Tensão do veículo=0 (caso legítimo model 170) não dispara falso-positivo."""
+    from src.services.vehicle_service import VehicleService
+
+    records = [
+        {"vehicle_voltage": 0, "internal_battery_voltage": 4.1},
+        {"vehicle_voltage": 0, "internal_battery_voltage": 4.1},
+    ]
+    assert VehicleService._warn_if_voltages_swapped("SYO4E10", records) is False
