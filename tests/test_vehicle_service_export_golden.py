@@ -17,6 +17,54 @@ def _gps_page():
     return [[{"t": 1775000000, "pos": {"y": -22.8, "x": -43.2, "s": 10}, "p": {}}]]
 
 
+def test_export_cancelado_para_no_meio(tmp_path):
+    """should_cancel=True interrompe entre veículos: processa parcial, marca
+    cancelled e NÃO gera consolidado nem faz upload."""
+    mock_client = MagicMock()
+    mock_client.list_vehicles.return_value = [
+        {"id": 1, "nm": "V1", "_plate": "AAA1111"},
+        {"id": 2, "nm": "V2", "_plate": "BBB2222"},
+        {"id": 3, "nm": "V3", "_plate": "CCC3333"},
+    ]
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.get_history.side_effect = lambda *a, **k: iter(_gps_page())
+
+    # Cancela no início da 2ª iteração (depois de processar o 1º veículo).
+    state = {"calls": 0}
+
+    def should_cancel():
+        state["calls"] += 1
+        return state["calls"] >= 2
+
+    svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
+    result = svc.export_monthly_data(
+        month=4, year=2026, export_format="csv", consolidated=True,
+        should_cancel=should_cancel,
+    )
+
+    assert result.cancelled is True
+    assert result.processed_vehicles == 1  # só o 1º veículo
+    assert not any("Consolidado" in f for f in result.exported_files)
+    assert result.upload_result is None
+
+
+def test_export_sem_should_cancel_nao_marca_cancelled(tmp_path):
+    """Sem should_cancel, o comportamento é o de sempre (cancelled=False)."""
+    svc = _service_with_one_vehicle(tmp_path)
+    result = svc.export_monthly_data(month=4, year=2026, consolidated=True)
+    assert result.cancelled is False
+
+
+def _service_with_one_vehicle(tmp_path):
+    mock_client = MagicMock()
+    mock_client.list_vehicles.return_value = [
+        {"id": 1, "nm": "V1", "_plate": "AAA1111"}
+    ]
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.get_history.side_effect = lambda *a, **k: iter(_gps_page())
+    return VehicleService(client=mock_client, export_dir=str(tmp_path))
+
+
 def test_resultado_agregado_lote_misto(tmp_path):
     """Lote com sucesso + sem-registros + erro: confere o ExportResult agregado."""
     mock_client = MagicMock()
