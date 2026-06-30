@@ -34,7 +34,6 @@ class HomeFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         
-        # Título
         self.title = ctk.CTkLabel(
             self,
             text="Bem-vindo ao Movi Exporter",
@@ -156,10 +155,7 @@ class HomeFrame(ctk.CTkFrame):
         )
         self.btn_list.grid(row=0, column=1, padx=5, pady=5)
 
-    # ------------------------------------------------------------------
     # Resumo de exportações (#07)
-    # ------------------------------------------------------------------
-
     def _create_export_summary(self):
         """Cria a seção 'Resumo de Exportações' e a popula."""
         label = ctk.CTkLabel(

@@ -51,7 +51,6 @@ class AboutDialog(ctk.CTkToplevel):
             justify="left",
         ).pack(anchor="w", pady=(0, Space.LG))
 
-        # Botões de ação
         ctk.CTkButton(
             container,
             text="  Repositório no GitHub",

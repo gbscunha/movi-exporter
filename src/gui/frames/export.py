@@ -75,7 +75,6 @@ class ExportFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
 
-        # Título
         self.title = ctk.CTkLabel(
             self,
             text="Exportar Dados",
@@ -83,16 +82,9 @@ class ExportFrame(ctk.CTkFrame):
         )
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
 
-        # Configurações
         self._create_config_section()
-
-        # Seleção de veículos
         self._create_vehicles_section()
-
-        # Log de progresso
         self._create_progress_section()
-
-        # Botões de ação
         self._create_action_buttons()
 
         # Reage à troca de conta feita na sidebar (estado global).

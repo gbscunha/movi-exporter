@@ -46,7 +46,6 @@ class UpdateDialog(ctk.CTkToplevel):
         )
         icon_label.grid(row=0, column=0, pady=(20, 10))
         
-        # Título
         title_label = ctk.CTkLabel(
             self,
             text="Nova Versão Disponível!",
@@ -54,7 +53,6 @@ class UpdateDialog(ctk.CTkToplevel):
         )
         title_label.grid(row=1, column=0, pady=(0, 10))
         
-        # Versão
         from src.gui import __version__
         version_label = ctk.CTkLabel(
             self,
@@ -77,7 +75,6 @@ class UpdateDialog(ctk.CTkToplevel):
         self.progress_bar = ctk.CTkProgressBar(self.progress_frame)
         self.progress_bar.set(0)
         
-        # Botões
         buttons_frame = ctk.CTkFrame(self, fg_color="transparent")
         buttons_frame.grid(row=4, column=0, pady=20)
         

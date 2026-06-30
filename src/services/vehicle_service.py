@@ -122,10 +122,8 @@ class VehicleService:
         Returns:
             Tupla (timestamp_inicio, timestamp_fim)
         """
-        # Primeiro dia do mês às 00:00:00
         start_date = datetime(year, month, 1, 0, 0, 0)
 
-        # Último dia do mês às 23:59:59
         last_day = calendar.monthrange(year, month)[1]
         end_date = datetime(year, month, last_day, 23, 59, 59)
 
@@ -171,10 +169,7 @@ class VehicleService:
         logger.info(f"Processando veículo: {vehicle_name} (ID: {vehicle_id})")
 
         try:
-            # Obtém mapa de sensores (com cache)
             sensor_map = self.get_vehicle_sensors(vehicle_id)
-
-            # Obtém timestamps do mês
             time_from, time_to = self.get_month_timestamps(month, year)
 
             # Processa histórico em páginas
