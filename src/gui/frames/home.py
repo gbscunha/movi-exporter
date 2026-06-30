@@ -353,8 +353,8 @@ class HomeFrame(ctk.CTkFrame):
             textbox.insert("end", header)
             
             # Dados
-            for v in vehicles:
-                line = f"{v['id']:>12} | {v['name']:<30} | {v.get('plate', ''):<15}\n"
+            for vehicle in vehicles:
+                line = f"{vehicle['id']:>12} | {vehicle['name']:<30} | {vehicle.get('plate', ''):<15}\n"
                 textbox.insert("end", line)
             
             textbox.insert("end", f"\nTotal: {len(vehicles)} veículos")

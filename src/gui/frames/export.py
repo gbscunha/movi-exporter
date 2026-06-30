@@ -6,6 +6,7 @@ capturando mensagens do loguru durante o processamento.
 """
 
 import threading
+from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from tkinter import messagebox
@@ -38,6 +39,13 @@ MESES = [
     "Novembro",
     "Dezembro",
 ]
+
+# Parâmetros de exportação lidos dos widgets (na thread da GUI) e repassados
+# ao worker em background.
+_ExportParams = namedtuple(
+    "_ExportParams",
+    "month year format_type consolidated upload vehicle_ids",
+)
 
 
 class ExportFrame(ctk.CTkFrame):
@@ -465,21 +473,21 @@ class ExportFrame(ctk.CTkFrame):
         Default: nenhum marcado (#15) — quem quer todos usa o radio "Todos os
         veículos". O usuário marca só os que precisa, podendo buscar antes.
         """
-        self._selection = {v["id"]: False for v in self.vehicles}
+        self._selection = {vehicle["id"]: False for vehicle in self.vehicles}
         self._render_limit = self._MAX_RENDER
         self._log(f"{len(self.vehicles)} veículos carregados", "SUCCESS")
         self._render_vehicle_list()
 
-    def _vehicle_label(self, v: dict) -> str:
+    def _vehicle_label(self, vehicle: dict) -> str:
         """Texto exibido no checkbox: nome + placa (ou só nome se sem placa)."""
-        plate = (v.get("plate") or "").strip()
-        return f"{v['name']}  ·  {plate}" if plate else str(v["name"])
+        plate = (vehicle.get("plate") or "").strip()
+        return f"{vehicle['name']}  ·  {plate}" if plate else str(vehicle["name"])
 
-    def _matches_search(self, v: dict, query: str) -> bool:
+    def _matches_search(self, vehicle: dict, query: str) -> bool:
         """True se o veículo casa com a busca (nome, placa ou id)."""
         if not query:
             return True
-        haystack = f"{v.get('name', '')} {v.get('plate', '')} {v.get('id', '')}".lower()
+        haystack = f"{vehicle.get('name', '')} {vehicle.get('plate', '')} {vehicle.get('id', '')}".lower()
         return query in haystack
 
     def _on_search_changed(self):
@@ -506,15 +514,17 @@ class ExportFrame(ctk.CTkFrame):
         self.vehicle_checkboxes.clear()
 
         query = self.search_var.get().strip().lower()
-        matches = [v for v in self.vehicles if self._matches_search(v, query)]
+        matches = [
+            vehicle for vehicle in self.vehicles if self._matches_search(vehicle, query)
+        ]
         visible = matches[: self._render_limit]
 
-        for i, v in enumerate(visible):
-            vid = v["id"]
+        for i, vehicle in enumerate(visible):
+            vid = vehicle["id"]
             var = ctk.BooleanVar(value=self._selection.get(vid, False))
             cb = ctk.CTkCheckBox(
                 self.vehicles_scroll,
-                text=self._vehicle_label(v),
+                text=self._vehicle_label(vehicle),
                 variable=var,
                 command=lambda vid=vid, var=var: self._on_checkbox_toggle(vid, var),
             )
@@ -547,9 +557,9 @@ class ExportFrame(ctk.CTkFrame):
     def _set_filtered_selection(self, value: bool):
         """Marca/desmarca todos os veículos que casam com a busca atual."""
         query = self.search_var.get().strip().lower()
-        for v in self.vehicles:
-            if self._matches_search(v, query):
-                self._selection[v["id"]] = value
+        for vehicle in self.vehicles:
+            if self._matches_search(vehicle, query):
+                self._selection[vehicle["id"]] = value
         # Reflete nos checkboxes visíveis sem recriar tudo.
         for vid, cb in self.vehicle_checkboxes.items():
             if isinstance(vid, int) and isinstance(cb, ctk.CTkCheckBox):
@@ -571,149 +581,164 @@ class ExportFrame(ctk.CTkFrame):
         return selected if selected else None
     
     def _start_export(self):
-        """Inicia a exportação."""
+        """Inicia a exportação em background."""
         if self.is_exporting:
             return
+        if not self._has_valid_selection():
+            return
 
-        # Validação: no modo "Selecionar veículos", exigir ao menos um marcado
-        # antes de chamar a API (#15e). Evita rodar um export que não faz nada.
-        if not self.all_vehicles_var.get():
-            if not any(self._selection.values()):
-                messagebox.showwarning(
-                    "Nenhum veículo selecionado",
-                    "Marque ao menos um veículo ou escolha 'Todos os veículos'.",
-                )
-                return
+        self._prepare_export_ui()
+        params = self._read_export_params()
+        self._log_export_params(params)
+        self._setup_log_handler()
 
+        thread = threading.Thread(target=self._run_export, args=(params,), daemon=True)
+        thread.start()
+
+    def _has_valid_selection(self) -> bool:
+        """No modo 'Selecionar veículos', exige ao menos um marcado (#15e).
+
+        Evita rodar um export que não faz nada — avisa e aborta se nada marcado.
+        """
+        if not self.all_vehicles_var.get() and not any(self._selection.values()):
+            messagebox.showwarning(
+                "Nenhum veículo selecionado",
+                "Marque ao menos um veículo ou escolha 'Todos os veículos'.",
+            )
+            return False
+        return True
+
+    def _prepare_export_ui(self) -> None:
+        """Trava o botão e mostra a barra de progresso (#27) ao iniciar."""
         self.is_exporting = True
         self.export_btn.configure(state="disabled", text="⏳ Exportando...")
-        # Mostra a barra de progresso durante o export (#27).
         self.progress_bar.grid()
         self.progress_bar.set(0)
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
         self._clear_log()
         self.progress_label.configure(text="Iniciando...")
-        
-        # Parâmetros
-        month = MESES.index(self.month_var.get()) + 1
-        year = int(self.year_var.get())
-        format_type = self.format_var.get()
-        consolidated = self.consolidated_var.get()
-        upload = self.upload_var.get()
-        vehicle_ids = self._get_selected_vehicle_ids()
-        
-        self._log(f"📅 Exportando: {month:02d}/{year}", "INFO")
-        self._log(f"📁 Formato: {format_type}", "INFO")
-        if vehicle_ids:
-            self._log(f"🚗 Veículos selecionados: {len(vehicle_ids)}", "INFO")
+
+    def _read_export_params(self) -> "_ExportParams":
+        """Lê os parâmetros de exportação dos widgets (na thread da GUI)."""
+        return _ExportParams(
+            month=MESES.index(self.month_var.get()) + 1,
+            year=int(self.year_var.get()),
+            format_type=self.format_var.get(),
+            consolidated=self.consolidated_var.get(),
+            upload=self.upload_var.get(),
+            vehicle_ids=self._get_selected_vehicle_ids(),
+        )
+
+    def _log_export_params(self, params: "_ExportParams") -> None:
+        """Loga o cabeçalho do export (período, formato, veículos)."""
+        self._log(f"📅 Exportando: {params.month:02d}/{params.year}", "INFO")
+        self._log(f"📁 Formato: {params.format_type}", "INFO")
+        if params.vehicle_ids:
+            self._log(f"🚗 Veículos selecionados: {len(params.vehicle_ids)}", "INFO")
         else:
             self._log("🚗 Todos os veículos", "INFO")
         self._log("", "INFO")
-        
-        # Registra handler de logs para capturar output do serviço
-        self._setup_log_handler()
-        
-        def export():
-            try:
-                if not self.service:
-                    self.service = self._build_service()
 
-                # Subpasta por conta só quando há duas contas configuradas.
-                account_name = (
-                    self._account_label() if settings.WIALON_TOKEN_2 else None
-                )
+    def _run_export(self, params: "_ExportParams") -> None:
+        """Worker em background: constrói o serviço, roda o export e trata o resultado."""
+        try:
+            if not self.service:
+                self.service = self._build_service()
 
-                result = self.service.export_monthly_data(
-                    month=month,
-                    year=year,
-                    vehicle_ids=vehicle_ids,
-                    export_format=format_type,
-                    consolidated=consolidated,
-                    upload_to_drive=upload,
-                    on_progress=self._on_export_progress,
-                    account_name=account_name,
-                )
-                
-                # Para barra de progresso e define como completo
-                self.after(0, self._set_progress_complete)
+            # Subpasta por conta só quando há duas contas configuradas.
+            account_name = self._account_label() if settings.WIALON_TOKEN_2 else None
 
-                # Caso especial: processou veículos mas nenhum dado no período.
-                # "Taxa de sucesso 100%" com 0 registros confunde — destacamos
-                # que não houve entrega e sugerimos a causa provável (#32).
-                if result.total_records == 0:
-                    self._log("", "WARNING")
-                    self._log("═" * 50, "WARNING")
-                    self._log("⚠️  NENHUM DADO DISPONÍVEL PARA O PERÍODO", "WARNING")
-                    self._log("═" * 50, "WARNING")
-                    self._log(
-                        f"Veículos processados: {result.processed_vehicles}/{result.total_vehicles}",
-                        "INFO",
-                    )
-                    self._log("Possíveis causas:", "INFO")
-                    self._log("  • Veículos inativos no período selecionado", "INFO")
-                    self._log("  • Limite de retenção de histórico da conta Wialon", "INFO")
-                    self._log("  • Mês/ano muito antigos", "INFO")
-                    self.after(
-                        0, lambda: self.progress_label.configure(text="Sem dados")
-                    )
-                    if self.status_callback:
-                        self.status_callback(
-                            "Exportação sem dados para o período", "warning"
-                        )
-                    self.after(
-                        0,
-                        lambda: toast.show(
-                            "Nenhum dado disponível para o período", kind="warning"
-                        ),
-                    )
-                else:
-                    # Resultado final
-                    self._log("", "INFO")
-                    self._log("═" * 50, "SUCCESS")
-                    self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
-                    self._log("═" * 50, "SUCCESS")
-                    self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO")
-                    self._log(f"Registros: {result.total_records}", "INFO")
-                    self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
+            result = self.service.export_monthly_data(
+                month=params.month,
+                year=params.year,
+                vehicle_ids=params.vehicle_ids,
+                export_format=params.format_type,
+                consolidated=params.consolidated,
+                upload_to_drive=params.upload,
+                on_progress=self._on_export_progress,
+                account_name=account_name,
+            )
 
-                    if result.exported_files:
-                        self._log("", "INFO")
-                        self._log("Arquivos gerados:", "INFO")
-                        for f in result.exported_files:
-                            self._log(f"  📄 {f}", "SUCCESS")
+            self.after(0, self._set_progress_complete)
 
-                    if result.upload_result:
-                        ur = result.upload_result
-                        self._log("", "INFO")
-                        self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
+            if result.total_records == 0:
+                self._handle_export_no_data(result)
+            else:
+                self._handle_export_success(result)
 
-                    if result.errors:
-                        self._log("", "WARNING")
-                        self._log("Erros:", "WARNING")
-                        for e in result.errors:
-                            self._log(f"  {e}", "ERROR")
+        except Exception as e:
+            self._log(f"\n❌ Erro na exportação: {e}", "ERROR")
+            if self.status_callback:
+                self.status_callback(f"Erro: {e}", "error")
+        finally:
+            self._teardown_log_handler()
+            self.after(0, self._reset_export_button)
 
-                    if self.status_callback:
-                        self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
-                    self.after(
-                        0,
-                        lambda: toast.show(
-                            f"Exportação concluída — {result.total_records} registros",
-                            kind="success",
-                        ),
-                    )
-                
-            except Exception as e:
-                self._log(f"\n❌ Erro na exportação: {e}", "ERROR")
-                if self.status_callback:
-                    self.status_callback(f"Erro: {e}", "error")
-            finally:
-                self._teardown_log_handler()
-                self.after(0, self._reset_export_button)
-        
-        thread = threading.Thread(target=export, daemon=True)
-        thread.start()
+    def _handle_export_no_data(self, result) -> None:
+        """Processou veículos mas nenhum dado no período — destaca isso (#32).
+
+        "Taxa de sucesso 100%" com 0 registros confunde; sinalizamos a
+        não-entrega e sugerimos a causa provável.
+        """
+        self._log("", "WARNING")
+        self._log("═" * 50, "WARNING")
+        self._log("⚠️  NENHUM DADO DISPONÍVEL PARA O PERÍODO", "WARNING")
+        self._log("═" * 50, "WARNING")
+        self._log(
+            f"Veículos processados: {result.processed_vehicles}/{result.total_vehicles}",
+            "INFO",
+        )
+        self._log("Possíveis causas:", "INFO")
+        self._log("  • Veículos inativos no período selecionado", "INFO")
+        self._log("  • Limite de retenção de histórico da conta Wialon", "INFO")
+        self._log("  • Mês/ano muito antigos", "INFO")
+        self.after(0, lambda: self.progress_label.configure(text="Sem dados"))
+        if self.status_callback:
+            self.status_callback("Exportação sem dados para o período", "warning")
+        self.after(
+            0,
+            lambda: toast.show(
+                "Nenhum dado disponível para o período", kind="warning"
+            ),
+        )
+
+    def _handle_export_success(self, result) -> None:
+        """Loga o resultado final (arquivos, upload, erros) e notifica sucesso."""
+        self._log("", "INFO")
+        self._log("═" * 50, "SUCCESS")
+        self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
+        self._log("═" * 50, "SUCCESS")
+        self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO")
+        self._log(f"Registros: {result.total_records}", "INFO")
+        self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
+
+        if result.exported_files:
+            self._log("", "INFO")
+            self._log("Arquivos gerados:", "INFO")
+            for f in result.exported_files:
+                self._log(f"  📄 {f}", "SUCCESS")
+
+        if result.upload_result:
+            ur = result.upload_result
+            self._log("", "INFO")
+            self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
+
+        if result.errors:
+            self._log("", "WARNING")
+            self._log("Erros:", "WARNING")
+            for e in result.errors:
+                self._log(f"  {e}", "ERROR")
+
+        if self.status_callback:
+            self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
+        self.after(
+            0,
+            lambda: toast.show(
+                f"Exportação concluída — {result.total_records} registros",
+                kind="success",
+            ),
+        )
     
     def _on_export_progress(self, current: int, total: int, vehicle_name: str):
         """Callback chamado pelo serviço a cada veículo (thread de trabalho).

@@ -219,18 +219,18 @@ class SettingsFrame(ctk.CTkFrame):
 
     def _set_token_status(self, account, text, color, icon=None):
         """Atualiza o label de status com texto, cor e (opcional) ícone."""
-        w = self._token_widgets[account]
+        widgets = self._token_widgets[account]
         img = icons.get(icon, size=14, color=color) if icon else None
-        w["status_label"].configure(text=text, text_color=color, image=img)
+        widgets["status_label"].configure(text=text, text_color=color, image=img)
 
     def _toggle_token_visibility(self, account: int):
         """Alterna entre mostrar e esconder o token da conta dada."""
-        w = self._token_widgets[account]
-        w["visible"] = not w["visible"]
-        w["entry"].configure(show="" if w["visible"] else "*")
+        widgets = self._token_widgets[account]
+        widgets["visible"] = not widgets["visible"]
+        widgets["entry"].configure(show="" if widgets["visible"] else "*")
         # Troca o ícone do botão (olho aberto/riscado) conforme a visibilidade.
-        w["toggle_btn"].configure(
-            image=self._eye_slash_icon if w["visible"] else self._eye_icon
+        widgets["toggle_btn"].configure(
+            image=self._eye_slash_icon if widgets["visible"] else self._eye_icon
         )
 
     def _open_wialon_auth_page(self):
@@ -239,8 +239,8 @@ class SettingsFrame(ctk.CTkFrame):
 
     def _save_wialon_token(self, account: int):
         """Grava o token da conta dada no .env e recarrega as configurações."""
-        w = self._token_widgets[account]
-        token = w["entry"].get().strip()
+        widgets = self._token_widgets[account]
+        token = widgets["entry"].get().strip()
         if not token:
             self._set_token_status(
                 account, "Cole um token válido antes de salvar.",
@@ -264,8 +264,8 @@ class SettingsFrame(ctk.CTkFrame):
 
     def _test_wialon_token(self, account: int):
         """Testa o token da conta dada chamando authenticate() em background."""
-        w = self._token_widgets[account]
-        token = w["entry"].get().strip()
+        widgets = self._token_widgets[account]
+        token = widgets["entry"].get().strip()
         if not token:
             self._set_token_status(
                 account, "Cole um token antes de testar a conexão.",
@@ -276,7 +276,7 @@ class SettingsFrame(ctk.CTkFrame):
         self._set_token_status(
             account, "Status: Testando conexão...", Colors.MUTED, icons.REFRESH
         )
-        w["test_btn"].configure(state="disabled")
+        widgets["test_btn"].configure(state="disabled")
 
         def worker():
             try:

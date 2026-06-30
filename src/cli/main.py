@@ -88,8 +88,8 @@ def cmd_list(account: int = 1) -> int:
         print(f"{'ID':>12} | {'Nome':<30} | {'Placa':<15}")
         print(f"{'='*60}")
 
-        for v in vehicles:
-            print(f"{v['id']:>12} | {v['name']:<30} | {v.get('plate', ''):<15}")
+        for vehicle in vehicles:
+            print(f"{vehicle['id']:>12} | {vehicle['name']:<30} | {vehicle.get('plate', ''):<15}")
 
         print(f"{'='*60}")
         print(f"Total: {len(vehicles)} veículos")

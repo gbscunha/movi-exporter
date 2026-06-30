@@ -390,7 +390,9 @@ class VehicleService:
         """Lista os veículos da conta, opcionalmente filtrados por IDs."""
         vehicles = self.client.list_vehicles()
         if vehicle_ids:
-            vehicles = [v for v in vehicles if v.get("id") in vehicle_ids]
+            vehicles = [
+                vehicle for vehicle in vehicles if vehicle.get("id") in vehicle_ids
+            ]
             logger.info(f"Filtrado para {len(vehicles)} veículos específicos")
         return vehicles
 
@@ -404,8 +406,8 @@ class VehicleService:
         TEP0B26 saiu como SYN3D86). Quem estiver duplicado é desambiguado por ID.
         """
         plate_counts: Dict[str, int] = {}
-        for v in vehicles:
-            plate = (v.get("_plate") or "").strip()
+        for vehicle in vehicles:
+            plate = (vehicle.get("_plate") or "").strip()
             if plate:
                 plate_counts[plate] = plate_counts.get(plate, 0) + 1
         return {p for p, c in plate_counts.items() if c > 1}
@@ -580,17 +582,17 @@ class VehicleService:
 
             # Simplifica para exibição
             simplified = []
-            for v in vehicles:
+            for vehicle in vehicles:
                 simplified.append(
                     {
-                        "id": v.get("id"),
-                        "name": v.get("nm"),
-                        "plate": v.get("_plate")
-                        or v.get(
+                        "id": vehicle.get("id"),
+                        "name": vehicle.get("nm"),
+                        "plate": vehicle.get("_plate")
+                        or vehicle.get(
                             "uid", ""
                         ),  # Placa do profile field ou UID como fallback
-                        "brand": v.get("_brand", ""),
-                        "model": v.get("_model", ""),
+                        "brand": vehicle.get("_brand", ""),
+                        "model": vehicle.get("_model", ""),
                     }
                 )
 
