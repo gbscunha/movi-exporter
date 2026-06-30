@@ -37,7 +37,7 @@
 | 0 | Rede de segurança (baseline) | — | ✅ Feito (testes/lint; export real pendente no cliente) |
 | 1 | Limpeza de lixo e código morto | Baixo | ✅ Feito |
 | 2 | Arquivar docs concluídos + pinar dependências | Baixo | ✅ Feito |
-| 3 | `service_factory` — remover acoplamento GUI→client | Baixo/Médio | ⬜ Todo |
+| 3 | `service_factory` — remover acoplamento GUI→client | Baixo/Médio | ✅ Feito |
 | 4 | Dedup do `exporter.py` (−~400 linhas) | Médio | ⬜ Todo |
 | 5 | Constantes nomeadas + helpers + fix de `except` | Baixo | ⬜ Todo |
 | 6 | Quebrar `export_monthly_data()` (com testes de caracterização) | **Alto** | ⬜ Todo |

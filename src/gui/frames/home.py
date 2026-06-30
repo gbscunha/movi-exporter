@@ -13,6 +13,7 @@ import customtkinter as ctk
 
 from src.core.config import settings
 from src.core.logger import logger
+from src.core.service_factory import build_vehicle_service
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.design import Border, Colors, Font, Space
@@ -275,14 +276,8 @@ class HomeFrame(ctk.CTkFrame):
 
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
-        if self.account_state is not None and self.account_state.account == 2:
-            from src.clients.wialon_client import WialonClient
-            from src.core.config import settings
-
-            if settings.WIALON_TOKEN_2:
-                client = WialonClient(token=settings.WIALON_TOKEN_2)
-                return VehicleService(client=client)
-        return VehicleService()
+        account = self.account_state.account if self.account_state is not None else 1
+        return build_vehicle_service(account=account)
 
     def _check_status_async(self):
         """Verifica status das conexões em background."""

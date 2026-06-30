@@ -16,35 +16,10 @@ import sys
 from datetime import datetime
 from typing import List, Optional
 
-from src.clients.wialon_client import WialonClient
 from src.core.config import settings
 from src.core.logger import logger
+from src.core.service_factory import build_vehicle_service
 from src.services.uploader import DriveUploader
-from src.services.vehicle_service import VehicleService
-
-
-def build_service(
-    account: int = 1,
-    export_dir: Optional[str] = None,
-) -> VehicleService:
-    """Cria um VehicleService usando o token da conta selecionada.
-
-    Account 1 usa `settings.WIALON_TOKEN`; account 2 usa `settings.WIALON_TOKEN_2`.
-    Se a Conta 2 for solicitada mas não estiver configurada, levanta ValueError.
-    """
-    if account == 1:
-        return VehicleService(export_dir=export_dir)
-
-    if account == 2:
-        if not settings.WIALON_TOKEN_2:
-            raise ValueError(
-                "Conta 2 não configurada — defina WIALON_TOKEN_2 no .env "
-                "ou na tela Configurações."
-            )
-        client = WialonClient(token=settings.WIALON_TOKEN_2)
-        return VehicleService(client=client, export_dir=export_dir)
-
-    raise ValueError(f"Conta inválida: {account!r}. Use 1 ou 2.")
 
 
 def _account_label(account: int) -> str:
@@ -57,7 +32,7 @@ def cmd_test(account: int = 1) -> int:
     print(f"Testando conexão com Wialon ({_account_label(account)})...")
 
     try:
-        service = build_service(account=account)
+        service = build_vehicle_service(account=account)
     except ValueError as e:
         print(f"❌ {e}")
         return 1
@@ -97,7 +72,7 @@ def cmd_list(account: int = 1) -> int:
     print(f"Buscando veículos ({_account_label(account)})...")
 
     try:
-        service = build_service(account=account)
+        service = build_vehicle_service(account=account)
     except ValueError as e:
         print(f"❌ {e}")
         return 1
@@ -162,7 +137,7 @@ def cmd_export(
     print()
 
     try:
-        service = build_service(account=account, export_dir=output_dir)
+        service = build_vehicle_service(account=account, export_dir=output_dir)
     except ValueError as e:
         print(f"❌ {e}")
         return 1

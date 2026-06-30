@@ -15,9 +15,9 @@ from typing import Callable, List, Optional
 
 import customtkinter as ctk
 
-from src.clients.wialon_client import WialonClient
 from src.core.config import settings
 from src.core.logger import GUILogHandler, logger
+from src.core.service_factory import build_vehicle_service
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.components import toast
@@ -224,10 +224,7 @@ class ExportFrame(ctk.CTkFrame):
 
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
-        if self._account() == 2 and settings.WIALON_TOKEN_2:
-            client = WialonClient(token=settings.WIALON_TOKEN_2)
-            return VehicleService(client=client)
-        return VehicleService()
+        return build_vehicle_service(account=self._account())
     
     # Máximo de checkboxes renderizados de uma vez. Acima disso, o usuário
     # refina pela busca. Evita o congelamento ao montar centenas de widgets
