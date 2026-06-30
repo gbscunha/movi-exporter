@@ -28,6 +28,13 @@ from src.services.normalizer import DataNormalizer
 from src.services.uploader import DriveUploader, UploadResult
 from src.services.wialon_transformer import WialonTransformer
 
+# Limiares (V) para detectar tensão do veículo e bateria interna trocadas no
+# cadastro Wialon: bateria interna lendo acima de VOLTAGE_SWAP_HIGH_V e tensão
+# do veículo abaixo de VOLTAGE_SWAP_LOW_V é o padrão claro de inversão. A folga
+# entre os dois evita falso-positivo do caso legítimo "tensão do veículo = 0".
+VOLTAGE_SWAP_HIGH_V = 10
+VOLTAGE_SWAP_LOW_V = 6
+
 
 @dataclass
 class VehicleStats:
@@ -262,7 +269,7 @@ class VehicleService:
 
         med_veic = median(veic)
         med_intern = median(intern)
-        if med_intern > 10 and med_veic < 6:
+        if med_intern > VOLTAGE_SWAP_HIGH_V and med_veic < VOLTAGE_SWAP_LOW_V:
             logger.warning(
                 f"{vehicle_name}: tensão do veículo (~{med_veic:.1f}V) menor que "
                 f"a bateria interna (~{med_intern:.1f}V) — provável sensor trocado "

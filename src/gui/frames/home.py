@@ -2,8 +2,6 @@
 Tela inicial (Home).
 """
 
-import subprocess
-import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +16,7 @@ from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.design import Border, Colors, Font, Space
 from src.gui.frames.export import MESES  # nomes dos meses (fonte única)
+from src.gui.system_utils import open_system_folder
 from src.services import export_history
 from src.services.vehicle_service import VehicleService
 
@@ -265,12 +264,7 @@ class HomeFrame(ctk.CTkFrame):
         if not path.exists():
             return
         try:
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", str(path)])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(path)])
-            else:
-                subprocess.Popen(["xdg-open", str(path)])
+            open_system_folder(path)
         except Exception as e:
             logger.debug(f"Erro ao abrir pasta: {e}")
 

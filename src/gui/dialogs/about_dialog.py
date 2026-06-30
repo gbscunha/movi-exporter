@@ -7,6 +7,7 @@ import webbrowser
 
 import customtkinter as ctk
 
+from src.core.logger import logger
 from src.gui import __version__, icons
 from src.gui.components import toast
 from src.gui.design import Colors, Font, Space
@@ -87,8 +88,8 @@ class AboutDialog(ctk.CTkToplevel):
         """Posiciona o diálogo no centro da janela principal."""
         try:
             self.grab_set()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Erro ao focar diálogo Sobre: {e}")
 
     def _check_updates(self):
         """Verifica atualização em background e dá feedback via toast."""

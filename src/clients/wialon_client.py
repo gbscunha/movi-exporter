@@ -58,6 +58,24 @@ class WialonClient:
     DEFAULT_PAGE_SIZE = 1000
     MAX_RETRIES = 3
 
+    # Timeouts de requisição HTTP (segundos). Login é rápido; chamadas de dados
+    # (search/messages) podem demorar mais com frotas grandes.
+    AUTH_TIMEOUT = 30
+    REQUEST_TIMEOUT = 60
+
+    # Flags de busca da API Wialon (bitmask). O flag de dados de unidade combina
+    # geral + custom fields + sensores + profile fields.
+    UNIT_FLAG_GENERAL = 1
+    UNIT_FLAG_CUSTOM_FIELDS = 8
+    UNIT_FLAG_SENSORS = 4096
+    UNIT_FLAG_PROFILE_FIELDS = 8388608
+    UNIT_DATA_FLAGS = (
+        UNIT_FLAG_GENERAL
+        | UNIT_FLAG_CUSTOM_FIELDS
+        | UNIT_FLAG_SENSORS
+        | UNIT_FLAG_PROFILE_FIELDS
+    )  # = 8392713
+
     def __init__(self, token: Optional[str] = None):
         """
         Inicializa o cliente Wialon.
@@ -96,7 +114,7 @@ class WialonClient:
             response = self._session.get(
                 self.BASE_URL,
                 params={"svc": "token/login", "params": json.dumps(params)},
-                timeout=30,
+                timeout=self.AUTH_TIMEOUT,
             )
             response.raise_for_status()
             data = response.json()
@@ -173,7 +191,7 @@ class WialonClient:
             response = self._session.get(
                 self.base_url,
                 params={"svc": svc, "params": json.dumps(params), "sid": self.sid},
-                timeout=60,
+                timeout=self.REQUEST_TIMEOUT,
             )
             response.raise_for_status()
             data = response.json()
@@ -246,7 +264,7 @@ class WialonClient:
                 "sortType": "sys_name",
             },
             "force": 1,
-            "flags": 8392713,  # 1 + 8 + 4096 + 8388608 (geral + custom fields + sensores + profile fields)
+            "flags": self.UNIT_DATA_FLAGS,
             "from": 0,
             "to": 0,  # 0 = todos os itens
         }
@@ -284,7 +302,7 @@ class WialonClient:
         """
         logger.debug(f"Buscando sensores do veículo {vehicle_id}...")
 
-        params = {"id": vehicle_id, "flags": 4096}  # Flag para obter sensores
+        params = {"id": vehicle_id, "flags": self.UNIT_FLAG_SENSORS}
 
         data = self._request("core/search_item", params)
 
