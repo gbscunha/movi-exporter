@@ -6,12 +6,13 @@ App desktop Python que extrai dados mensais de rastreamento veicular da Wialon e
 
 ```
 src/core/        — config, logger, env_writer
-src/clients/     — wialon_client (stateful), base_client
+src/clients/     — wialon_client (stateful)
 src/services/    — vehicle_service, wialon_transformer, normalizer, exporter, uploader
 src/gui/         — app, frames/, components/, dialogs/, updater
 src/cli/         — main
 tests/           — pytest
-docs/desenvolvimento/  — PLANO_ONDA_1.md, CHECKLIST_DECISOES.md
+docs/desenvolvimento/  — PLANO_REFACTOR.md (ativo), PLANO_MOTORISTA_RFID.md (futuro)
+docs/arquivo/          — planos e docs históricos concluídos
 docs/wialon/           — TOKEN_AUTORIZACAO.md, GEOCODIFICACAO.md
 docs/wialon-api-docs/  — documentação oficial da API Wialon
 ```
@@ -80,7 +81,7 @@ Antes de declarar qualquer tarefa concluída:
 ## Ciclo de desenvolvimento
 
 Consulte `.claude/skills/xp-cycle.md` para o ciclo completo.
-Resumo: **Consultar plano → Implementar fase → Verificar → Commitar → Atualizar status no PLANO_ONDA_1.md**
+Resumo: **Consultar plano → Implementar fase → Verificar → Commitar → Atualizar status no PLANO_REFACTOR.md**
 
 Skills disponíveis: `/nova-fase` (executa próxima fase do plano) · `/review` (revisa código da sessão)
 
@@ -100,6 +101,6 @@ Skills disponíveis: `/nova-fase` (executa próxima fase do plano) · `/review` 
 ## Compactação
 
 Quando o contexto for compactado, preservar:
-- Fase atual do `PLANO_ONDA_1.md` e status de cada item
+- Fase atual do `PLANO_REFACTOR.md` e status de cada item
 - Arquivos modificados na sessão ainda não commitados
 - Decisões arquiteturais tomadas e erros encontrados

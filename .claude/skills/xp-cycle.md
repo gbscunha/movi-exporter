@@ -12,7 +12,7 @@ Planejar → Implementar → Verificar → Refatorar → Commitar → Documentar
 
 Antes de escrever qualquer código:
 
-1. Identificar a próxima fase ⬜ no `docs/desenvolvimento/PLANO_ONDA_1.md`
+1. Identificar a próxima fase ⬜ no `docs/desenvolvimento/PLANO_REFACTOR.md`
 2. Ler todos os arquivos que serão modificados (nunca editar de memória)
 3. Confirmar o escopo: o que muda, quais arquivos, qual o risco
 
@@ -108,7 +108,7 @@ ci: adicionar workflow de validação em push e pull_request
 
 ## Etapa 7 — Documentar
 
-Atualizar o status na tabela do `PLANO_ONDA_1.md` (⬜ → ✅).
+Atualizar o status na tabela do `PLANO_REFACTOR.md` (⬜ → ✅).
 
 Se durante a implementação surgiu:
 - Um obstáculo inesperado (ex: parâmetro Wialon com comportamento diferente)
@@ -140,7 +140,7 @@ Se durante a implementação surgiu:
 │       ↓                                                         │
 │  6. COMMITAR      Pequeno, descritivo, em português             │
 │       ↓                                                         │
-│  7. DOCUMENTAR    Atualizar PLANO_ONDA_1.md + CLAUDE.md        │
+│  7. DOCUMENTAR    Atualizar PLANO_REFACTOR.md + CLAUDE.md     │
 │       ↓                                                         │
 │  ← próxima fase ←──────────────────────────────────────────── │
 │                                                                 │

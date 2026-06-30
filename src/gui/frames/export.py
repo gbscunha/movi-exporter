@@ -5,8 +5,6 @@ Exibe configurações de exportação e log de progresso em tempo real
 capturando mensagens do loguru durante o processamento.
 """
 
-import subprocess
-import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -15,13 +13,14 @@ from typing import Callable, List, Optional
 
 import customtkinter as ctk
 
-from src.clients.wialon_client import WialonClient
 from src.core.config import settings
 from src.core.logger import GUILogHandler, logger
+from src.core.service_factory import build_vehicle_service
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.components import toast
 from src.gui.design import Colors, Font, Space
+from src.gui.system_utils import open_system_folder
 from src.services.vehicle_service import VehicleService
 
 # Nomes dos meses em português brasileiro — usados no dropdown.
@@ -76,7 +75,6 @@ class ExportFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
 
-        # Título
         self.title = ctk.CTkLabel(
             self,
             text="Exportar Dados",
@@ -84,16 +82,9 @@ class ExportFrame(ctk.CTkFrame):
         )
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
 
-        # Configurações
         self._create_config_section()
-
-        # Seleção de veículos
         self._create_vehicles_section()
-
-        # Log de progresso
         self._create_progress_section()
-
-        # Botões de ação
         self._create_action_buttons()
 
         # Reage à troca de conta feita na sidebar (estado global).
@@ -224,10 +215,7 @@ class ExportFrame(ctk.CTkFrame):
 
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
-        if self._account() == 2 and settings.WIALON_TOKEN_2:
-            client = WialonClient(token=settings.WIALON_TOKEN_2)
-            return VehicleService(client=client)
-        return VehicleService()
+        return build_vehicle_service(account=self._account())
     
     # Máximo de checkboxes renderizados de uma vez. Acima disso, o usuário
     # refina pela busca. Evita o congelamento ao montar centenas de widgets
@@ -429,12 +417,7 @@ class ExportFrame(ctk.CTkFrame):
         path.mkdir(parents=True, exist_ok=True)
 
         try:
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", str(path)])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(path)])
-            else:
-                subprocess.Popen(["xdg-open", str(path)])
+            open_system_folder(path)
         except Exception as e:
             logger.debug(f"Erro ao abrir pasta: {e}")
             messagebox.showerror("Erro", f"Não foi possível abrir a pasta: {e}")

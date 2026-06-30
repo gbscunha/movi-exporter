@@ -35,10 +35,8 @@ DEFAULT_SIZE = 18
 _DEFAULT_DARK = "#dce4ee"  # quase-branco (tema escuro)
 _DEFAULT_LIGHT = "#1a1a1a"  # quase-preto (tema claro)
 
-# ---------------------------------------------------------------------------
 # Codepoints (FontAwesome 6 Free Solid). Validados como renderizáveis.
 # Nomes seguem o ícone, não o emoji que substituem.
-# ---------------------------------------------------------------------------
 PLUG = ""
 EYE = ""
 EYE_SLASH = ""

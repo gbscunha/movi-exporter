@@ -2,8 +2,6 @@
 Tela inicial (Home).
 """
 
-import subprocess
-import sys
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -13,10 +11,12 @@ import customtkinter as ctk
 
 from src.core.config import settings
 from src.core.logger import logger
+from src.core.service_factory import build_vehicle_service
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.design import Border, Colors, Font, Space
 from src.gui.frames.export import MESES  # nomes dos meses (fonte única)
+from src.gui.system_utils import open_system_folder
 from src.services import export_history
 from src.services.vehicle_service import VehicleService
 
@@ -34,7 +34,6 @@ class HomeFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         
-        # Título
         self.title = ctk.CTkLabel(
             self,
             text="Bem-vindo ao Movi Exporter",
@@ -156,10 +155,7 @@ class HomeFrame(ctk.CTkFrame):
         )
         self.btn_list.grid(row=0, column=1, padx=5, pady=5)
 
-    # ------------------------------------------------------------------
     # Resumo de exportações (#07)
-    # ------------------------------------------------------------------
-
     def _create_export_summary(self):
         """Cria a seção 'Resumo de Exportações' e a popula."""
         label = ctk.CTkLabel(
@@ -264,25 +260,14 @@ class HomeFrame(ctk.CTkFrame):
         if not path.exists():
             return
         try:
-            if sys.platform == "win32":
-                subprocess.Popen(["explorer", str(path)])
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", str(path)])
-            else:
-                subprocess.Popen(["xdg-open", str(path)])
+            open_system_folder(path)
         except Exception as e:
             logger.debug(f"Erro ao abrir pasta: {e}")
 
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
-        if self.account_state is not None and self.account_state.account == 2:
-            from src.clients.wialon_client import WialonClient
-            from src.core.config import settings
-
-            if settings.WIALON_TOKEN_2:
-                client = WialonClient(token=settings.WIALON_TOKEN_2)
-                return VehicleService(client=client)
-        return VehicleService()
+        account = self.account_state.account if self.account_state is not None else 1
+        return build_vehicle_service(account=account)
 
     def _check_status_async(self):
         """Verifica status das conexões em background."""

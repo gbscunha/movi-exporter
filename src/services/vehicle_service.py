@@ -28,6 +28,13 @@ from src.services.normalizer import DataNormalizer
 from src.services.uploader import DriveUploader, UploadResult
 from src.services.wialon_transformer import WialonTransformer
 
+# Limiares (V) para detectar tensão do veículo e bateria interna trocadas no
+# cadastro Wialon: bateria interna lendo acima de VOLTAGE_SWAP_HIGH_V e tensão
+# do veículo abaixo de VOLTAGE_SWAP_LOW_V é o padrão claro de inversão. A folga
+# entre os dois evita falso-positivo do caso legítimo "tensão do veículo = 0".
+VOLTAGE_SWAP_HIGH_V = 10
+VOLTAGE_SWAP_LOW_V = 6
+
 
 @dataclass
 class VehicleStats:
@@ -115,10 +122,8 @@ class VehicleService:
         Returns:
             Tupla (timestamp_inicio, timestamp_fim)
         """
-        # Primeiro dia do mês às 00:00:00
         start_date = datetime(year, month, 1, 0, 0, 0)
 
-        # Último dia do mês às 23:59:59
         last_day = calendar.monthrange(year, month)[1]
         end_date = datetime(year, month, last_day, 23, 59, 59)
 
@@ -164,10 +169,7 @@ class VehicleService:
         logger.info(f"Processando veículo: {vehicle_name} (ID: {vehicle_id})")
 
         try:
-            # Obtém mapa de sensores (com cache)
             sensor_map = self.get_vehicle_sensors(vehicle_id)
-
-            # Obtém timestamps do mês
             time_from, time_to = self.get_month_timestamps(month, year)
 
             # Processa histórico em páginas
@@ -262,7 +264,7 @@ class VehicleService:
 
         med_veic = median(veic)
         med_intern = median(intern)
-        if med_intern > 10 and med_veic < 6:
+        if med_intern > VOLTAGE_SWAP_HIGH_V and med_veic < VOLTAGE_SWAP_LOW_V:
             logger.warning(
                 f"{vehicle_name}: tensão do veículo (~{med_veic:.1f}V) menor que "
                 f"a bateria interna (~{med_intern:.1f}V) — provável sensor trocado "
@@ -309,169 +311,51 @@ class VehicleService:
         logger.info("═══════════════════════════════════════════════════════════")
 
         try:
-            # Autentica
             self.client.authenticate()
 
-            # Lista veículos
-            vehicles = self.client.list_vehicles()
-
-            # Filtra por IDs específicos se fornecido
-            if vehicle_ids:
-                vehicles = [v for v in vehicles if v.get("id") in vehicle_ids]
-                logger.info(f"Filtrado para {len(vehicles)} veículos específicos")
-
+            vehicles = self._resolve_and_filter_vehicles(vehicle_ids)
             result.total_vehicles = len(vehicles)
 
             if not vehicles:
                 logger.warning("Nenhum veículo encontrado para processar")
                 return result
 
-            # Wialon é fonte não-confiável: registration_plate é texto livre,
-            # podendo vir vazio, com typo ou DUPLICADO/trocado entre unidades.
-            # Como o nome do arquivo é a placa, duas unidades com a mesma placa
-            # gerariam arquivos de mesmo nome — risco de sobrescrita silenciosa
-            # (e foi o que ocorreu em produção: TEP0B26 saiu como SYN3D86).
-            # Mapeia placas repetidas no lote para desambiguar o arquivo via ID.
-            plate_counts: Dict[str, int] = {}
-            for v in vehicles:
-                plate = (v.get("_plate") or "").strip()
-                if plate:
-                    plate_counts[plate] = plate_counts.get(plate, 0) + 1
-            duplicated_plates = {p for p, c in plate_counts.items() if c > 1}
+            duplicated_plates = self._detect_duplicate_plates(vehicles)
 
-            # Processa cada veículo
             all_history: Dict[str, List[Dict[str, Any]]] = {}
-            vehicles_info: Dict[str, Dict[str, str]] = {}  # Para exportação consolidada
+            vehicles_info: Dict[str, Dict[str, str]] = {}  # para o consolidado
 
             for index, vehicle in enumerate(vehicles, start=1):
-                vehicle_id = vehicle.get("id")
-                vehicle_name = vehicle.get("nm", f"Veículo {vehicle_id}")
-                vehicle_plate = (
-                    vehicle.get("_plate") or ""
-                ).strip()  # Placa extraída do profile field
-
-                # Placa usada SÓ no nome do arquivo. Em caso de placa duplicada
-                # na conta, anexa o ID para manter o arquivo único e rastreável.
-                # O consolidado mantém a placa original (fidelidade ao dado).
-                plate_for_file = vehicle_plate
-                if vehicle_plate and vehicle_plate in duplicated_plates:
-                    plate_for_file = f"{vehicle_plate}_{vehicle_id}"
-                    logger.warning(
-                        f"Placa '{vehicle_plate}' duplicada na conta Wialon — "
-                        f"anexando ID {vehicle_id} ao arquivo do veículo "
-                        f"'{vehicle_name}' para evitar sobrescrita."
-                    )
-
                 # Notifica a GUI do progresso (veículo atual / total).
                 if on_progress is not None:
+                    vehicle_name = vehicle.get("nm", f"Veículo {vehicle.get('id')}")
                     on_progress(index, result.total_vehicles, vehicle_name)
 
-                try:
-                    # Processa histórico
-                    records, stats = self.process_vehicle_history(vehicle, month, year)
-                    result.vehicle_stats.append(stats)
-
-                    if not stats.success:
-                        result.failed_vehicles += 1
-                        continue
-
-                    if not records:
-                        logger.warning(
-                            f"Veículo {vehicle_name}: nenhum registro no período"
-                        )
-                        result.processed_vehicles += 1
-                        continue
-
-                    # Normaliza registros
-                    normalized = self.normalizer.normalize_history(
-                        records, system="wialon"
-                    )
-                    stats.exported_records = len(normalized)
-                    result.total_records += len(normalized)
-
-                    # Exporta arquivo individual
-                    if export_format in ("csv", "both"):
-                        file_path = self.exporter.export_history_to_csv(
-                            normalized,
-                            str(vehicle_id),
-                            month,
-                            year,
-                            vehicle_name=vehicle_name,
-                            vehicle_plate=plate_for_file,
-                            account_name=account_name,
-                        )
-                        if file_path:
-                            result.exported_files.append(file_path)
-
-                    if export_format in ("xlsx", "both"):
-                        file_path = self.exporter.export_history_to_excel(
-                            normalized,
-                            str(vehicle_id),
-                            month,
-                            year,
-                            vehicle_name=vehicle_name,
-                            vehicle_plate=plate_for_file,
-                            account_name=account_name,
-                        )
-                        if file_path:
-                            result.exported_files.append(file_path)
-
-                    # Guarda para consolidado
-                    if consolidated:
-                        all_history[str(vehicle_id)] = normalized
-                        vehicles_info[str(vehicle_id)] = {
-                            "name": vehicle_name,
-                            "plate": vehicle_plate,
-                        }
-
-                    result.processed_vehicles += 1
-
-                except Exception as e:
-                    error_msg = f"Erro inesperado no veículo {vehicle_name}: {e}"
-                    logger.error(error_msg)
-                    result.errors.append(error_msg)
-                    result.failed_vehicles += 1
-
-            # Exporta consolidado — SEMPRE em CSV, independente do formato
-            # escolhido para os arquivos individuais. O consolidado junta todos
-            # os veículos num único arquivo, que facilmente passa do limite de
-            # 1.048.576 linhas do Excel (.xlsx) — uma frota grande estoura esse
-            # teto e o xlsx falha. CSV não tem limite e é o formato adequado
-            # para um dataset desse porte (análise/BI).
-            if consolidated and all_history:
-                logger.info("Gerando arquivo consolidado (CSV)...")
-                if export_format == "xlsx":
-                    logger.info(
-                        "Obs: o consolidado é gerado em CSV mesmo com formato "
-                        "Excel selecionado — o Excel não suporta mais de ~1 "
-                        "milhão de linhas, e o consolidado da frota costuma "
-                        "passar disso. Os arquivos por veículo seguem em xlsx."
-                    )
-                file_path = self.exporter.export_consolidated_history_to_csv(
-                    all_history,
+                self._process_vehicle(
+                    vehicle,
                     month,
                     year,
-                    vehicles_info=vehicles_info,
-                    account_name=account_name,
+                    export_format,
+                    consolidated,
+                    account_name,
+                    duplicated_plates,
+                    result,
+                    all_history,
+                    vehicles_info,
                 )
-                if file_path:
-                    result.exported_files.append(file_path)
 
-            # Upload para Google Drive
-            if upload_to_drive and result.exported_files:
-                logger.info("Iniciando upload para Google Drive...")
-                try:
-                    uploader = DriveUploader()
-                    result.upload_result = uploader.upload_files(
-                        file_paths=result.exported_files,
-                        month=month,
-                        year=year,
-                        overwrite=True,
-                    )
-                except Exception as e:
-                    error_msg = f"Erro no upload para Google Drive: {e}"
-                    logger.error(error_msg)
-                    result.errors.append(error_msg)
+            self._export_consolidated(
+                all_history,
+                vehicles_info,
+                month,
+                year,
+                export_format,
+                consolidated,
+                account_name,
+                result,
+            )
+
+            self._maybe_upload(result, month, year, upload_to_drive)
 
             # Log final
             logger.info("═══════════════════════════════════════════════════════════")
@@ -499,6 +383,189 @@ class VehicleService:
                 self.client.logout()
             except Exception as e:
                 logger.debug(f"Erro: {e}")
+
+    def _resolve_and_filter_vehicles(
+        self, vehicle_ids: Optional[List[int]]
+    ) -> List[Dict[str, Any]]:
+        """Lista os veículos da conta, opcionalmente filtrados por IDs."""
+        vehicles = self.client.list_vehicles()
+        if vehicle_ids:
+            vehicles = [v for v in vehicles if v.get("id") in vehicle_ids]
+            logger.info(f"Filtrado para {len(vehicles)} veículos específicos")
+        return vehicles
+
+    def _detect_duplicate_plates(self, vehicles: List[Dict[str, Any]]) -> set:
+        """Retorna o conjunto de placas que aparecem em mais de uma unidade.
+
+        Wialon é fonte não-confiável: registration_plate é texto livre, podendo
+        vir vazio, com typo ou DUPLICADO/trocado entre unidades. Como o nome do
+        arquivo é a placa, duas unidades com a mesma placa gerariam arquivos de
+        mesmo nome — risco de sobrescrita silenciosa (ocorreu em produção:
+        TEP0B26 saiu como SYN3D86). Quem estiver duplicado é desambiguado por ID.
+        """
+        plate_counts: Dict[str, int] = {}
+        for v in vehicles:
+            plate = (v.get("_plate") or "").strip()
+            if plate:
+                plate_counts[plate] = plate_counts.get(plate, 0) + 1
+        return {p for p, c in plate_counts.items() if c > 1}
+
+    def _process_vehicle(
+        self,
+        vehicle: Dict[str, Any],
+        month: int,
+        year: int,
+        export_format: str,
+        consolidated: bool,
+        account_name: Optional[str],
+        duplicated_plates: set,
+        result: ExportResult,
+        all_history: Dict[str, List[Dict[str, Any]]],
+        vehicles_info: Dict[str, Dict[str, str]],
+    ) -> None:
+        """Processa um veículo: histórico → normaliza → export individual.
+
+        Atualiza `result`, `all_history` e `vehicles_info` no lugar.
+        """
+        vehicle_id = vehicle.get("id")
+        vehicle_name = vehicle.get("nm", f"Veículo {vehicle_id}")
+        vehicle_plate = (
+            vehicle.get("_plate") or ""
+        ).strip()  # Placa extraída do profile field
+
+        # Placa usada SÓ no nome do arquivo. Em caso de placa duplicada na conta,
+        # anexa o ID para manter o arquivo único e rastreável. O consolidado
+        # mantém a placa original (fidelidade ao dado).
+        plate_for_file = vehicle_plate
+        if vehicle_plate and vehicle_plate in duplicated_plates:
+            plate_for_file = f"{vehicle_plate}_{vehicle_id}"
+            logger.warning(
+                f"Placa '{vehicle_plate}' duplicada na conta Wialon — "
+                f"anexando ID {vehicle_id} ao arquivo do veículo "
+                f"'{vehicle_name}' para evitar sobrescrita."
+            )
+
+        try:
+            records, stats = self.process_vehicle_history(vehicle, month, year)
+            result.vehicle_stats.append(stats)
+
+            if not stats.success:
+                result.failed_vehicles += 1
+                return
+
+            if not records:
+                logger.warning(f"Veículo {vehicle_name}: nenhum registro no período")
+                result.processed_vehicles += 1
+                return
+
+            normalized = self.normalizer.normalize_history(records, system="wialon")
+            stats.exported_records = len(normalized)
+            result.total_records += len(normalized)
+
+            if export_format in ("csv", "both"):
+                file_path = self.exporter.export_history_to_csv(
+                    normalized,
+                    str(vehicle_id),
+                    month,
+                    year,
+                    vehicle_name=vehicle_name,
+                    vehicle_plate=plate_for_file,
+                    account_name=account_name,
+                )
+                if file_path:
+                    result.exported_files.append(file_path)
+
+            if export_format in ("xlsx", "both"):
+                file_path = self.exporter.export_history_to_excel(
+                    normalized,
+                    str(vehicle_id),
+                    month,
+                    year,
+                    vehicle_name=vehicle_name,
+                    vehicle_plate=plate_for_file,
+                    account_name=account_name,
+                )
+                if file_path:
+                    result.exported_files.append(file_path)
+
+            if consolidated:
+                all_history[str(vehicle_id)] = normalized
+                vehicles_info[str(vehicle_id)] = {
+                    "name": vehicle_name,
+                    "plate": vehicle_plate,
+                }
+
+            result.processed_vehicles += 1
+
+        except Exception as e:
+            error_msg = f"Erro inesperado no veículo {vehicle_name}: {e}"
+            logger.error(error_msg)
+            result.errors.append(error_msg)
+            result.failed_vehicles += 1
+
+    def _export_consolidated(
+        self,
+        all_history: Dict[str, List[Dict[str, Any]]],
+        vehicles_info: Dict[str, Dict[str, str]],
+        month: int,
+        year: int,
+        export_format: str,
+        consolidated: bool,
+        account_name: Optional[str],
+        result: ExportResult,
+    ) -> None:
+        """Gera o arquivo consolidado — SEMPRE em CSV, independente do formato.
+
+        O consolidado junta todos os veículos num único arquivo, que facilmente
+        passa do limite de 1.048.576 linhas do Excel (.xlsx) — uma frota grande
+        estoura esse teto e o xlsx falha. CSV não tem limite e é o formato
+        adequado para um dataset desse porte (análise/BI).
+        """
+        if not (consolidated and all_history):
+            return
+
+        logger.info("Gerando arquivo consolidado (CSV)...")
+        if export_format == "xlsx":
+            logger.info(
+                "Obs: o consolidado é gerado em CSV mesmo com formato "
+                "Excel selecionado — o Excel não suporta mais de ~1 "
+                "milhão de linhas, e o consolidado da frota costuma "
+                "passar disso. Os arquivos por veículo seguem em xlsx."
+            )
+        file_path = self.exporter.export_consolidated_history_to_csv(
+            all_history,
+            month,
+            year,
+            vehicles_info=vehicles_info,
+            account_name=account_name,
+        )
+        if file_path:
+            result.exported_files.append(file_path)
+
+    def _maybe_upload(
+        self,
+        result: ExportResult,
+        month: int,
+        year: int,
+        upload_to_drive: bool,
+    ) -> None:
+        """Faz upload dos arquivos gerados para o Google Drive, se solicitado."""
+        if not (upload_to_drive and result.exported_files):
+            return
+
+        logger.info("Iniciando upload para Google Drive...")
+        try:
+            uploader = DriveUploader()
+            result.upload_result = uploader.upload_files(
+                file_paths=result.exported_files,
+                month=month,
+                year=year,
+                overwrite=True,
+            )
+        except Exception as e:
+            error_msg = f"Erro no upload para Google Drive: {e}"
+            logger.error(error_msg)
+            result.errors.append(error_msg)
 
     def list_vehicles(self) -> List[Dict[str, Any]]:
         """

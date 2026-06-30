@@ -9,10 +9,10 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
-from src.clients.wialon_client import WialonClient, WialonError
 from src.core.config import settings
 from src.core.env_writer import set_env_value
 from src.core.logger import logger
+from src.core.service_factory import WialonError, authenticate_token
 from src.gui import icons
 from src.gui.components import toast
 from src.gui.design import Colors
@@ -31,7 +31,6 @@ class SettingsFrame(ctk.CTkFrame):
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
 
-        # Título
         self.title = ctk.CTkLabel(
             self, text="Configurações", font=ctk.CTkFont(size=28, weight="bold")
         )
@@ -113,7 +112,6 @@ class SettingsFrame(ctk.CTkFrame):
         section.pack(fill="x", pady=(0, 15))
         section.grid_columnconfigure(1, weight=1)
 
-        # Título
         title = ctk.CTkLabel(
             section,
             text=f"  Wialon API — Conta {account}",
@@ -282,10 +280,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         def worker():
             try:
-                client = WialonClient(token=token)
-                client.authenticate()
-                username = getattr(client, "username", "") or ""
-                client.logout()
+                username = authenticate_token(token)
                 self.after(0, self._on_token_test_ok, account, username)
             except WialonError as e:
                 self.after(0, self._on_token_test_fail, account, str(e))
@@ -317,7 +312,6 @@ class SettingsFrame(ctk.CTkFrame):
         section.pack(fill="x", pady=(0, 15))
         section.grid_columnconfigure(1, weight=1)
 
-        # Título
         title = ctk.CTkLabel(
             section, text="  Exportação", image=icons.get(icons.FOLDER, size=18),
             compound="left", font=ctk.CTkFont(size=16, weight="bold")
@@ -466,7 +460,6 @@ class SettingsFrame(ctk.CTkFrame):
         section.pack(fill="x", pady=(0, 15))
         section.grid_columnconfigure(1, weight=1)
 
-        # Título
         title = ctk.CTkLabel(
             section, text="  Google Drive", image=icons.get(icons.CLOUD, size=18),
             compound="left", font=ctk.CTkFont(size=16, weight="bold")
@@ -550,7 +543,6 @@ class SettingsFrame(ctk.CTkFrame):
         section.pack(fill="x", pady=(0, 15))
         section.grid_columnconfigure(1, weight=1)
 
-        # Título
         title = ctk.CTkLabel(
             section, text="  Geral", image=icons.get(icons.GEAR, size=18),
             compound="left", font=ctk.CTkFont(size=16, weight="bold")
