@@ -40,7 +40,7 @@
 | 3 | `service_factory` — remover acoplamento GUI→client | Baixo/Médio | ✅ Feito |
 | 4 | Dedup do `exporter.py` (−~400 linhas) | Médio | ✅ Feito (−207 linhas) |
 | 5 | Constantes nomeadas + helpers + fix de `except` | Baixo | ✅ Feito |
-| 6 | Quebrar `export_monthly_data()` (com testes de caracterização) | **Alto** | ⬜ Todo |
+| 6 | Quebrar `export_monthly_data()` (com testes de caracterização) | **Alto** | ✅ Feito (extração GUI opcional adiada) |
 | 7 | Varredura final de comentários óbvios | Baixo | ⬜ Todo |
 
 ---
