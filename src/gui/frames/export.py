@@ -78,8 +78,11 @@ class ExportFrame(ctk.CTkFrame):
         self.vehicles: List[dict] = []
         self.is_exporting = False
         self._log_handler: Optional[GUILogHandler] = None
+        # Sinaliza o pedido de cancelamento do export em andamento (botão Parar).
+        self._cancel_event = threading.Event()
 
-        # Configurar grid
+        # Configurar grid. A área central (row 3) alterna entre a vista de
+        # Veículos e a de Progresso (mesma célula) via o segmented no row 2.
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
 
@@ -91,6 +94,7 @@ class ExportFrame(ctk.CTkFrame):
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
 
         self._create_config_section()
+        self._create_view_toggle()
         self._create_vehicles_section()
         self._create_progress_section()
         self._create_action_buttons()
@@ -224,103 +228,159 @@ class ExportFrame(ctk.CTkFrame):
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
         return build_vehicle_service(account=self._account())
-    
-    # Máximo de checkboxes renderizados de uma vez. Acima disso, o usuário
-    # refina pela busca. Evita o congelamento ao montar centenas de widgets
-    # pesados na thread da GUI (era a causa do freeze com 800+ veículos).
+
+    def _create_view_toggle(self):
+        """Alternador entre a vista de seleção de veículos e a de progresso.
+
+        As duas vistas dividem a mesma célula do grid (row 3); só uma aparece
+        por vez. Ao iniciar um export, trocamos para 'Progresso' e ficamos lá.
+        """
+        self.view_var = ctk.StringVar(value="Veículos")
+        self.view_toggle = ctk.CTkSegmentedButton(
+            self,
+            values=["Veículos", "Progresso"],
+            variable=self.view_var,
+            command=self._switch_view,
+        )
+        self.view_toggle.grid(row=2, column=0, sticky="w", pady=(0, 12))
+
+    def _show_view(self, value: str) -> None:
+        """Troca a vista programaticamente (mantém o segmented em sincronia)."""
+        self.view_var.set(value)
+        self._switch_view(value)
+
+    def _switch_view(self, value: str) -> None:
+        """Mostra a vista pedida ('Veículos' ou 'Progresso') e esconde a outra."""
+        if value == "Progresso":
+            self.vehicles_frame.grid_remove()
+            self.progress_frame.grid()
+        else:
+            self.progress_frame.grid_remove()
+            self.vehicles_frame.grid()
+
+    # Tamanho do lote renderizado por vez. A lista carrega mais ao rolar (scroll
+    # infinito) — renderizar tudo de uma vez congelava a GUI com 800+ veículos.
     _MAX_RENDER = 120
 
     def _create_vehicles_section(self):
-        """Cria seção de seleção de veículos.
+        """Vista 'Veículos': modo (todos / manual), busca e lista rolável.
 
         Estado de seleção (`self._selection`: id→bool) é separado da renderização:
-        só desenhamos checkboxes do subconjunto filtrado (limitado a _MAX_RENDER),
-        o que mantém a tela fluida mesmo com milhares de veículos.
+        a lista carrega em lotes ao rolar (scroll infinito), o que mantém a tela
+        fluida mesmo com milhares de veículos.
         """
-        vehicles_frame = ctk.CTkFrame(self)
-        vehicles_frame.grid(row=2, column=0, sticky="ew", pady=(0, 15))
-        vehicles_frame.grid_columnconfigure(1, weight=1)
+        self.vehicles_frame = ctk.CTkFrame(self)
+        self.vehicles_frame.grid(row=3, column=0, sticky="nsew")
+        self.vehicles_frame.grid_columnconfigure(0, weight=1)
+        self.vehicles_frame.grid_rowconfigure(2, weight=1)  # a lista ocupa o resto
 
-        # --- Linha 0: rótulo + radios + carregar ---
-        ctk.CTkLabel(
-            vehicles_frame, text="Veículos:", font=ctk.CTkFont(weight="bold")
-        ).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        # --- Linha 0: modo (radios) + Carregar ---
+        mode_row = ctk.CTkFrame(self.vehicles_frame, fg_color="transparent")
+        mode_row.grid(row=0, column=0, padx=12, pady=(12, 4), sticky="ew")
+        mode_row.grid_columnconfigure(2, weight=1)
 
         self.all_vehicles_var = ctk.BooleanVar(value=True)
         self.all_radio = ctk.CTkRadioButton(
-            vehicles_frame, text="Todos os veículos", variable=self.all_vehicles_var,
+            mode_row, text="Todos os veículos", variable=self.all_vehicles_var,
             value=True, command=self._toggle_vehicle_selection,
         )
-        self.all_radio.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        self.all_radio.grid(row=0, column=0, padx=(0, 16), pady=4, sticky="w")
 
         self.specific_radio = ctk.CTkRadioButton(
-            vehicles_frame, text="Selecionar veículos", variable=self.all_vehicles_var,
+            mode_row, text="Escolher manualmente", variable=self.all_vehicles_var,
             value=False, command=self._toggle_vehicle_selection,
         )
-        self.specific_radio.grid(row=0, column=2, padx=10, pady=10, sticky="w")
+        self.specific_radio.grid(row=0, column=1, padx=0, pady=4, sticky="w")
 
         self.load_btn = ctk.CTkButton(
-            vehicles_frame, text=" Carregar",
+            mode_row, text=" Carregar",
             image=icons.get(icons.REFRESH, size=16, on_accent=True),
             width=110, command=self._load_vehicles,
         )
-        self.load_btn.grid(row=0, column=3, padx=10, pady=10)
+        self.load_btn.grid(row=0, column=3, padx=0, pady=4, sticky="e")
 
-        # --- Linha 1: barra de ferramentas (busca + marcar/desmarcar + contador) ---
-        # Só visível no modo "Selecionar veículos".
-        self.vehicles_toolbar = ctk.CTkFrame(vehicles_frame, fg_color="transparent")
-        self.vehicles_toolbar.grid(row=1, column=0, columnspan=4, padx=10, pady=(0, 4), sticky="ew")
+        # --- Linha 1: busca + ações em massa (discretas) + contador ---
+        # Só visível no modo "Escolher manualmente".
+        self.vehicles_toolbar = ctk.CTkFrame(self.vehicles_frame, fg_color="transparent")
+        self.vehicles_toolbar.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="ew")
         self.vehicles_toolbar.grid_columnconfigure(0, weight=1)
 
         self.search_var = ctk.StringVar()
-        # Ao mudar a busca, recomeça do primeiro lote (reseta o "Mostrar mais").
         self.search_var.trace_add("write", lambda *_: self._on_search_changed())
         self.search_entry = ctk.CTkEntry(
             self.vehicles_toolbar,
             textvariable=self.search_var,
-            placeholder_text="Buscar por nome, placa ou ID...",
+            placeholder_text="🔍  Buscar por nome, placa ou ID",
         )
-        self.search_entry.grid(row=0, column=0, padx=(0, 8), sticky="ew")
+        self.search_entry.grid(row=0, column=0, padx=(0, 10), sticky="ew")
 
+        # Ações em massa como texto discreto (não competem com a lista).
         self.mark_all_btn = ctk.CTkButton(
-            self.vehicles_toolbar, text="Marcar todos", width=110,
+            self.vehicles_toolbar, text="Marcar todos", width=120,
+            fg_color="transparent", hover=False, text_color=Colors.PRIMARY,
             command=lambda: self._set_filtered_selection(True),
         )
-        self.mark_all_btn.grid(row=0, column=1, padx=2)
+        self.mark_all_btn.grid(row=0, column=1, padx=0)
 
         self.unmark_all_btn = ctk.CTkButton(
-            self.vehicles_toolbar, text="Desmarcar todos", width=130,
+            self.vehicles_toolbar, text="Limpar todos", width=120,
+            fg_color="transparent", hover=False, text_color=Colors.MUTED,
             command=lambda: self._set_filtered_selection(False),
         )
-        self.unmark_all_btn.grid(row=0, column=2, padx=2)
+        self.unmark_all_btn.grid(row=0, column=2, padx=(0, 10))
 
         self.selection_count_label = ctk.CTkLabel(
-            self.vehicles_toolbar, text="", font=ctk.CTkFont(size=12),
-            text_color=Colors.MUTED,
+            self.vehicles_toolbar, text="",
+            font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
         )
-        self.selection_count_label.grid(row=0, column=3, padx=(8, 0))
+        self.selection_count_label.grid(row=0, column=3, padx=0)
 
-        # --- Linha 2: lista rolável ---
-        self.vehicles_scroll = ctk.CTkScrollableFrame(vehicles_frame, height=140)
-        self.vehicles_scroll.grid(row=2, column=0, columnspan=4, padx=10, pady=(0, 10), sticky="ew")
+        # --- Linha 2: lista rolável (ocupa o espaço restante da vista) ---
+        self.vehicles_scroll = ctk.CTkScrollableFrame(self.vehicles_frame)
+        self.vehicles_scroll.grid(
+            row=2, column=0, padx=12, pady=(0, 12), sticky="nsew"
+        )
+        self.vehicles_scroll.grid_columnconfigure((0, 1), weight=1)
+        self._wire_infinite_scroll()
 
-        # Estado: seleção por id (fonte da verdade) e checkboxes renderizados.
+        # Estado: seleção por id (fonte da verdade), checkboxes e cache do filtro.
         self._selection: dict[int, bool] = {}
         self.vehicle_checkboxes: dict[int, ctk.CTkCheckBox] = {}
-        # Quantos itens do filtro atual estão renderizados (cresce com "Mostrar mais").
-        self._render_limit = self._MAX_RENDER
+        self._matches: list[dict] = []  # resultado do filtro atual
+        self._rendered_count = 0  # quantos itens do filtro já estão na tela
 
         # Começa escondido (modo "Todos" é o default).
         self.vehicles_toolbar.grid_remove()
         self.vehicles_scroll.grid_remove()
-    
+
+    def _wire_infinite_scroll(self) -> None:
+        """Carrega o próximo lote quando o scroll chega perto do fim.
+
+        Envolve o `yscrollcommand` do canvas interno do CTkScrollableFrame para
+        detectar a posição (pega tanto a roda do mouse quanto arrastar a barra).
+        """
+        try:
+            scroll_set = self.vehicles_scroll._scrollbar.set
+
+            def _on_yscroll(first, last):
+                scroll_set(first, last)
+                if float(last) >= 0.985:
+                    self.after_idle(self._maybe_load_more)
+
+            self.vehicles_scroll._parent_canvas.configure(yscrollcommand=_on_yscroll)
+        except Exception as e:
+            logger.debug(f"Scroll infinito indisponível: {e}")
+
     def _create_progress_section(self):
         """Cria seção de log de progresso."""
-        progress_frame = ctk.CTkFrame(self)
-        progress_frame.grid(row=3, column=0, sticky="nsew", pady=(0, 15))
+        # Mesma célula (row 3) da vista de Veículos — alternadas pelo segmented.
+        # Começa escondida (a vista padrão é 'Veículos').
+        self.progress_frame = progress_frame = ctk.CTkFrame(self)
+        progress_frame.grid(row=3, column=0, sticky="nsew")
         progress_frame.grid_columnconfigure(0, weight=1)
         progress_frame.grid_rowconfigure(1, weight=1)
-        
+        progress_frame.grid_remove()
+
         # Header com título, contador e toolbar do log (#17)
         header_frame = ctk.CTkFrame(progress_frame, fg_color="transparent")
         header_frame.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="ew")
@@ -406,6 +466,9 @@ class ExportFrame(ctk.CTkFrame):
             command=self._start_export,
         )
         self.export_btn.grid(row=0, column=1, padx=5)
+        # Cores originais do botão (tema) — para restaurar após o estado 'Parar'.
+        self._export_btn_fg = self.export_btn.cget("fg_color")
+        self._export_btn_hover = self.export_btn.cget("hover_color")
 
     def _open_export_folder(self):
         """Abre a pasta de exportação do mês/ano atualmente selecionados.
@@ -474,14 +537,20 @@ class ExportFrame(ctk.CTkFrame):
         veículos". O usuário marca só os que precisa, podendo buscar antes.
         """
         self._selection = {vehicle["id"]: False for vehicle in self.vehicles}
-        self._render_limit = self._MAX_RENDER
         self._log(f"{len(self.vehicles)} veículos carregados", "SUCCESS")
         self._render_vehicle_list()
 
     def _vehicle_label(self, vehicle: dict) -> str:
-        """Texto exibido no checkbox: nome + placa (ou só nome se sem placa)."""
+        """Texto do checkbox: nome; placa só quando difere do nome.
+
+        Muitos veículos são cadastrados com o nome igual à placa — mostrar
+        "ABC1234 · ABC1234" só polui. Nesse caso, exibe só o nome.
+        """
+        name = str(vehicle.get("name") or "").strip()
         plate = (vehicle.get("plate") or "").strip()
-        return f"{vehicle['name']}  ·  {plate}" if plate else str(vehicle["name"])
+        if plate and plate != name:
+            return f"{name}  ·  {plate}"
+        return name
 
     def _matches_search(self, vehicle: dict, query: str) -> bool:
         """True se o veículo casa com a busca (nome, placa ou id)."""
@@ -491,35 +560,38 @@ class ExportFrame(ctk.CTkFrame):
         return query in haystack
 
     def _on_search_changed(self):
-        """Nova busca recomeça do primeiro lote (reseta o 'Mostrar mais')."""
-        self._render_limit = self._MAX_RENDER
-        self._render_vehicle_list()
-
-    def _show_more(self):
-        """Renderiza o próximo lote de veículos do filtro atual."""
-        self._render_limit += self._MAX_RENDER
+        """Nova busca recomeça a renderização do primeiro lote."""
         self._render_vehicle_list()
 
     def _render_vehicle_list(self):
-        """Renderiza o subconjunto filtrado, limitado a `_render_limit`.
+        """Renderiza o filtro atual do zero (primeiro lote); o resto vem ao rolar.
 
-        Renderizar só os filtrados — e em lotes — é o que evita o congelamento
-        que existia ao montar centenas de checkboxes de uma vez. Para alcançar
-        veículos além do lote, o usuário busca (nome/placa/ID) ou clica em
-        "Mostrar mais".
+        Renderizar em lotes evita o congelamento que existia ao montar centenas
+        de checkboxes de uma vez. `_maybe_load_more` acrescenta os próximos
+        conforme o usuário rola (scroll infinito).
         """
-        # Limpa o conteúdo atual da lista (checkboxes + widgets auxiliares).
         for widget in self.vehicles_scroll.winfo_children():
             widget.destroy()
         self.vehicle_checkboxes.clear()
 
         query = self.search_var.get().strip().lower()
-        matches = [
+        self._matches = [
             vehicle for vehicle in self.vehicles if self._matches_search(vehicle, query)
         ]
-        visible = matches[: self._render_limit]
+        self._rendered_count = 0
+        self._append_next_batch()
 
-        for i, vehicle in enumerate(visible):
+        self._update_bulk_button_labels()
+        self._update_selection_count()
+        # Se o primeiro lote não encheu a viewport, segue carregando até encher.
+        self.after(60, self._fill_if_short)
+
+    def _append_next_batch(self):
+        """Acrescenta o próximo lote de checkboxes ao fim da lista (sem recriar)."""
+        start = self._rendered_count
+        end = min(start + self._MAX_RENDER, len(self._matches))
+        for i in range(start, end):
+            vehicle = self._matches[i]
             vid = vehicle["id"]
             var = ctk.BooleanVar(value=self._selection.get(vid, False))
             cb = ctk.CTkCheckBox(
@@ -530,24 +602,31 @@ class ExportFrame(ctk.CTkFrame):
             )
             cb.grid(row=i // 2, column=i % 2, padx=5, pady=2, sticky="w")
             self.vehicle_checkboxes[vid] = cb
+        self._rendered_count = end
 
-        # Botão "Mostrar mais" quando há resultados além do lote renderizado.
-        if len(matches) > self._render_limit:
-            restantes = len(matches) - self._render_limit
-            mostrar = min(self._MAX_RENDER, restantes)
-            more_btn = ctk.CTkButton(
-                self.vehicles_scroll,
-                text=f"Mostrar mais (+{mostrar}) — {restantes} restantes",
-                fg_color="transparent",
-                text_color=Colors.PRIMARY,
-                hover=False,
-                command=self._show_more,
-            )
-            more_btn.grid(
-                row=len(visible) // 2 + 1, column=0, columnspan=2, padx=5, pady=6, sticky="w"
-            )
+    def _maybe_load_more(self):
+        """Carrega o próximo lote se o scroll chegou perto do fim."""
+        if self._rendered_count >= len(self._matches):
+            return
+        try:
+            last = self.vehicles_scroll._parent_canvas.yview()[1]
+        except Exception:
+            last = 1.0
+        if last >= 0.97:
+            self._append_next_batch()
 
-        self._update_selection_count()
+    def _fill_if_short(self):
+        """Garante itens suficientes para a lista poder rolar (caso lote curto)."""
+        if self._rendered_count >= len(self._matches):
+            return
+        try:
+            last = self.vehicles_scroll._parent_canvas.yview()[1]
+        except Exception:
+            return
+        # yview retorna (0.0, 1.0) quando não há o que rolar → carrega mais.
+        if last >= 0.999:
+            self._append_next_batch()
+            self.after(60, self._fill_if_short)
 
     def _on_checkbox_toggle(self, vid: int, var: "ctk.BooleanVar"):
         """Atualiza o estado de seleção quando um checkbox é marcado/desmarcado."""
@@ -567,10 +646,34 @@ class ExportFrame(ctk.CTkFrame):
         self._update_selection_count()
 
     def _update_selection_count(self):
-        """Atualiza o rótulo 'X de Y selecionados'."""
+        """Atualiza o rótulo 'X de Y selecionados' (+ nº no filtro, se buscando)."""
         total = len(self._selection)
         marcados = sum(1 for sel in self._selection.values() if sel)
-        self.selection_count_label.configure(text=f"{marcados} de {total} selecionados")
+        query = self.search_var.get().strip().lower()
+        if query:
+            filtrados = sum(
+                1 for vehicle in self.vehicles if self._matches_search(vehicle, query)
+            )
+            self.selection_count_label.configure(
+                text=f"{marcados} de {total} selecionados · {filtrados} no filtro"
+            )
+        else:
+            self.selection_count_label.configure(
+                text=f"{marcados} de {total} selecionados"
+            )
+
+    def _update_bulk_button_labels(self):
+        """Deixa explícito o alvo dos botões: 'todos' sem busca, 'filtrados' com.
+
+        Com uma busca ativa, marcar/desmarcar agem só sobre os resultados — o
+        que diferencia do modo 'Todos os veículos' (radio) e remove a ambiguidade.
+        """
+        if self.search_var.get().strip():
+            self.mark_all_btn.configure(text="Marcar filtrados")
+            self.unmark_all_btn.configure(text="Limpar filtrados")
+        else:
+            self.mark_all_btn.configure(text="Marcar todos")
+            self.unmark_all_btn.configure(text="Limpar todos")
 
     def _get_selected_vehicle_ids(self) -> Optional[List[int]]:
         """Retorna IDs dos veículos selecionados ou None para todos."""
@@ -581,19 +684,42 @@ class ExportFrame(ctk.CTkFrame):
         return selected if selected else None
     
     def _start_export(self):
-        """Inicia a exportação em background."""
+        """Inicia a exportação em background (após validação e confirmação)."""
         if self.is_exporting:
             return
         if not self._has_valid_selection():
             return
 
-        self._prepare_export_ui()
         params = self._read_export_params()
+        if not self._confirm_export(params):
+            return
+
+        self._prepare_export_ui()
         self._log_export_params(params)
         self._setup_log_handler()
 
         thread = threading.Thread(target=self._run_export, args=(params,), daemon=True)
         thread.start()
+
+    def _confirm_export(self, params: "_ExportParams") -> bool:
+        """Mostra um resumo e pede confirmação antes de iniciar (#3).
+
+        Barreira barata contra export com mês/formato/seleção errados — não
+        toca no serviço, só confirma a intenção.
+        """
+        if params.vehicle_ids:
+            alvo = f"{len(params.vehicle_ids)} veículo(s) selecionado(s)"
+        else:
+            alvo = "Todos os veículos"
+        resumo = (
+            f"Mês/Ano:  {MESES[params.month - 1]} / {params.year}\n"
+            f"Formato:  {params.format_type}\n"
+            f"Veículos:  {alvo}\n"
+            f"Consolidado:  {'sim' if params.consolidated else 'não'}\n"
+            f"Upload Google Drive:  {'sim' if params.upload else 'não'}\n\n"
+            "Iniciar a exportação?"
+        )
+        return messagebox.askyesno("Confirmar exportação", resumo)
 
     def _has_valid_selection(self) -> bool:
         """No modo 'Selecionar veículos', exige ao menos um marcado (#15e).
@@ -609,15 +735,35 @@ class ExportFrame(ctk.CTkFrame):
         return True
 
     def _prepare_export_ui(self) -> None:
-        """Trava o botão e mostra a barra de progresso (#27) ao iniciar."""
+        """Prepara a UI ao iniciar: troca para a vista Progresso (#2), o botão
+        por 'Parar' (#3) e mostra a barra de progresso (#27)."""
         self.is_exporting = True
-        self.export_btn.configure(state="disabled", text="⏳ Exportando...")
+        self._cancel_event.clear()
+        self._show_view("Progresso")
+        # O botão de ação vira 'Parar' (cinza) e passa a cancelar o export.
+        self.export_btn.configure(
+            text="  Parar",
+            image=icons.get(icons.CIRCLE_XMARK, size=18, on_accent=True),
+            fg_color=Colors.MUTED,
+            hover_color="#6d6d6d",
+            command=self._request_cancel,
+        )
         self.progress_bar.grid()
         self.progress_bar.set(0)
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
         self._clear_log()
         self.progress_label.configure(text="Iniciando...")
+
+    def _request_cancel(self) -> None:
+        """Pede o cancelamento do export em andamento (botão 'Parar')."""
+        self._cancel_event.set()
+        self.export_btn.configure(text="  Parando...", state="disabled")
+        self.progress_label.configure(text="Cancelando...")
+        self._log(
+            "⏹️  Cancelamento solicitado — encerrando após o veículo atual...",
+            "WARNING",
+        )
 
     def _read_export_params(self) -> "_ExportParams":
         """Lê os parâmetros de exportação dos widgets (na thread da GUI)."""
@@ -658,14 +804,17 @@ class ExportFrame(ctk.CTkFrame):
                 upload_to_drive=params.upload,
                 on_progress=self._on_export_progress,
                 account_name=account_name,
+                should_cancel=self._cancel_event.is_set,
             )
 
-            self.after(0, self._set_progress_complete)
-
-            if result.total_records == 0:
-                self._handle_export_no_data(result)
+            if result.cancelled:
+                self._handle_export_cancelled(result)
             else:
-                self._handle_export_success(result)
+                self.after(0, self._set_progress_complete)
+                if result.total_records == 0:
+                    self._handle_export_no_data(result)
+                else:
+                    self._handle_export_success(result)
 
         except Exception as e:
             self._log(f"\n❌ Erro na exportação: {e}", "ERROR")
@@ -739,7 +888,29 @@ class ExportFrame(ctk.CTkFrame):
                 kind="success",
             ),
         )
-    
+
+    def _handle_export_cancelled(self, result) -> None:
+        """Export interrompido pelo usuário — informa o parcial já gerado."""
+        self.after(0, lambda: self.progress_label.configure(text="Cancelado"))
+        self._log("", "WARNING")
+        self._log("═" * 50, "WARNING")
+        self._log("⏹️  EXPORTAÇÃO CANCELADA", "WARNING")
+        self._log("═" * 50, "WARNING")
+        self._log(
+            f"Processados antes de parar: "
+            f"{result.processed_vehicles}/{result.total_vehicles}",
+            "INFO",
+        )
+        if result.exported_files:
+            self._log(
+                f"Arquivos parciais gerados: {len(result.exported_files)} "
+                "(consolidado e upload não foram executados)",
+                "INFO",
+            )
+        if self.status_callback:
+            self.status_callback("Exportação cancelada", "warning")
+        self.after(0, lambda: toast.show("Exportação cancelada", kind="warning"))
+
     def _on_export_progress(self, current: int, total: int, vehicle_name: str):
         """Callback chamado pelo serviço a cada veículo (thread de trabalho).
 
@@ -767,9 +938,16 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_label.configure(text="Concluído")
     
     def _reset_export_button(self):
-        """Reseta o estado do botão de exportação."""
+        """Restaura o botão para 'Iniciar Exportação' (a vista fica em Progresso)."""
         self.is_exporting = False
-        self.export_btn.configure(state="normal", text="  Iniciar Exportação")
+        self.export_btn.configure(
+            state="normal",
+            text="  Iniciar Exportação",
+            image=icons.get(icons.PLAY, size=18, on_accent=True),
+            fg_color=self._export_btn_fg,
+            hover_color=self._export_btn_hover,
+            command=self._start_export,
+        )
         # Garante que a barra de progresso está parada e a esconde (#27).
         try:
             self.progress_bar.stop()
