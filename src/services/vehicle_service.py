@@ -62,6 +62,7 @@ class ExportResult:
     exported_files: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     upload_result: Optional[UploadResult] = None
+    cancelled: bool = False  # True se o usuário interrompeu o export no meio
 
     @property
     def success_rate(self) -> float:
@@ -283,6 +284,7 @@ class VehicleService:
         upload_to_drive: bool = False,
         account_name: Optional[str] = None,
         on_progress: Optional[Callable[[int, int, str], None]] = None,
+        should_cancel: Optional[Callable[[], bool]] = None,
     ) -> ExportResult:
         """
         Exporta dados mensais de todos os veículos (ou lista específica).
@@ -300,6 +302,10 @@ class VehicleService:
             on_progress: Callback opcional `(atual, total, nome_veiculo)` chamado
                          ao iniciar o processamento de cada veículo — usado pela
                          GUI para mostrar progresso real (barra determinada).
+            should_cancel: Callback opcional `() -> bool` consultado antes de cada
+                           veículo. Se retornar True, o export para no veículo
+                           atual (mantém os arquivos individuais já gerados, pula
+                           o consolidado e o upload) e marca `result.cancelled`.
 
         Returns:
             Resultado da exportação com estatísticas
@@ -326,6 +332,16 @@ class VehicleService:
             vehicles_info: Dict[str, Dict[str, str]] = {}  # para o consolidado
 
             for index, vehicle in enumerate(vehicles, start=1):
+                # Cancelamento cooperativo: checado entre veículos. Um veículo já
+                # em processamento termina; os seguintes não são tocados.
+                if should_cancel is not None and should_cancel():
+                    result.cancelled = True
+                    logger.warning(
+                        f"Exportação cancelada pelo usuário após "
+                        f"{result.processed_vehicles} veículo(s)."
+                    )
+                    break
+
                 # Notifica a GUI do progresso (veículo atual / total).
                 if on_progress is not None:
                     vehicle_name = vehicle.get("nm", f"Veículo {vehicle.get('id')}")
@@ -343,6 +359,12 @@ class VehicleService:
                     all_history,
                     vehicles_info,
                 )
+
+            # Cancelado: pula consolidado e upload (entrega parcial fica só nos
+            # arquivos individuais já gravados).
+            if result.cancelled:
+                logger.info("Exportação interrompida — consolidado e upload pulados.")
+                return result
 
             self._export_consolidated(
                 all_history,
