@@ -40,7 +40,7 @@
 | 3 | `service_factory` — remover acoplamento GUI→client | Baixo/Médio | ✅ Feito |
 | 4 | Dedup do `exporter.py` (−~400 linhas) | Médio | ✅ Feito (−207 linhas) |
 | 5 | Constantes nomeadas + helpers + fix de `except` | Baixo | ✅ Feito |
-| 6 | Quebrar `export_monthly_data()` (com testes de caracterização) | **Alto** | ✅ Feito (extração GUI opcional adiada) |
+| 6 | Quebrar `export_monthly_data()` (com testes de caracterização) | **Alto** | ✅ Feito (inclui extração de `_start_export` da GUI) |
 | 7 | Varredura final de comentários óbvios | Baixo | ✅ Feito |
 
 ---
@@ -49,11 +49,15 @@
 
 Estabelecer o ponto verde de referência antes de qualquer mudança.
 
-- [ ] `pytest -q` verde e registrar nº de testes
-- [ ] `ruff check src/` sem erros
-- [ ] Abrir a GUI e rodar **um export real** (conta 1) → guardar o CSV/XLSX
-      gerado como *baseline* para comparação nas Fases 4 e 6
-- [ ] Confirmar que a `main` está limpa e que cada fase parte dela
+- [x] `pytest -q` verde e registrar nº de testes — **204 testes** no baseline
+- [x] `ruff check src/` sem erros
+- [x] Abrir a GUI e rodar **um export real** (conta 1) → guardar o CSV/XLSX
+      gerado como *baseline* para comparação nas Fases 4 e 6 — *export real
+      validado na verificação final (1 veículo, 33.218 registros): colunas,
+      `N/D` e valores conferidos*
+- [x] Confirmar que a `main` está limpa e que cada fase parte dela — *`main`
+      limpa; por decisão do mantenedor, todas as fases numa única branch
+      `fix/ajustes-pontuais-v1` (1 commit por fase)*
 
 ---
 
@@ -64,13 +68,14 @@ Estabelecer o ponto verde de referência antes de qualquer mudança.
 Código morto **confirmado** (`base_client.py` só é referenciado pelo próprio
 `__init__.py`; nenhum teste o importa).
 
-- [ ] Deletar `src/clients/base_client.py` (146 linhas, `BaseClient` /
+- [x] Deletar `src/clients/base_client.py` (146 linhas, `BaseClient` /
       `StatefulClient` nunca usados)
-- [ ] Limpar `src/clients/__init__.py` — remover import e `__all__` de
+- [x] Limpar `src/clients/__init__.py` — remover import e `__all__` de
       `BaseClient`/`StatefulClient` e a linha do docstring que os cita
-- [ ] Adicionar `.ruff_cache/` ao `.gitignore` (hoje fora do ignore)
-- [ ] (Opcional, não-git) limpar lixo local: `app*.log`, `.DS_Store`,
-      `__pycache__/`, `.ruff_cache/`, `.pytest_cache/`
+- [x] Adicionar `.ruff_cache/` ao `.gitignore` (hoje fora do ignore)
+- [x] (Opcional, não-git) limpar lixo local: `app*.log`, `.DS_Store`,
+      `__pycache__/`, `.ruff_cache/`, `.pytest_cache/` — *feito (só ignored;
+      `venv/`/`exports/`/`.env` preservados)*
 
 **Verificação:** `pytest -q` + `ruff check src/`; confirmar que
 `from src.clients import WialonClient` ainda funciona.
@@ -86,21 +91,22 @@ Código morto **confirmado** (`base_client.py` só é referenciado pelo próprio
 `.claude/skills/xp-cycle.md`. Arquivar sem atualizar essas referências
 **quebra a skill `/nova-fase`**.
 
-- [ ] Criar `docs/arquivo/`
-- [ ] `git mv` para `docs/arquivo/` os planos concluídos / históricos:
+- [x] Criar `docs/arquivo/`
+- [x] `git mv` para `docs/arquivo/` os planos concluídos / históricos:
   - `PLANO_ONDA_1.md`, `PLANO_ONDA_2.md`, `PLANO_ONDA_3.md`
   - `RETOMADA.md` (auto-marcado "apagar quando Onda 3 fechar")
   - `ANALISE_MELHORIAS.md`, `CHECKLIST_DECISOES.md`, `BACKLOG_ONDA_2.md`
   - `exporter_usage.md`, `normalizer_usage.md` (duplicam docstrings)
   - `docs/STATUS-PROJETO-API-WAILON-110626.html` (snapshot órfão)
-- [ ] **Manter** em `docs/desenvolvimento/`: `PLANO_MOTORISTA_RFID.md` (feature
+- [x] **Manter** em `docs/desenvolvimento/`: `PLANO_MOTORISTA_RFID.md` (feature
       futura) e este `PLANO_REFACTOR.md` (plano ativo)
-- [ ] Repontar referências para o **plano ativo** (`PLANO_REFACTOR.md`):
+- [x] Repontar referências para o **plano ativo** (`PLANO_REFACTOR.md`):
   - `CLAUDE.md` (linhas 14, 83, 103)
   - `.claude/skills/nova-fase/SKILL.md`
   - `.claude/skills/xp-cycle.md`
-- [ ] **Pinar** dependências: `pip-compile requirements.in` → `requirements.txt`
-      com versões exatas das já instaladas no venv (não fazer upgrade)
+- [x] **Pinar** dependências: `pip-compile requirements.in` → `requirements.txt`
+      com versões exatas das já instaladas no venv (não fazer upgrade) — *travado
+      via `-c` nas versões do venv; `pytest`/`ruff` ficam fora (CI os instala à parte)*
 
 **Verificação:** `pip install -r requirements.txt` num venv limpo instala sem
 conflito; a skill `/nova-fase` aponta para um plano válido; `pytest -q`.
@@ -115,16 +121,17 @@ conflito; a skill `/nova-fase` aponta para um plano válido; `pytest -q`.
 `WialonClient` direto (viola `CLAUDE.md:97`). O CLI já tem o padrão correto
 (`build_service()` em `cli/main.py:26-47`) — vamos extrair e reusar.
 
-- [ ] Criar `src/core/service_factory.py` com
+- [x] Criar `src/core/service_factory.py` com
       `build_vehicle_service(account: int = 1, export_dir: str | None = None) -> VehicleService`
       (mover a lógica de seleção de conta/token do CLI para cá)
-- [ ] `cli/main.py` passa a importar do factory (remover `build_service` local)
-- [ ] `gui/frames/export.py`: usar o factory; remover `from src.clients...`
-- [ ] `gui/frames/home.py`: idem
-- [ ] `gui/frames/settings.py`: usar o factory e o serviço para testar conexão
-      (`VehicleService.test_connection()`) em vez de `WialonClient().authenticate()`
-- [ ] Garantir que **nenhum** arquivo em `src/gui/` importe `src.clients`
-- [ ] Novo teste `tests/test_service_factory.py` (conta 1, conta 2, conta 2 sem
+- [x] `cli/main.py` passa a importar do factory (remover `build_service` local)
+- [x] `gui/frames/export.py`: usar o factory; remover `from src.clients...`
+- [x] `gui/frames/home.py`: idem
+- [x] `gui/frames/settings.py`: usar o factory e o serviço para testar conexão
+      em vez de `WialonClient().authenticate()` — *via `authenticate_token()` do
+      factory (preserva username + msg de erro, que `test_connection()->bool` perderia)*
+- [x] Garantir que **nenhum** arquivo em `src/gui/` importe `src.clients`
+- [x] Novo teste `tests/test_service_factory.py` (conta 1, conta 2, conta 2 sem
       token → erro)
 
 **Verificação:** `pytest -q`; `grep -rn "src.clients" src/gui` deve voltar vazio;
@@ -139,15 +146,17 @@ abrir GUI e testar conexão (conta 1 e conta 2) + um export.
 ~400 linhas duplicadas: 3 pares CSV/Excel idênticos que só diferem na linha
 `df.to_csv(...)` vs `df.to_excel(...)`.
 
-- [ ] Extrair `_write_dataframe(df, file_path, fmt)` central (encapsula
+- [x] Extrair `_write_dataframe(df, file_path, fmt)` central (encapsula
       `to_csv` com `encoding="utf-8-sig"` e `to_excel` com `engine="openpyxl"`)
-- [ ] **Manter as assinaturas públicas** (`export_vehicles_to_csv/excel`,
+- [x] **Manter as assinaturas públicas** (`export_vehicles_to_csv/excel`,
       `export_history_to_csv/excel`, `export_consolidated_history_to_csv/excel`)
       como wrappers finos delegando a um método genérico — assim o
       `vehicle_service.py` não precisa mudar
-- [ ] Preservar exatamente: `N/D`, `EXCEL_MAX_ROWS`, ordem/tradução de colunas,
-      nomes de arquivo
-- [ ] Efeito colateral: a unificação já remove a maioria dos comentários óbvios
+- [x] Preservar exatamente: `N/D`, `EXCEL_MAX_ROWS`, ordem/tradução de colunas,
+      nomes de arquivo — *confirmado no export real: 18 colunas iguais em
+      CSV/XLSX/consolidado; também extraído `_clean_history_record` (dict 16
+      campos que aparecia 4×)*
+- [x] Efeito colateral: a unificação já remove a maioria dos comentários óbvios
       duplicados (`# Cria DataFrame`, `# Define caminho de saída`, etc.)
 
 **Verificação:** `pytest -q` (`test_exporter`, `test_exporter_nd`,
@@ -160,15 +169,18 @@ com o baseline da Fase 0** (regra `CLAUDE.md` de verificação #4).
 
 **Branch:** `refactor/constantes-helpers`
 
-- [ ] Nomear o flag mágico do Wialon (`8392713` = `1 + 8 + 4096 + 8388608`) em
-      constantes documentadas no `wialon_client.py`
-- [ ] Nomear limiares de tensão trocada (`10V` / `6V`) e timeouts (`30` / `60`)
-- [ ] Extrair helper `_open_system_folder()` compartilhado (hoje duplicado entre
-      `export.py` e `home.py`)
-- [ ] Corrigir o único `except Exception: pass` real
+- [x] Nomear o flag mágico do Wialon (`8392713` = `1 + 8 + 4096 + 8388608`) em
+      constantes documentadas no `wialon_client.py` — *`UNIT_DATA_FLAGS` como OR
+      de `UNIT_FLAG_*`*
+- [x] Nomear limiares de tensão trocada (`10V` / `6V`) e timeouts (`30` / `60`) —
+      *`VOLTAGE_SWAP_HIGH_V`/`LOW_V`, `AUTH_TIMEOUT`/`REQUEST_TIMEOUT`*
+- [x] Extrair helper `open_system_folder()` compartilhado (hoje duplicado entre
+      `export.py` e `home.py`) — *módulo `src/gui/system_utils.py`*
+- [x] Corrigir o único `except Exception: pass` real
       (`gui/dialogs/about_dialog.py:91` → `logger.debug(...)`)
-- [ ] (Opcional, com cuidado) renomear variáveis de 1 letra pontuais
-      (`v`→`vehicle`, `w`→`widgets`)
+- [x] (Opcional, com cuidado) renomear variáveis de 1 letra pontuais
+      (`v`→`vehicle`, `w`→`widgets`) — *feito em `cli/main.py`, `home.py`,
+      `export.py`, `settings.py`, `vehicle_service.py`*
 
 > Nota: a alegação de "34 `except` mascarando bugs" foi **verificada e
 > descartada** — apenas 1 engole o erro; os demais já logam, como o `CLAUDE.md`
@@ -187,17 +199,21 @@ detecção de placa duplicada, loop de processamento, normalização, export
 individual, consolidado, upload e log. É o **coração da produção** → blindar
 com testes antes de tocar.
 
-- [ ] **PRIMEIRO**: escrever testes de caracterização (golden) que capturam a
+- [x] **PRIMEIRO**: escrever testes de caracterização (golden) que capturam a
       saída atual a partir de fixtures mockadas (veículos, histórico, N/D,
-      placa duplicada, tensão trocada, conta sem dados)
-- [ ] Só então extrair sub-métodos privados, ex.:
+      placa duplicada, tensão trocada, conta sem dados) — *`tests/test_vehicle_service_export_golden.py`
+      (4 testes) + cobertura já existente em `test_vehicle_service.py`*
+- [x] Só então extrair sub-métodos privados, ex.:
   - `_resolve_and_filter_vehicles(...)`
   - `_detect_duplicate_plates(...)`
   - `_process_vehicle(...)` (histórico → normaliza → export individual)
   - `_export_consolidated(...)`
   - `_maybe_upload(...)`
-- [ ] (Se houver fôlego) aplicar a mesma extração em
-      `gui/frames/export.py::_start_export()` (~140 linhas)
+- [x] (Se houver fôlego) aplicar a mesma extração em
+      `gui/frames/export.py::_start_export()` (~140 linhas) — *feito: 6 métodos
+      (`_has_valid_selection`, `_prepare_export_ui`, `_read_export_params`,
+      `_log_export_params`, `_run_export`, `_handle_export_no_data/success`);
+      worker verificado headless (sucesso/sem-dados/erro)*
 
 **Verificação reforçada:** testes de caracterização verdes; **comparar o arquivo
 exportado (colunas e valores) antes vs. depois** com o baseline da Fase 0;
@@ -240,12 +256,14 @@ repetem o que a linha seguinte já diz.
 
 ### Checklist
 
-- [ ] Varrer arquivos restantes (não cobertos por dedup/extração): `home.py`,
+- [x] Varrer arquivos restantes (não cobertos por dedup/extração): `home.py`,
       `settings.py`, `wialon_client.py`, `cli/main.py`, `tracker_profiles/`,
       `sidebar.py`, `app.py`, `icons.py`
-- [ ] Remover comentários que só repetem a linha seguinte (rubrica acima)
-- [ ] **Na dúvida, manter** — preferir falso-negativo a apagar um "porquê" útil
-- [ ] Não tocar em docstrings de interface pública (type hints + docstring são
+- [x] Remover comentários que só repetem a linha seguinte (rubrica acima) —
+      *rótulos `# Título`/`# Configurações`/`# Botões`, narrações óbvias e os 4
+      divisores decorativos (mantido o texto útil dentro, ex. `#07`)*
+- [x] **Na dúvida, manter** — preferir falso-negativo a apagar um "porquê" útil
+- [x] Não tocar em docstrings de interface pública (type hints + docstring são
       contrato, não comentário óbvio)
 
 **Verificação:** `pytest -q` + `ruff check src/` (comentários não mudam
