@@ -255,3 +255,74 @@ def test_aviso_tensao_nao_emitido_quando_veiculo_zero():
         {"vehicle_voltage": 0, "internal_battery_voltage": 4.1},
     ]
     assert VehicleService._warn_if_voltages_swapped("SYO4E10", records) is False
+
+
+# ----- Forward-fill do motorista (Fase 02, Motorista RFID) -----
+
+
+def _pos(t):
+    """Mensagem GPS mínima no timestamp t."""
+    return {"y": -22.8, "x": -43.5, "s": 0}
+
+
+def test_forward_fill_motorista_preenche_linhas_sem_tag():
+    """Sequência [tap A, sem tag, sem tag, tap B] → [A, A, A, B]."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {"111": "MOTORISTA A", "222": "MOTORISTA B"}
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": _pos(1), "p": {"rfid_tag": "111"}},
+        {"t": 2, "pos": _pos(2), "p": {}},
+        {"t": 3, "pos": _pos(3), "p": {}},
+        {"t": 4, "pos": _pos(4), "p": {"rfid_tag": "222"}},
+    ]])
+
+    svc = VehicleService(client=mock_client)
+    records, _ = svc.process_vehicle_history(
+        vehicle={"id": 1, "nm": "V1"}, month=5, year=2026
+    )
+    motoristas = [r["driver"] for r in records]
+    assert motoristas == ["MOTORISTA A", "MOTORISTA A", "MOTORISTA A", "MOTORISTA B"]
+
+
+def test_forward_fill_motorista_none_ate_primeiro_tap():
+    """Antes do primeiro tap, motorista é None (vira N/D no export)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {"111": "MOTORISTA A"}
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": _pos(1), "p": {}},
+        {"t": 2, "pos": _pos(2), "p": {"rfid_tag": "111"}},
+        {"t": 3, "pos": _pos(3), "p": {}},
+    ]])
+
+    svc = VehicleService(client=mock_client)
+    records, _ = svc.process_vehicle_history(
+        vehicle={"id": 1, "nm": "V1"}, month=5, year=2026
+    )
+    assert [r["driver"] for r in records] == [None, "MOTORISTA A", "MOTORISTA A"]
+
+
+def test_forward_fill_motorista_reinicia_por_veiculo():
+    """Motorista de um veículo não vaza para outro (last_driver é local ao loop)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {"111": "MOTORISTA A"}
+    # Veículo 1 tem tap; veículo 2 nunca lê cartão.
+    mock_client.get_history.side_effect = [
+        iter([[{"t": 1, "pos": _pos(1), "p": {"rfid_tag": "111"}}]]),
+        iter([[{"t": 2, "pos": _pos(2), "p": {}}]]),
+    ]
+
+    svc = VehicleService(client=mock_client)
+    rec1, _ = svc.process_vehicle_history({"id": 1, "nm": "V1"}, month=5, year=2026)
+    rec2, _ = svc.process_vehicle_history({"id": 2, "nm": "V2"}, month=5, year=2026)
+
+    assert rec1[0]["driver"] == "MOTORISTA A"
+    assert rec2[0]["driver"] is None  # não herdou o motorista do veículo 1

@@ -110,6 +110,10 @@ class VehicleService:
         # Formato: {vehicle_id: {param_base: {"name": str, "formula": str}}}
         self._sensor_cache: Dict[int, Dict[str, Dict[str, Any]]] = {}
 
+        # Cache do mapa {código RFID: nome} — carregado uma vez por export e
+        # reusado por todos os veículos. None = ainda não carregado.
+        self._drivers_cache: Optional[Dict[str, str]] = None
+
         logger.info("VehicleService inicializado")
 
     def get_month_timestamps(self, month: int, year: int) -> tuple[int, int]:
@@ -145,6 +149,23 @@ class VehicleService:
             self._sensor_cache[vehicle_id] = self.client.get_vehicle_sensors(vehicle_id)
         return self._sensor_cache[vehicle_id]
 
+    def get_drivers(self) -> Dict[str, str]:
+        """Obtém o mapa {código RFID: nome} de motoristas, com cache.
+
+        Degradação graciosa: se a busca falhar (ex.: token sem ACL de ver
+        motoristas), loga um aviso e devolve mapa vazio — o export NÃO pode
+        quebrar por causa do motorista (a coluna simplesmente vira N/D).
+        """
+        if self._drivers_cache is None:
+            try:
+                self._drivers_cache = self.client.list_drivers()
+            except WialonError as e:
+                logger.warning(
+                    f"Não foi possível carregar motoristas (coluna virará N/D): {e}"
+                )
+                self._drivers_cache = {}
+        return self._drivers_cache
+
     def process_vehicle_history(
         self,
         vehicle: Dict[str, Any],
@@ -171,12 +192,14 @@ class VehicleService:
 
         try:
             sensor_map = self.get_vehicle_sensors(vehicle_id)
+            driver_map = self.get_drivers()
             time_from, time_to = self.get_month_timestamps(month, year)
 
             # Processa histórico em páginas
             all_records = []
             last_pwr_ext: Optional[float] = None
             last_ignition: Optional[bool] = None
+            last_driver: Optional[str] = None
 
             page_size = settings.WIALON_PAGE_SIZE or 1000
             for page in self.client.get_history(
@@ -188,7 +211,7 @@ class VehicleService:
                         last_pwr_ext = params["pwr_ext"]
 
                     transformed = self.transformer.transform_message(
-                        message, vehicle_id, sensor_map
+                        message, vehicle_id, sensor_map, driver_map
                     )
                     if transformed is None:
                         continue
@@ -212,6 +235,16 @@ class VehicleService:
                         transformed["ignition"] = last_ignition
                     else:
                         last_ignition = ignition
+
+                    # Forward-fill do motorista: o `rfid_tag` só aparece na
+                    # mensagem em que o cartão é lido, mas o vínculo persiste até
+                    # trocar. Propaga o último motorista visto (mesmo padrão da
+                    # ignição). Reinicia por veículo (last_driver é local ao loop).
+                    driver = transformed.get("driver")
+                    if driver is None:
+                        transformed["driver"] = last_driver
+                    else:
+                        last_driver = driver
 
                     all_records.append(transformed)
 
