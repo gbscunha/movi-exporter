@@ -76,6 +76,12 @@ class WialonClient:
         | UNIT_FLAG_PROFILE_FIELDS
     )  # = 8392713
 
+    # Flags de busca de resource (avl_resource). O de motoristas combina base
+    # (geral) + Drivers, necessário para o campo `drvrs` vir preenchido.
+    RESOURCE_FLAG_BASE = 1
+    RESOURCE_FLAG_DRIVERS = 256
+    RESOURCE_DRIVERS_FLAGS = RESOURCE_FLAG_BASE | RESOURCE_FLAG_DRIVERS  # = 257
+
     def __init__(self, token: Optional[str] = None):
         """
         Inicializa o cliente Wialon.
@@ -90,6 +96,9 @@ class WialonClient:
         self.username: str = ""
         self.base_url: str = self.BASE_URL
         self._session = requests.Session()
+        # Cache do mapa {código RFID: nome}. A lista de motoristas muda pouco e
+        # é reusada por todos os veículos no mesmo export.
+        self._drivers_cache: Optional[Dict[str, str]] = None
 
         if not self.token:
             raise WialonError("Token Wialon não configurado")
@@ -284,6 +293,57 @@ class WialonClient:
         logger.success(f"{len(items)} veículos encontrados")
 
         return items
+
+    def list_drivers(self) -> Dict[str, str]:
+        """Mapa {código RFID: nome} de todos os motoristas dos resources.
+
+        O código (`c`) casa com o param `rfid_tag` das mensagens. Usado para
+        resolver o nome do motorista de cada registro no export.
+
+        Requer que o token tenha ACL de ver motoristas no resource
+        (`ADF_ACL_AVL_RES_VIEW_DRIVERS`); sem ela, `drvrs` vem vazio e o mapa
+        resulta vazio (a coluna Motorista vira N/D no export).
+
+        Resultado é cacheado na instância — a lista muda pouco e é reusada por
+        todos os veículos no mesmo export.
+        """
+        if self._drivers_cache is not None:
+            return self._drivers_cache
+
+        logger.info("Buscando lista de motoristas (resources)...")
+
+        params = {
+            "spec": {
+                "itemsType": "avl_resource",
+                "propName": "sys_name",
+                "propValueMask": "*",
+                "sortType": "sys_name",
+            },
+            "force": 1,
+            "flags": self.RESOURCE_DRIVERS_FLAGS,
+            "from": 0,
+            "to": 0,  # 0 = todos os resources
+        }
+
+        data = self._request("core/search_items", params)
+        items = data.get("items", []) or []
+
+        drivers: Dict[str, str] = {}
+        for resource in items:
+            # `drvrs` normalmente é um dict {id: {c, n, ...}}; alguns retornos
+            # trazem lista. Tratamos ambos para não depender da forma.
+            drvrs = resource.get("drvrs") or {}
+            driver_entries = drvrs.values() if isinstance(drvrs, dict) else drvrs
+            for driver in driver_entries:
+                code = str(driver.get("c", "") or "").strip()
+                name = driver.get("n")
+                if code and name:
+                    drivers[code] = name
+
+        logger.debug(f"{len(drivers)} motoristas mapeados")
+
+        self._drivers_cache = drivers
+        return drivers
 
     def get_vehicle_sensors(self, vehicle_id: int) -> Dict[str, Dict[str, Any]]:
         """

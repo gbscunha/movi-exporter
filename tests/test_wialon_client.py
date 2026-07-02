@@ -148,3 +148,88 @@ def test_normalize_sensor_combustivel():
 def test_normalize_sensor_nome_desconhecido_vira_snake_case():
     """Nomes sem correspondência ficam como snake_case do nome original."""
     assert _client()._normalize_sensor_name("Acionamento de Prancha") == "acionamento_de_prancha"
+
+
+# ----- list_drivers — mapa código RFID → nome (Fase 01, Motorista RFID) -----
+
+
+def test_list_drivers_monta_mapa_codigo_para_nome():
+    """Payload com 2 resources e N motoristas → mapa {código: nome} completo."""
+    payload = {
+        "items": [
+            {
+                "nm": "Resource A",
+                "drvrs": {
+                    "1": {"id": 1, "c": "9310401", "n": "ALDO LOPES"},
+                    "2": {"id": 2, "c": "9310402", "n": "MARIA SOUZA"},
+                },
+            },
+            {
+                "nm": "Resource B",
+                "drvrs": {"5": {"id": 5, "c": "7001", "n": "JOÃO LIMA"}},
+            },
+        ]
+    }
+    client = _client()
+    with patch.object(client, "_request", return_value=payload):
+        drivers = client.list_drivers()
+
+    assert drivers == {
+        "9310401": "ALDO LOPES",
+        "9310402": "MARIA SOUZA",
+        "7001": "JOÃO LIMA",
+    }
+
+
+def test_list_drivers_ignora_codigo_vazio():
+    """Motorista sem código (`c` vazio/ausente) não entra no mapa."""
+    payload = {
+        "items": [
+            {
+                "drvrs": {
+                    "1": {"c": "", "n": "SEM CARTÃO"},
+                    "2": {"n": "SEM CODIGO"},
+                    "3": {"c": "555", "n": "COM CARTÃO"},
+                }
+            }
+        ]
+    }
+    client = _client()
+    with patch.object(client, "_request", return_value=payload):
+        drivers = client.list_drivers()
+
+    assert drivers == {"555": "COM CARTÃO"}
+
+
+def test_list_drivers_resource_sem_drivers_retorna_vazio():
+    """Resource sem `drvrs` (ACL ausente ou sem motoristas) não quebra."""
+    payload = {"items": [{"nm": "Resource sem motoristas"}]}
+    client = _client()
+    with patch.object(client, "_request", return_value=payload):
+        drivers = client.list_drivers()
+
+    assert drivers == {}
+
+
+def test_list_drivers_aceita_drvrs_como_lista():
+    """Alguns retornos trazem `drvrs` como lista em vez de dict."""
+    payload = {
+        "items": [{"drvrs": [{"c": "111", "n": "A"}, {"c": "222", "n": "B"}]}]
+    }
+    client = _client()
+    with patch.object(client, "_request", return_value=payload):
+        drivers = client.list_drivers()
+
+    assert drivers == {"111": "A", "222": "B"}
+
+
+def test_list_drivers_usa_cache_na_segunda_chamada():
+    """Segunda chamada usa cache — não repete o request."""
+    payload = {"items": [{"drvrs": {"1": {"c": "9", "n": "X"}}}]}
+    client = _client()
+    with patch.object(client, "_request", return_value=payload) as mock_req:
+        first = client.list_drivers()
+        second = client.list_drivers()
+
+    assert first == second == {"9": "X"}
+    assert mock_req.call_count == 1
