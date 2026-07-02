@@ -55,6 +55,11 @@ class WialonTransformer:
         "engine_hours",
     ]
 
+    # Params que carregam o código do cartão RFID do motorista, em ordem de
+    # preferência. Hoje só `rfid_tag`; a lista facilita generalizar depois sem
+    # mexer na lógica (ver D5 do PLANO_MOTORISTA_RFID.md).
+    DRIVER_PARAM_KEYS = ["rfid_tag"]
+
     def __init__(
         self,
         client: TrackingClient,
@@ -76,6 +81,7 @@ class WialonTransformer:
         message: Dict[str, Any],
         vehicle_id: int,
         sensor_map: Dict[str, Dict[str, Any]],
+        driver_map: Optional[Dict[str, str]] = None,
     ) -> Optional[Dict[str, Any]]:
         """Transforma mensagem bruta da Wialon para formato intermediário.
 
@@ -90,6 +96,9 @@ class WialonTransformer:
             vehicle_id: ID do veículo
             sensor_map: Mapa de sensores do veículo
                         Formato: {param_base: {"name": str, "formula": str}}
+            driver_map: Mapa {código RFID: nome} para resolver o motorista da
+                        mensagem (de `WialonClient.list_drivers`). Default vazio
+                        (motorista fica None) para não quebrar chamadas antigas.
 
         Returns:
             Dicionário com dados transformados, ou `None` se a mensagem
@@ -138,12 +147,42 @@ class WialonTransformer:
             "vehicle_voltage": sensor_values.get("vehicle_voltage"),
             "internal_battery_voltage": sensor_values.get("internal_battery_voltage"),
             "engine_hours": sensor_values.get("engine_hours"),
-            "driver": message.get("drv"),  # Motorista vinculado
+            "driver": self._resolve_driver(params, driver_map),
             "address": None,  # Requer geocodificação reversa (não implementado)
             "raw_data": message,  # Preserva dados originais
         }
 
         return transformed
+
+    def _resolve_driver(
+        self,
+        params: Dict[str, Any],
+        driver_map: Optional[Dict[str, str]],
+    ) -> Optional[str]:
+        """Resolve o nome do motorista a partir do código RFID da mensagem.
+
+        Lê o código das chaves candidatas (`DRIVER_PARAM_KEYS`) e casa com o
+        mapa {código: nome}. Retorna `None` (não `"N/D"`) quando não há cartão
+        ou o código é desconhecido — o `N/D` é responsabilidade da camada de
+        export, como nos demais sensores.
+        """
+        if not driver_map:
+            return None
+
+        for key in self.DRIVER_PARAM_KEYS:
+            raw = params.get(key)
+            # `0`/""/None = sem cartão lido nesta mensagem.
+            if raw in (None, "", 0, "0"):
+                continue
+            code = str(raw).strip()
+            # Ponto único de ajuste se a Fase 00 mostrar que o `rfid_tag` chega
+            # em formato diferente do "Código" (ex.: hex/decimal): normalizar
+            # `code` aqui antes do lookup.
+            name = driver_map.get(code)
+            if name:
+                return name
+
+        return None
 
     def _resolve_sensors_from_map(
         self,
