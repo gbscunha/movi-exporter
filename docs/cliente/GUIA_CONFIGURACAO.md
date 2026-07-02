@@ -52,6 +52,12 @@ GOOGLE_DRIVE_FOLDER_ID=
 8. **Copie o token** que aparece
 9. Cole no arquivo `.env` no lugar de `SEU_TOKEN_AQUI`
 
+> **Coluna "Motorista" no export (cartão RFID):** para o nome do motorista sair
+> preenchido, o token precisa ter permissão de **ver motoristas** (ao criar o
+> token, marque o acesso aos recursos/motoristas) e cada cartão RFID precisa
+> estar com o campo **"Código" preenchido** na aba **Motoristas** do Wialon.
+> Sem isso, a coluna sai como `N/D` — o restante do export funciona normalmente.
+
 ---
 
 ## ☁️ Passo 3: Google Drive (Opcional)

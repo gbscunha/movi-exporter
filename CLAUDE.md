@@ -47,6 +47,7 @@ Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nu
 - `flagsMask=0` em `messages/load_interval` para capturar todos os tipos (incluindo data-only com `pwr_ext`)
 - Odômetro vem em **metros** — sempre converter para km (÷ 1000)
 - `pwr_ext` = tensão do veículo (~12-28V); `voltage` = bateria interna do tracker (~4V) — são coisas diferentes
+- **Motorista:** `params["rfid_tag"]` = código do cartão RFID → casar com `c` (Código) do motorista no resource (`drvrs`). A lista vem de `core/search_items` em `avl_resource` com flag `256` (Drivers). O nome usa **forward-fill por veículo** (o vínculo persiste entre mensagens). Requer ACL de ver motoristas no token; sem ela, coluna vira `N/D`
 
 **Token:** `docs/wialon/TOKEN_AUTORIZACAO.md` — gerado via formulário web, NÃO via API.
 

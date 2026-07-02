@@ -48,8 +48,13 @@ O **Movi Exporter App** é uma ferramenta de linha de comando (CLI) desenvolvida
 | RPM do Motor | Sensores/Parâmetros | ✅ |
 | Voltagem da Bateria | Sensores/Parâmetros | ✅ |
 | Horas do Motor | Sensores/Parâmetros | ✅ |
-| Motorista | Mensagens | ✅ |
+| Motorista | Cartão RFID + Motoristas | ✅ |
 | Localização (Endereço) | Geocodificação | ⏳ Pendente |
+
+> **Coluna Motorista:** o nome vem do cartão RFID lido pelo veículo, casado com
+> a lista de **Motoristas** do Wialon (campo "Código" de cada cartão). Requisitos:
+> o token precisa ter permissão de **ver motoristas** e cada cartão precisa estar
+> com o **Código preenchido**. Linhas sem cartão lido saem como `N/D`.
 
 ---
 
@@ -264,7 +269,7 @@ Obtidos via `export`:
 | `rpm` | Rotação do motor | int | Sensor ou `can_rpm` |
 | `battery_voltage` | Voltagem da bateria (V) | float | Sensor ou `pwr_ext` |
 | `engine_hours` | Horas do motor | float | Sensor |
-| `driver` | Motorista vinculado | string | `message.drv` |
+| `driver` | Motorista (nome do cartão RFID) | string | `rfid_tag` + lista de motoristas |
 | `odometer` | Hodômetro | float | N/A (não disponível) |
 | `address` | Endereço | string | N/A (requer geocodificação) |
 
