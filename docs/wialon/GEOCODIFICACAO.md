@@ -1,155 +1,87 @@
-# Geocodificação Wialon — Status e Implementação
+# Geocodificação Wialon — endereço a partir de lat/lon
 
-**Última atualização:** 2026-05-22
+**Última atualização:** 2026-07-03 · **Status: ✅ implementado e funcionando**
 
----
-
-## Status atual
-
-A coluna **Localização** nos arquivos exportados está **vazia** porque o serviço `gis_geocode` não está habilitado para a conta (`error=7 = Access denied`).
-
-**Isso é uma questão de licença/billing**, não técnica. O código está pronto.
+A coluna **Localização** é preenchida com o endereço completo (rua, número,
+bairro, cidade, UF, CEP, país) quando o export é feito com a opção **"Incluir
+endereço"** ligada (opt-in). Sem ela, a coluna sai como `N/D`.
 
 ---
 
-## O que foi descoberto (2026-05-22)
+## ⚠️ Correção histórica (o que estava errado)
 
-A resposta do `token/login` já retorna tudo que precisamos:
+Por muito tempo achamos que o serviço estava **bloqueado por billing** (a chamada
+retornava `error=7 = Access denied`). **Isso estava errado.** O serviço sempre
+esteve disponível — a chamada é que estava malformada. Eram **3 erros combinados**:
+
+| # | Errado (antigo) | Certo |
+|---|-----------------|-------|
+| 1 | URL `{gis_geocode}/gis_geocode` | `{gis_geocode}/{host_api}/gis_geocode` (host da API no path) |
+| 2 | Autenticava com `gis_sid` | Usa **`uid`** (id do usuário, do login) + sessão |
+| 3 | Enviava `search_provider=osm` | **Não envia provider** (a conta tem o seu padrão) |
+
+O `error=7` era o `search_provider` explícito sendo recusado. Prova: sem provider
+e com `uid`, a resposta vem com endereços reais.
+
+---
+
+## Receita correta (verificada com token real)
+
+```
+POST  {gis_geocode}/{host_api}/gis_geocode
+        ex: https://geocode-maps.wialon.us/hst-api.wialon.us/gis_geocode
+
+Corpo (form-encoded):
+    coords = [{"lon": -43.359657, "lat": -22.818147}, ...]   (JSON)
+    flags  = 1255211008                                       (endereço completo)
+    uid    = 401955931                                        (login["user"]["id"])
+
+NÃO enviar: gis_sid, search_provider
+```
+
+**De onde vem cada parte (tudo do `token/login`):**
+- `{gis_geocode}` → campo `gis_geocode` da resposta de login (URL dinâmica, varia por região — **nunca** hardcodar)
+- `{host_api}` → host do `base_url` (ex.: `hst-api.wialon.us`) — vai **dentro do path**
+- `uid` → `login["user"]["id"]`
+
+**Resposta:** array de strings na mesma ordem das coords; string vazia = ponto
+sem endereço (ex.: meio do oceano) → tratamos como `None` → vira `N/D`.
 
 ```json
-{
-  "eid": "...",
-  "gis_sid": "4d126fa8af81514a",
-  "gis_geocode": "https://geocode-maps.wialon.us",
-  "gis_search": "https://search-maps.wialon.us",
-  "gis_render": "https://render-maps.wialon.us",
-  "gis_routing": "https://routing-maps.wialon.us"
-}
-```
-
-**Importante:**
-- `gis_sid` é diferente do `sid` principal — usar o `gis_sid` nas chamadas GIS
-- A URL `gis_geocode` varia por conta/região — sempre usar a URL dinâmica do login, nunca hardcoded
-- O código atual tinha ambos os bugs: usava `sid` errado e URL hardcoded
-
----
-
-## Como habilitar
-
-Solicitar ao **administrador da conta Wialon** (quem gerencia o contrato/licença):
-
-> *"Precisamos habilitar o serviço de geocodificação (`gis_geocode`) para a conta. É necessário ativar no plano."*
-
-Não é possível habilitar via API nem pelo painel de usuário comum — é configuração de conta/billing do lado Wialon.
-
----
-
-## Endpoint (quando habilitado)
-
-```
-GET https://geocode-maps.wialon.us/gis_geocode
-    ?coords=[{"lon":-43.29,"lat":-22.87},{"lon":-46.63,"lat":-23.55}]
-    &flags=1255211008
-    &gis_sid=<GIS_SESSION_ID_DO_LOGIN>
-    &search_provider=osm
-    &lang=pt
-```
-
-**Parâmetros:**
-
-| Parâmetro | Obrigatório | Descrição |
-|-----------|-------------|-----------|
-| `coords` | Sim | Array JSON de coordenadas `[{"lon": float, "lat": float}]` |
-| `flags` | Sim | Formato do endereço — usar `1255211008` (rua, casa, cidade, região, país) |
-| `gis_sid` | Sim | **Session ID GIS** do login (campo `gis_sid`, não `eid`) |
-| `search_provider` | Sim | Provedor: `osm`, `google`, `sygic`, `yandex`, `here`, `trimble` |
-| `lang` | Não | Idioma — usar `pt` |
-
-**Resposta (array na mesma ordem das coordenadas):**
-```json
-["Rua Exemplo, 100, Niterói, RJ, Brasil", "Av. Paulista, 1000, São Paulo, SP, Brasil"]
+["Rua Volta Redonda 204, Pavuna, Rio De Janeiro, RJ 21530-200, Brazil", ""]
 ```
 
 ---
 
-## Código pronto para implementar
+## GET × POST (limite de tamanho)
 
-### 1. Salvar `gis_sid` e `gis_geocode` no `WialonClient`
+- **GET** coloca `coords` na URL → estoura em **~150 pontos** (HTTP 414 Request-URI
+  Too Large).
+- **POST** (params no corpo) aceita **milhares** numa tacada. **Usamos POST.**
+- Lote de `GEOCODE_BATCH_SIZE = 1000` coords por requisição (folgado e rápido).
 
-```python
-# Em authenticate() — wialon_client.py
-self.gis_sid = data.get("gis_sid")
-self.gis_geocode_url = data.get("gis_geocode")
-```
+---
 
-### 2. Método de geocodificação em batch
+## Como está implementado
 
-```python
-def get_addresses_batch(
-    self, coordinates: List[Dict[str, float]], provider: str = "osm"
-) -> List[Optional[str]]:
-    if not coordinates or not self.gis_sid or not self.gis_geocode_url:
-        return [None] * len(coordinates)
+**`WialonClient`** (`src/clients/wialon_client.py`)
+- No `authenticate()`: captura `self.uid` (de `login["user"]["id"]`) e monta
+  `self.gis_geocode_url = {gis_geocode}/{host_api}/gis_geocode`.
+- `get_addresses_batch(coords) -> List[Optional[str]]`: POST em lotes; degrada com
+  elegância (sem `uid`/URL, ou erro de rede/API → `None` nas posições afetadas).
 
-    coords = [{"lon": c["lon"], "lat": c["lat"]} for c in coordinates]
+**`VehicleService`** (`src/services/vehicle_service.py`)
+- `_fill_addresses(records)` (opt-in via `include_addresses`): deduplica as
+  coordenadas arredondando a `ADDRESS_COORD_PRECISION = 4` casas (~11 m), consulta
+  só as novas e mantém um **cache compartilhado no export** (`_address_cache`). A
+  frota repete muito depósito/rota, então o cache poupa a maior parte das chamadas.
+- Exemplo real: 5.749 registros → 1.019 coords únicas (~82% de economia), ~8 s.
 
-    try:
-        response = self._session.get(
-            f"{self.gis_geocode_url}/gis_geocode",
-            params={
-                "coords": json.dumps(coords),
-                "flags": 1255211008,
-                "gis_sid": self.gis_sid,
-                "search_provider": provider,
-                "lang": "pt",
-            },
-            timeout=60,
-        )
-        response.raise_for_status()
-        data = response.json()
-
-        if isinstance(data, dict) and "error" in data:
-            logger.warning(f"Geocodificação indisponível: error={data['error']}")
-            return [None] * len(coordinates)
-
-        return [addr if addr else None for addr in data]
-
-    except requests.RequestException as e:
-        logger.warning(f"Erro na geocodificação: {e}")
-        return [None] * len(coordinates)
-```
-
-### 3. Integração no `VehicleService`
-
-Após coletar todos os registros de um veículo, agrupar coordenadas únicas e buscar endereços em batch (1 requisição por ~100m de precisão):
-
-```python
-# Agrupa coordenadas únicas por ~100m
-unique_coords = {}
-for record in all_records:
-    lat, lon = record.get("latitude"), record.get("longitude")
-    if lat and lon:
-        key = (round(lat, 3), round(lon, 3))
-        if key not in unique_coords:
-            unique_coords[key] = {"lat": lat, "lon": lon}
-
-# Busca endereços em batch
-coords_list = list(unique_coords.values())
-addresses = self.client.get_addresses_batch(coords_list)
-
-# Aplica ao mapa
-address_map = {
-    (round(c["lat"], 3), round(c["lon"], 3)): addr
-    for c, addr in zip(coords_list, addresses)
-}
-
-# Preenche nos registros
-for record in all_records:
-    lat, lon = record.get("latitude"), record.get("longitude")
-    if lat and lon:
-        key = (round(lat, 3), round(lon, 3))
-        record["address"] = address_map.get(key)
-```
+**Export**
+- Coluna já existente ("Localização"); `address` está em `OPTIONAL_SENSOR_COLS`, então
+  `None` vira `N/D` automaticamente.
+- Ativação: checkbox **"Incluir endereço (mais lento)"** na GUI, ou `--addresses`/`-A`
+  no CLI.
 
 ---
 
@@ -157,16 +89,12 @@ for record in all_records:
 
 | Flag | Formato |
 |------|---------|
-| `1255211008` | Rua, casa, cidade, região, país (completo) |
-| `1241513984` | Rua e casa |
+| `1255211008` | Rua, número, cidade, região, país (completo) — **usado** |
+| `1073741824` | Rua apenas |
 
 ---
 
-## Provedores disponíveis
+## Referências
 
-- `osm` — OpenStreetMap (gratuito, boa cobertura Brasil)
-- `google` — Google Maps
-- `sygic` — Sygic
-- `yandex` — Yandex
-- `here` — HERE Maps
-- `trimble` — Trimble
+- Exemplo oficial do SDK: https://sdk.wialon.com/wiki/en/sidebar/remoteapi/codesamples/address_coords
+- Sonda de diagnóstico: `scripts/probe_geocode.py` (revalida a receita com token real)

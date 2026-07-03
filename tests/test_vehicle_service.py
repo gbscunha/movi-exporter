@@ -255,3 +255,178 @@ def test_aviso_tensao_nao_emitido_quando_veiculo_zero():
         {"vehicle_voltage": 0, "internal_battery_voltage": 4.1},
     ]
     assert VehicleService._warn_if_voltages_swapped("SYO4E10", records) is False
+
+
+# ----- Forward-fill do motorista (Fase 02, Motorista RFID) -----
+
+
+def _pos(t):
+    """Mensagem GPS mínima no timestamp t."""
+    return {"y": -22.8, "x": -43.5, "s": 0}
+
+
+def test_forward_fill_motorista_preenche_linhas_sem_tag():
+    """Sequência [tap A, sem tag, sem tag, tap B] → [A, A, A, B]."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {"111": "MOTORISTA A", "222": "MOTORISTA B"}
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": _pos(1), "p": {"rfid_tag": "111"}},
+        {"t": 2, "pos": _pos(2), "p": {}},
+        {"t": 3, "pos": _pos(3), "p": {}},
+        {"t": 4, "pos": _pos(4), "p": {"rfid_tag": "222"}},
+    ]])
+
+    svc = VehicleService(client=mock_client)
+    records, _ = svc.process_vehicle_history(
+        vehicle={"id": 1, "nm": "V1"}, month=5, year=2026
+    )
+    motoristas = [r["driver"] for r in records]
+    assert motoristas == ["MOTORISTA A", "MOTORISTA A", "MOTORISTA A", "MOTORISTA B"]
+
+
+def test_forward_fill_motorista_none_ate_primeiro_tap():
+    """Antes do primeiro tap, motorista é None (vira N/D no export)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {"111": "MOTORISTA A"}
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": _pos(1), "p": {}},
+        {"t": 2, "pos": _pos(2), "p": {"rfid_tag": "111"}},
+        {"t": 3, "pos": _pos(3), "p": {}},
+    ]])
+
+    svc = VehicleService(client=mock_client)
+    records, _ = svc.process_vehicle_history(
+        vehicle={"id": 1, "nm": "V1"}, month=5, year=2026
+    )
+    assert [r["driver"] for r in records] == [None, "MOTORISTA A", "MOTORISTA A"]
+
+
+def test_forward_fill_motorista_reinicia_por_veiculo():
+    """Motorista de um veículo não vaza para outro (last_driver é local ao loop)."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {"111": "MOTORISTA A"}
+    # Veículo 1 tem tap; veículo 2 nunca lê cartão.
+    mock_client.get_history.side_effect = [
+        iter([[{"t": 1, "pos": _pos(1), "p": {"rfid_tag": "111"}}]]),
+        iter([[{"t": 2, "pos": _pos(2), "p": {}}]]),
+    ]
+
+    svc = VehicleService(client=mock_client)
+    rec1, _ = svc.process_vehicle_history({"id": 1, "nm": "V1"}, month=5, year=2026)
+    rec2, _ = svc.process_vehicle_history({"id": 2, "nm": "V2"}, month=5, year=2026)
+
+    assert rec1[0]["driver"] == "MOTORISTA A"
+    assert rec2[0]["driver"] is None  # não herdou o motorista do veículo 1
+
+
+# ----- Geocodificação: preenchimento de endereço (Feature Endereço) -----
+
+
+def _svc_geocode(mock_client, addresses):
+    """VehicleService com geocode ligado; client devolve `addresses` no batch."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {}
+    mock_client.get_addresses_batch.return_value = addresses
+    svc = VehicleService(client=mock_client)
+    svc._include_addresses = True
+    return svc
+
+
+def test_geocode_desligado_nao_chama_api():
+    """include_addresses off (default) → address fica None e API não é chamada."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {}
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": {"y": -22.8, "x": -43.5, "s": 0}, "p": {}},
+    ]])
+    svc = VehicleService(client=mock_client)  # _include_addresses = False
+    records, _ = svc.process_vehicle_history({"id": 1, "nm": "V1"}, month=5, year=2026)
+    assert records[0]["address"] is None
+    mock_client.get_addresses_batch.assert_not_called()
+
+
+def test_geocode_preenche_endereco():
+    """Com geocode ligado, address é preenchido a partir do batch."""
+    mock_client = MagicMock()
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": {"y": -22.818147, "x": -43.359657, "s": 0}, "p": {}},
+    ]])
+    svc = _svc_geocode(mock_client, ["Rua Volta Redonda 204, RJ"])
+    records, _ = svc.process_vehicle_history({"id": 1, "nm": "V1"}, month=5, year=2026)
+    assert records[0]["address"] == "Rua Volta Redonda 204, RJ"
+
+
+def test_geocode_deduplica_coordenadas_repetidas():
+    """Coords iguais (após arredondar) geram UMA coordenada no batch."""
+    mock_client = MagicMock()
+    # 3 mensagens: duas no mesmo ponto, uma diferente.
+    mock_client.get_history.return_value = iter([[
+        {"t": 1, "pos": {"y": -22.818147, "x": -43.359657, "s": 0}, "p": {}},
+        {"t": 2, "pos": {"y": -22.8181471, "x": -43.3596572, "s": 0}, "p": {}},  # ~mesmo
+        {"t": 3, "pos": {"y": -23.561414, "x": -46.655881, "s": 0}, "p": {}},
+    ]])
+    svc = _svc_geocode(mock_client, ["Rua A", "Av B"])
+    records, _ = svc.process_vehicle_history({"id": 1, "nm": "V1"}, month=5, year=2026)
+
+    # batch chamado uma vez, com 2 coords únicas (não 3)
+    assert mock_client.get_addresses_batch.call_count == 1
+    coords_enviadas = mock_client.get_addresses_batch.call_args.args[0]
+    assert len(coords_enviadas) == 2
+    # as duas primeiras mensagens compartilham o mesmo endereço
+    assert records[0]["address"] == records[1]["address"] == "Rua A"
+    assert records[2]["address"] == "Av B"
+
+
+def test_geocode_cache_entre_veiculos():
+    """Coordenada já vista em outro veículo não é geocodificada de novo."""
+    mock_client = MagicMock()
+    mock_client.get_history.side_effect = [
+        iter([[{"t": 1, "pos": {"y": -22.818147, "x": -43.359657, "s": 0}, "p": {}}]]),
+        iter([[{"t": 2, "pos": {"y": -22.818147, "x": -43.359657, "s": 0}, "p": {}}]]),
+    ]
+    svc = _svc_geocode(mock_client, ["Rua A"])
+    rec1, _ = svc.process_vehicle_history({"id": 1, "nm": "V1"}, month=5, year=2026)
+    rec2, _ = svc.process_vehicle_history({"id": 2, "nm": "V2"}, month=5, year=2026)
+
+    # segundo veículo reaproveita o cache — batch chamado só uma vez no total
+    assert mock_client.get_addresses_batch.call_count == 1
+    assert rec1[0]["address"] == rec2[0]["address"] == "Rua A"
+
+
+def test_geocode_endereco_none_vira_nd_no_export(tmp_path):
+    """Ponto sem endereço (batch devolve None) → coluna N/D no arquivo."""
+    import glob
+    import pandas as pd
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.get_vehicle_sensors.return_value = {}
+    mock_client.list_drivers.return_value = {}
+    mock_client.list_vehicles.return_value = [{"id": 1, "nm": "V1", "_plate": "AAA1111"}]
+    mock_client.get_history.side_effect = lambda *a, **k: iter([[
+        {"t": 1, "pos": {"y": 0.0, "x": 0.0, "s": 0}, "p": {}},
+    ]])
+    mock_client.get_addresses_batch.return_value = [None]
+
+    svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
+    result = svc.export_monthly_data(
+        month=5, year=2026, export_format="csv", consolidated=False,
+        include_addresses=True,
+    )
+    ind = [f for f in result.exported_files if "Consolidado" not in f]
+    df = pd.read_csv(ind[0])
+    assert df["Localização"][0] == "N/D"

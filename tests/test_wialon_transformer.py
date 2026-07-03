@@ -196,3 +196,69 @@ def test_ignicao_mode_tem_prioridade_sobre_evento():
     }
     record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
     assert record["ignition"] is True
+
+
+# ----- Motorista (RFID) — resolução por rfid_tag (Fase 02) -----
+
+
+def _msg_com_params(params: dict) -> dict:
+    """Mensagem GPS mínima com os params dados."""
+    return {"t": 1700000000, "pos": {"y": -22.87, "x": -43.29, "s": 0}, "p": params}
+
+
+def test_resolve_motorista_por_rfid_tag():
+    """rfid_tag presente no mapa → nome do motorista."""
+    transformer = _make_transformer()
+    msg = _msg_com_params({"rfid_tag": "9310401"})
+    record = transformer.transform_message(
+        msg, vehicle_id=1, sensor_map={}, driver_map={"9310401": "ALDO LOPES"}
+    )
+    assert record["driver"] == "ALDO LOPES"
+
+
+def test_resolve_motorista_rfid_tag_numerico():
+    """rfid_tag pode vir como int — deve casar com a chave string do mapa."""
+    transformer = _make_transformer()
+    msg = _msg_com_params({"rfid_tag": 9310401})
+    record = transformer.transform_message(
+        msg, vehicle_id=1, sensor_map={}, driver_map={"9310401": "ALDO LOPES"}
+    )
+    assert record["driver"] == "ALDO LOPES"
+
+
+def test_motorista_codigo_desconhecido_retorna_none():
+    """Código fora do mapa → None (export vira N/D)."""
+    transformer = _make_transformer()
+    msg = _msg_com_params({"rfid_tag": "0000"})
+    record = transformer.transform_message(
+        msg, vehicle_id=1, sensor_map={}, driver_map={"9310401": "ALDO LOPES"}
+    )
+    assert record["driver"] is None
+
+
+def test_motorista_sem_rfid_tag_retorna_none():
+    """Mensagem sem o param rfid_tag → None."""
+    transformer = _make_transformer()
+    msg = _msg_com_params({})
+    record = transformer.transform_message(
+        msg, vehicle_id=1, sensor_map={}, driver_map={"9310401": "ALDO LOPES"}
+    )
+    assert record["driver"] is None
+
+
+def test_motorista_rfid_tag_zero_e_sem_cartao():
+    """rfid_tag=0 significa 'sem cartão lido' → None."""
+    transformer = _make_transformer()
+    msg = _msg_com_params({"rfid_tag": 0})
+    record = transformer.transform_message(
+        msg, vehicle_id=1, sensor_map={}, driver_map={"9310401": "ALDO LOPES"}
+    )
+    assert record["driver"] is None
+
+
+def test_mapa_de_motoristas_vazio_nao_quebra():
+    """driver_map vazio (default) → None, sem erro."""
+    transformer = _make_transformer()
+    msg = _msg_com_params({"rfid_tag": "9310401"})
+    record = transformer.transform_message(msg, vehicle_id=1, sensor_map={})
+    assert record["driver"] is None

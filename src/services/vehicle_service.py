@@ -35,6 +35,11 @@ from src.services.wialon_transformer import WialonTransformer
 VOLTAGE_SWAP_HIGH_V = 10
 VOLTAGE_SWAP_LOW_V = 6
 
+# Casas decimais para agrupar coordenadas na geocodificação. 4 casas ≈ 11 m
+# (nível rua) — deduplica pontos praticamente idênticos sem perder o número da
+# casa, reduzindo drasticamente as chamadas ao gis_geocode.
+ADDRESS_COORD_PRECISION = 4
+
 
 @dataclass
 class VehicleStats:
@@ -110,6 +115,16 @@ class VehicleService:
         # Formato: {vehicle_id: {param_base: {"name": str, "formula": str}}}
         self._sensor_cache: Dict[int, Dict[str, Dict[str, Any]]] = {}
 
+        # Cache do mapa {código RFID: nome} — carregado uma vez por export e
+        # reusado por todos os veículos. None = ainda não carregado.
+        self._drivers_cache: Optional[Dict[str, str]] = None
+
+        # Geocodificação (opt-in). `_include_addresses` é ligado por export;
+        # `_address_cache` {(lat,lon): endereço} é compartilhado entre todos os
+        # veículos do export — a frota repete muito depósito/rota.
+        self._include_addresses: bool = False
+        self._address_cache: Dict[tuple, Optional[str]] = {}
+
         logger.info("VehicleService inicializado")
 
     def get_month_timestamps(self, month: int, year: int) -> tuple[int, int]:
@@ -145,6 +160,68 @@ class VehicleService:
             self._sensor_cache[vehicle_id] = self.client.get_vehicle_sensors(vehicle_id)
         return self._sensor_cache[vehicle_id]
 
+    def get_drivers(self) -> Dict[str, str]:
+        """Obtém o mapa {código RFID: nome} de motoristas, com cache.
+
+        Degradação graciosa: se a busca falhar (ex.: token sem ACL de ver
+        motoristas), loga um aviso e devolve mapa vazio — o export NÃO pode
+        quebrar por causa do motorista (a coluna simplesmente vira N/D).
+        """
+        if self._drivers_cache is None:
+            try:
+                self._drivers_cache = self.client.list_drivers()
+            except WialonError as e:
+                logger.warning(
+                    f"Não foi possível carregar motoristas (coluna virará N/D): {e}"
+                )
+                self._drivers_cache = {}
+        return self._drivers_cache
+
+    @staticmethod
+    def _coord_key(lat: Any, lon: Any) -> Optional[tuple]:
+        """Chave de agrupamento de coordenada (arredondada) ou None se inválida."""
+        if lat is None or lon is None:
+            return None
+        try:
+            return (
+                round(float(lat), ADDRESS_COORD_PRECISION),
+                round(float(lon), ADDRESS_COORD_PRECISION),
+            )
+        except (TypeError, ValueError):
+            return None
+
+    def _fill_addresses(self, records: List[Dict[str, Any]]) -> None:
+        """Preenche `address` nos registros via geocodificação em lote (opt-in).
+
+        Só age quando `_include_addresses` está ligado. Deduplica coordenadas
+        (arredondadas por `ADDRESS_COORD_PRECISION`) e consulta apenas as que
+        ainda não estão no cache compartilhado do export — a frota repete muito
+        depósito e rota, então o cache poupa a maior parte das chamadas.
+
+        Não levanta: em qualquer falha, `get_addresses_batch` já devolve None e
+        o endereço vira N/D no export.
+        """
+        if not self._include_addresses or not records:
+            return
+
+        # Coordenadas únicas ainda não geocodificadas neste export.
+        to_fetch: Dict[tuple, Dict[str, float]] = {}
+        for record in records:
+            key = self._coord_key(record.get("latitude"), record.get("longitude"))
+            if key is not None and key not in self._address_cache and key not in to_fetch:
+                to_fetch[key] = {"lat": record["latitude"], "lon": record["longitude"]}
+
+        if to_fetch:
+            keys = list(to_fetch.keys())
+            addresses = self.client.get_addresses_batch([to_fetch[k] for k in keys])
+            for key, address in zip(keys, addresses):
+                self._address_cache[key] = address
+
+        for record in records:
+            key = self._coord_key(record.get("latitude"), record.get("longitude"))
+            if key is not None:
+                record["address"] = self._address_cache.get(key)
+
     def process_vehicle_history(
         self,
         vehicle: Dict[str, Any],
@@ -171,12 +248,14 @@ class VehicleService:
 
         try:
             sensor_map = self.get_vehicle_sensors(vehicle_id)
+            driver_map = self.get_drivers()
             time_from, time_to = self.get_month_timestamps(month, year)
 
             # Processa histórico em páginas
             all_records = []
             last_pwr_ext: Optional[float] = None
             last_ignition: Optional[bool] = None
+            last_driver: Optional[str] = None
 
             page_size = settings.WIALON_PAGE_SIZE or 1000
             for page in self.client.get_history(
@@ -188,7 +267,7 @@ class VehicleService:
                         last_pwr_ext = params["pwr_ext"]
 
                     transformed = self.transformer.transform_message(
-                        message, vehicle_id, sensor_map
+                        message, vehicle_id, sensor_map, driver_map
                     )
                     if transformed is None:
                         continue
@@ -213,6 +292,16 @@ class VehicleService:
                     else:
                         last_ignition = ignition
 
+                    # Forward-fill do motorista: o `rfid_tag` só aparece na
+                    # mensagem em que o cartão é lido, mas o vínculo persiste até
+                    # trocar. Propaga o último motorista visto (mesmo padrão da
+                    # ignição). Reinicia por veículo (last_driver é local ao loop).
+                    driver = transformed.get("driver")
+                    if driver is None:
+                        transformed["driver"] = last_driver
+                    else:
+                        last_driver = driver
+
                     all_records.append(transformed)
 
                 stats.total_messages += len(page)
@@ -222,6 +311,9 @@ class VehicleService:
             # "bateria interna". NÃO alteramos o dado (é fiel à fonte), apenas
             # avisamos no log para o cliente corrigir o cadastro na Wialon.
             self._warn_if_voltages_swapped(vehicle_name, all_records)
+
+            # Geocodificação reversa (opt-in) — preenche `address` em lote.
+            self._fill_addresses(all_records)
 
             logger.success(
                 f"Veículo {vehicle_name}: {stats.total_messages} mensagens processadas"
@@ -285,6 +377,7 @@ class VehicleService:
         account_name: Optional[str] = None,
         on_progress: Optional[Callable[[int, int, str], None]] = None,
         should_cancel: Optional[Callable[[], bool]] = None,
+        include_addresses: bool = False,
     ) -> ExportResult:
         """
         Exporta dados mensais de todos os veículos (ou lista específica).
@@ -296,6 +389,9 @@ class VehicleService:
             export_format: Formato de exportação ("csv", "xlsx", ou "both")
             consolidated: Se True, gera arquivo consolidado além dos individuais
             upload_to_drive: Se True, faz upload dos arquivos para o Google Drive
+            include_addresses: Se True, geocodifica as coordenadas e preenche a
+                          coluna Localização (opt-in — adiciona chamadas de API e
+                          tempo ao export). Se False, a coluna sai como N/D.
             account_name: Se fornecido, exports vão para subpasta `YYYY-MM/<name>/`
                           em vez de `YYYY-MM/` — útil quando há mais de uma conta
                           Wialon configurada.
@@ -311,6 +407,7 @@ class VehicleService:
             Resultado da exportação com estatísticas
         """
         result = ExportResult(month=month, year=year)
+        self._include_addresses = include_addresses
 
         logger.info("═══════════════════════════════════════════════════════════")
         logger.info(f"Iniciando exportação mensal: {month:02d}/{year}")

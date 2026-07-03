@@ -110,6 +110,7 @@ def cmd_export(
     output_dir: Optional[str] = None,
     upload: bool = False,
     account: int = 1,
+    include_addresses: bool = False,
 ) -> int:
     """
     Exporta dados históricos mensais.
@@ -123,6 +124,7 @@ def cmd_export(
         output_dir: Diretório de saída customizado
         upload: Se deve fazer upload para Google Drive
         account: Conta Wialon a usar (1 ou 2)
+        include_addresses: Se deve geocodificar e preencher a coluna Localização
     """
     print(f"Iniciando exportação ({_account_label(account)}): {month:02d}/{year}")
 
@@ -133,6 +135,7 @@ def cmd_export(
 
     print(f"Formato: {format}")
     print(f"Consolidado: {'sim' if consolidated else 'não'}")
+    print(f"Incluir endereço: {'sim' if include_addresses else 'não'}")
     print(f"Upload Drive: {'sim' if upload else 'não'}")
     print()
 
@@ -154,6 +157,7 @@ def cmd_export(
             export_format=format,
             consolidated=consolidated,
             upload_to_drive=upload,
+            include_addresses=include_addresses,
             account_name=account_name,
         )
 
@@ -323,6 +327,12 @@ Exemplos:
         help="Faz upload dos arquivos para Google Drive",
     )
 
+    export_parser.add_argument(
+        "--addresses", "-A",
+        action="store_true",
+        help="Geocodifica coordenadas e preenche a coluna Localização (mais lento)",
+    )
+
     _add_account_arg(export_parser)
 
     # Parse args
@@ -352,6 +362,7 @@ Exemplos:
             output_dir=args.output,
             upload=args.upload,
             account=args.account,
+            include_addresses=args.addresses,
         )
 
     return 0

@@ -28,7 +28,7 @@ core/logout
 }
 ```
 
-Salvar: `self.sid`, `self.gis_sid`, `self.gis_geocode_url`, `self.base_url`, `self.username`.
+Salvar: `self.sid`, `self.gis_sid`, `self.uid` (`user.id`), `self.gis_geocode_url`, `self.base_url`, `self.username`.
 
 ## Mensagens (`messages/load_interval`)
 
@@ -96,17 +96,17 @@ FLAGS_LIST_VEHICLES = (
 ## Geocodificação (`gis_geocode`)
 
 ```
-GET {gis_geocode_url}/gis_geocode
-    ?coords=[{"lon": -43.29, "lat": -22.87}]
-    &flags=1255211008
-    &gis_sid={self.gis_sid}     ← NÃO self.sid
-    &search_provider=osm
-    &lang=pt
+POST {gis_geocode}/{host_api}/gis_geocode    ← host da API DENTRO do path
+    coords = [{"lon": -43.29, "lat": -22.87}]  (JSON, no corpo)
+    flags  = 1255211008                        (endereço completo)
+    uid    = {login["user"]["id"]}             ← uid, NÃO gis_sid nem provider
 ```
 
-Retorna array de strings na mesma ordem das coordenadas.
-`error=7` = serviço não habilitado na conta (questão de billing, não código).
-Ver `docs/wialon/GEOCODIFICACAO.md` para detalhes e como habilitar.
+Retorna array de strings na mesma ordem das coordenadas (vazio = sem endereço).
+- **POST**, não GET — o GET estoura em ~150 coords (HTTP 414). POST engole milhares.
+- `error=7` NÃO é billing — é o `search_provider` explícito sendo recusado. Não
+  envie provider nem `gis_sid`; use `uid` + sessão.
+Ver `docs/wialon/GEOCODIFICACAO.md` para a receita completa e o porquê.
 
 ## Paginação do histórico
 

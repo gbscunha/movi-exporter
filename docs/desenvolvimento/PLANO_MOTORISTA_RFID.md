@@ -12,10 +12,10 @@
 | # | Fase | TDD | Esforço | Status |
 |---|------|-----|---------|--------|
 | 00 | Validação do formato `rfid_tag` com dado real | — | S | ⬜ Todo |
-| 01 | `wialon_client.list_drivers()` — mapa código→nome | 🟢 sim | S | ⬜ Todo |
-| 02 | Resolver motorista por registro (transformer + forward-fill) | 🟢 sim | M | ⬜ Todo |
-| 03 | Integração no pipeline + export | 🔴 parcial | S | ⬜ Todo |
-| 04 | Docs (manual + GUIA) e verificação final | — | S | ⬜ Todo |
+| 01 | `wialon_client.list_drivers()` — mapa código→nome | 🟢 sim | S | ✅ Concluído |
+| 02 | Resolver motorista por registro (transformer + forward-fill) | 🟢 sim | M | ✅ Concluído |
+| 03 | Integração no pipeline + export | 🔴 parcial | S | ✅ Concluído |
+| 04 | Docs (manual + GUIA) e verificação final | — | S | ✅ Concluído (verificação real-token pendente) |
 
 **Legenda status:** ⬜ Todo · 🔄 Em andamento · ✅ Concluído · ⏸️ Bloqueado
 **Legenda TDD:** 🟢 sim · 🔴 parcial = só nos pontos com lógica testável · — = não aplicável
