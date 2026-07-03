@@ -44,7 +44,7 @@ MESES = [
 # ao worker em background.
 _ExportParams = namedtuple(
     "_ExportParams",
-    "month year format_type consolidated upload vehicle_ids",
+    "month year format_type consolidated upload include_addresses vehicle_ids",
 )
 
 
@@ -193,6 +193,17 @@ class ExportFrame(ctk.CTkFrame):
         )
         self.upload_check.grid(
             row=1, column=1, padx=Space.MD, pady=(0, Space.SM), sticky="w"
+        )
+
+        # Geocodificação é opt-in: adiciona chamadas de API e tempo ao export.
+        self.include_addresses_var = ctk.BooleanVar(value=False)
+        self.include_addresses_check = ctk.CTkCheckBox(
+            options_card,
+            text="Incluir endereço (mais lento)",
+            variable=self.include_addresses_var,
+        )
+        self.include_addresses_check.grid(
+            row=2, column=0, columnspan=2, padx=Space.MD, pady=(0, Space.SM), sticky="w"
         )
 
     def _on_account_changed(self, account: int):
@@ -716,6 +727,7 @@ class ExportFrame(ctk.CTkFrame):
             f"Formato:  {params.format_type}\n"
             f"Veículos:  {alvo}\n"
             f"Consolidado:  {'sim' if params.consolidated else 'não'}\n"
+            f"Incluir endereço:  {'sim' if params.include_addresses else 'não'}\n"
             f"Upload Google Drive:  {'sim' if params.upload else 'não'}\n\n"
             "Iniciar a exportação?"
         )
@@ -773,6 +785,7 @@ class ExportFrame(ctk.CTkFrame):
             format_type=self.format_var.get(),
             consolidated=self.consolidated_var.get(),
             upload=self.upload_var.get(),
+            include_addresses=self.include_addresses_var.get(),
             vehicle_ids=self._get_selected_vehicle_ids(),
         )
 
@@ -780,6 +793,8 @@ class ExportFrame(ctk.CTkFrame):
         """Loga o cabeçalho do export (período, formato, veículos)."""
         self._log(f"📅 Exportando: {params.month:02d}/{params.year}", "INFO")
         self._log(f"📁 Formato: {params.format_type}", "INFO")
+        if params.include_addresses:
+            self._log("📍 Endereço: incluído (geocodificação ativada)", "INFO")
         if params.vehicle_ids:
             self._log(f"🚗 Veículos selecionados: {len(params.vehicle_ids)}", "INFO")
         else:
@@ -802,6 +817,7 @@ class ExportFrame(ctk.CTkFrame):
                 export_format=params.format_type,
                 consolidated=params.consolidated,
                 upload_to_drive=params.upload,
+                include_addresses=params.include_addresses,
                 on_progress=self._on_export_progress,
                 account_name=account_name,
                 should_cancel=self._cancel_event.is_set,
