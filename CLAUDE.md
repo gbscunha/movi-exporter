@@ -48,6 +48,7 @@ Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nu
 - Odômetro vem em **metros** — sempre converter para km (÷ 1000)
 - `pwr_ext` = tensão do veículo (~12-28V); `voltage` = bateria interna do tracker (~4V) — são coisas diferentes
 - **Motorista:** `params["rfid_tag"]` = código do cartão RFID → casar com `c` (Código) do motorista no resource (`drvrs`). A lista vem de `core/search_items` em `avl_resource` com flag `256` (Drivers). O nome usa **forward-fill por veículo** (o vínculo persiste entre mensagens). Requer ACL de ver motoristas no token; sem ela, coluna vira `N/D`
+- **Endereço (geocode):** `POST {gis_geocode}/{host_api}/gis_geocode` com `coords`+`flags=1255211008`+`uid` (de `login["user"]["id"]`). Host da API **dentro do path**; **não** enviar `gis_sid` nem `search_provider` (o `error=7` é o provider recusado, NÃO billing). POST (GET estoura em ~150 coords). Deduplicar coords (~4 casas) e cachear no export
 
 **Token:** `docs/wialon/TOKEN_AUTORIZACAO.md` — gerado via formulário web, NÃO via API.
 
@@ -90,7 +91,8 @@ Skills disponíveis: `/nova-fase` (executa próxima fase do plano) · `/review` 
 
 - **NÃO use `flagsMask=65281`** — filtra mensagens data-only e perde `pwr_ext`
 - **NÃO use `self.sid` para chamadas GIS** — usar `self.gis_sid`
-- **NÃO hardcode URL de geocodificação** — vem do login em `data["gis_geocode"]`
+- **NÃO hardcode URL de geocodificação** — vem do login em `data["gis_geocode"]` (+ host da API no path)
+- **NÃO use `gis_sid` nem `search_provider` no geocode** — use `uid` + sessão (POST); `error=7` é o provider recusado, não billing
 - **NÃO use `voltage` como fallback de `battery_voltage`** — é bateria interna do tracker
 - **NÃO hardcode `"odometer": None`** — ler de `params.get("odometer")` e converter m→km
 - **NÃO adicione dependências sem perguntar** — PyInstaller é sensível a imports inesperados

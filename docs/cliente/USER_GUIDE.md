@@ -49,12 +49,18 @@ O **Movi Exporter App** é uma ferramenta de linha de comando (CLI) desenvolvida
 | Voltagem da Bateria | Sensores/Parâmetros | ✅ |
 | Horas do Motor | Sensores/Parâmetros | ✅ |
 | Motorista | Cartão RFID + Motoristas | ✅ |
-| Localização (Endereço) | Geocodificação | ⏳ Pendente |
+| Localização (Endereço) | Geocodificação | ✅ (opt-in) |
 
 > **Coluna Motorista:** o nome vem do cartão RFID lido pelo veículo, casado com
 > a lista de **Motoristas** do Wialon (campo "Código" de cada cartão). Requisitos:
 > o token precisa ter permissão de **ver motoristas** e cada cartão precisa estar
 > com o **Código preenchido**. Linhas sem cartão lido saem como `N/D`.
+
+> **Coluna Localização:** o endereço completo (rua, número, bairro, cidade, UF,
+> CEP) é obtido por geocodificação das coordenadas. É **opcional** — marque
+> **"Incluir endereço (mais lento)"** na tela Exportar para ativar; deixa o
+> export um pouco mais demorado por causa das consultas. Pontos sem endereço
+> mapeado saem como `N/D`.
 
 ---
 
@@ -271,7 +277,7 @@ Obtidos via `export`:
 | `engine_hours` | Horas do motor | float | Sensor |
 | `driver` | Motorista (nome do cartão RFID) | string | `rfid_tag` + lista de motoristas |
 | `odometer` | Hodômetro | float | N/A (não disponível) |
-| `address` | Endereço | string | N/A (requer geocodificação) |
+| `address` | Endereço completo | string | Geocodificação (`gis_geocode`, opt-in) |
 
 ### 6.3 Parâmetros Buscados Automaticamente
 
@@ -572,7 +578,7 @@ KNOWN_PARAMS = {
 
 ### 12.3 Funcionalidades Planejadas
 
-- [ ] Geocodificação reversa (endereços)
+- [x] Geocodificação reversa (endereços)
 - [ ] Upload para Google Drive
 - [ ] Interface web
 - [ ] Notificações por email
