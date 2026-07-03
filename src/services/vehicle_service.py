@@ -35,6 +35,11 @@ from src.services.wialon_transformer import WialonTransformer
 VOLTAGE_SWAP_HIGH_V = 10
 VOLTAGE_SWAP_LOW_V = 6
 
+# Casas decimais para agrupar coordenadas na geocodificação. 4 casas ≈ 11 m
+# (nível rua) — deduplica pontos praticamente idênticos sem perder o número da
+# casa, reduzindo drasticamente as chamadas ao gis_geocode.
+ADDRESS_COORD_PRECISION = 4
+
 
 @dataclass
 class VehicleStats:
@@ -114,6 +119,12 @@ class VehicleService:
         # reusado por todos os veículos. None = ainda não carregado.
         self._drivers_cache: Optional[Dict[str, str]] = None
 
+        # Geocodificação (opt-in). `_include_addresses` é ligado por export;
+        # `_address_cache` {(lat,lon): endereço} é compartilhado entre todos os
+        # veículos do export — a frota repete muito depósito/rota.
+        self._include_addresses: bool = False
+        self._address_cache: Dict[tuple, Optional[str]] = {}
+
         logger.info("VehicleService inicializado")
 
     def get_month_timestamps(self, month: int, year: int) -> tuple[int, int]:
@@ -165,6 +176,51 @@ class VehicleService:
                 )
                 self._drivers_cache = {}
         return self._drivers_cache
+
+    @staticmethod
+    def _coord_key(lat: Any, lon: Any) -> Optional[tuple]:
+        """Chave de agrupamento de coordenada (arredondada) ou None se inválida."""
+        if lat is None or lon is None:
+            return None
+        try:
+            return (
+                round(float(lat), ADDRESS_COORD_PRECISION),
+                round(float(lon), ADDRESS_COORD_PRECISION),
+            )
+        except (TypeError, ValueError):
+            return None
+
+    def _fill_addresses(self, records: List[Dict[str, Any]]) -> None:
+        """Preenche `address` nos registros via geocodificação em lote (opt-in).
+
+        Só age quando `_include_addresses` está ligado. Deduplica coordenadas
+        (arredondadas por `ADDRESS_COORD_PRECISION`) e consulta apenas as que
+        ainda não estão no cache compartilhado do export — a frota repete muito
+        depósito e rota, então o cache poupa a maior parte das chamadas.
+
+        Não levanta: em qualquer falha, `get_addresses_batch` já devolve None e
+        o endereço vira N/D no export.
+        """
+        if not self._include_addresses or not records:
+            return
+
+        # Coordenadas únicas ainda não geocodificadas neste export.
+        to_fetch: Dict[tuple, Dict[str, float]] = {}
+        for record in records:
+            key = self._coord_key(record.get("latitude"), record.get("longitude"))
+            if key is not None and key not in self._address_cache and key not in to_fetch:
+                to_fetch[key] = {"lat": record["latitude"], "lon": record["longitude"]}
+
+        if to_fetch:
+            keys = list(to_fetch.keys())
+            addresses = self.client.get_addresses_batch([to_fetch[k] for k in keys])
+            for key, address in zip(keys, addresses):
+                self._address_cache[key] = address
+
+        for record in records:
+            key = self._coord_key(record.get("latitude"), record.get("longitude"))
+            if key is not None:
+                record["address"] = self._address_cache.get(key)
 
     def process_vehicle_history(
         self,
@@ -256,6 +312,9 @@ class VehicleService:
             # avisamos no log para o cliente corrigir o cadastro na Wialon.
             self._warn_if_voltages_swapped(vehicle_name, all_records)
 
+            # Geocodificação reversa (opt-in) — preenche `address` em lote.
+            self._fill_addresses(all_records)
+
             logger.success(
                 f"Veículo {vehicle_name}: {stats.total_messages} mensagens processadas"
             )
@@ -318,6 +377,7 @@ class VehicleService:
         account_name: Optional[str] = None,
         on_progress: Optional[Callable[[int, int, str], None]] = None,
         should_cancel: Optional[Callable[[], bool]] = None,
+        include_addresses: bool = False,
     ) -> ExportResult:
         """
         Exporta dados mensais de todos os veículos (ou lista específica).
@@ -329,6 +389,9 @@ class VehicleService:
             export_format: Formato de exportação ("csv", "xlsx", ou "both")
             consolidated: Se True, gera arquivo consolidado além dos individuais
             upload_to_drive: Se True, faz upload dos arquivos para o Google Drive
+            include_addresses: Se True, geocodifica as coordenadas e preenche a
+                          coluna Localização (opt-in — adiciona chamadas de API e
+                          tempo ao export). Se False, a coluna sai como N/D.
             account_name: Se fornecido, exports vão para subpasta `YYYY-MM/<name>/`
                           em vez de `YYYY-MM/` — útil quando há mais de uma conta
                           Wialon configurada.
@@ -344,6 +407,7 @@ class VehicleService:
             Resultado da exportação com estatísticas
         """
         result = ExportResult(month=month, year=year)
+        self._include_addresses = include_addresses
 
         logger.info("═══════════════════════════════════════════════════════════")
         logger.info(f"Iniciando exportação mensal: {month:02d}/{year}")
