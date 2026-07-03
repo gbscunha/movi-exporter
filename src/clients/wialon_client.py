@@ -14,6 +14,7 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Iterator
 from datetime import datetime
+from urllib.parse import urlparse
 
 import requests
 
@@ -82,6 +83,14 @@ class WialonClient:
     RESOURCE_FLAG_DRIVERS = 256
     RESOURCE_DRIVERS_FLAGS = RESOURCE_FLAG_BASE | RESOURCE_FLAG_DRIVERS  # = 257
 
+    # Geocodificação (gis_geocode). Flag do formato de endereço completo:
+    # rua, número, cidade, região, país. A chamada usa `uid` (id do usuário do
+    # login) + sessão — NÃO gis_sid nem search_provider (ver GEOCODIFICACAO.md).
+    GEOCODE_FLAGS = 1255211008
+    # coords vão no corpo do POST — o GET estoura em ~150 (HTTP 414). Com POST
+    # a API aceita milhares; 1000 é folgado e mantém a resposta rápida.
+    GEOCODE_BATCH_SIZE = 1000
+
     def __init__(self, token: Optional[str] = None):
         """
         Inicializa o cliente Wialon.
@@ -93,6 +102,8 @@ class WialonClient:
         self.sid: Optional[str] = None
         self.gis_sid: Optional[str] = None
         self.gis_geocode_url: Optional[str] = None
+        # ID do usuário (do login) — usado como credencial nas chamadas GIS.
+        self.uid: Optional[int] = None
         self.username: str = ""
         self.base_url: str = self.BASE_URL
         self._session = requests.Session()
@@ -151,10 +162,19 @@ class WialonClient:
 
             # Salva sessão e URL de geocodificação para uso futuro.
             # URLs de GIS são dinâmicas — devem vir do login, nunca hardcoded.
+            # A URL de geocode inclui o HOST da API no path:
+            #   {gis_geocode}/{host_api}/gis_geocode
+            # (formato do SDK oficial — sem esse segmento a chamada falha).
             self.gis_sid = data.get("gis_sid")
             gis_geocode = data.get("gis_geocode", "")
             if gis_geocode:
-                self.gis_geocode_url = f"{gis_geocode.rstrip('/')}/gis_geocode"
+                api_host = urlparse(self.base_url).netloc
+                self.gis_geocode_url = f"{gis_geocode.rstrip('/')}/{api_host}/gis_geocode"
+
+            # ID do usuário — credencial das chamadas GIS (campo `user.id`).
+            user_obj = data.get("user")
+            if isinstance(user_obj, dict):
+                self.uid = user_obj.get("id")
 
             # Captura nome da conta — campo "au" pode vir como dict {"nm": "..."}
             # ou como string direto, dependendo da versão da API.
@@ -344,6 +364,78 @@ class WialonClient:
 
         self._drivers_cache = drivers
         return drivers
+
+    def get_addresses_batch(
+        self, coordinates: List[Dict[str, float]]
+    ) -> List[Optional[str]]:
+        """Geocodificação reversa: converte coordenadas em endereços.
+
+        Recebe uma lista `[{"lon": float, "lat": float}, ...]` e devolve uma
+        lista de mesmo tamanho e ordem com o endereço de cada ponto (ou `None`
+        quando não há endereço / a chamada falha).
+
+        Usa POST (o GET estoura o limite de URL em ~150 pontos) contra
+        `{gis_geocode}/{host_api}/gis_geocode`, autenticando por `uid` + sessão.
+        As coordenadas são processadas em lotes de `GEOCODE_BATCH_SIZE`.
+
+        Degrada com elegância: sem `gis_geocode_url`/`uid`, ou em erro de rede/
+        API, retorna `None` nas posições afetadas — o export nunca quebra por
+        causa do endereço (a coluna vira N/D).
+        """
+        if not coordinates:
+            return []
+
+        if not self.gis_geocode_url or not self.uid:
+            logger.warning(
+                "Geocodificação indisponível (sem gis_geocode_url/uid) — "
+                "endereços virão como N/D."
+            )
+            return [None] * len(coordinates)
+
+        results: List[Optional[str]] = []
+        for start in range(0, len(coordinates), self.GEOCODE_BATCH_SIZE):
+            chunk = coordinates[start : start + self.GEOCODE_BATCH_SIZE]
+            results.extend(self._geocode_chunk(chunk))
+        return results
+
+    def _geocode_chunk(
+        self, chunk: List[Dict[str, float]]
+    ) -> List[Optional[str]]:
+        """Geocodifica um único lote via POST. Retorna None por item em falha."""
+        coords = [{"lon": c["lon"], "lat": c["lat"]} for c in chunk]
+        try:
+            response = self._session.post(
+                self.gis_geocode_url,
+                data={
+                    "coords": json.dumps(coords),
+                    "flags": self.GEOCODE_FLAGS,
+                    "uid": self.uid,
+                },
+                timeout=self.REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if isinstance(data, dict) and "error" in data:
+                logger.warning(f"Geocodificação retornou error={data.get('error')}")
+                return [None] * len(chunk)
+
+            if not isinstance(data, list):
+                logger.warning(f"Geocodificação: resposta inesperada ({type(data)})")
+                return [None] * len(chunk)
+
+            # Normaliza tamanho e converte strings vazias em None.
+            out: List[Optional[str]] = [addr or None for addr in data]
+            if len(out) != len(chunk):
+                logger.warning(
+                    f"Geocodificação: {len(out)} endereços para {len(chunk)} coords"
+                )
+                out = (out + [None] * len(chunk))[: len(chunk)]
+            return out
+
+        except (requests.RequestException, ValueError) as e:
+            logger.warning(f"Erro na geocodificação: {e}")
+            return [None] * len(chunk)
 
     def get_vehicle_sensors(self, vehicle_id: int) -> Dict[str, Dict[str, Any]]:
         """

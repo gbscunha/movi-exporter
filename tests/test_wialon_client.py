@@ -3,6 +3,7 @@
 Fase 11 — capturar username e gis_sid da resposta de login.
 """
 
+import json
 from unittest.mock import MagicMock, patch
 
 from src.clients.wialon_client import WialonClient
@@ -233,3 +234,88 @@ def test_list_drivers_usa_cache_na_segunda_chamada():
 
     assert first == second == {"9": "X"}
     assert mock_req.call_count == 1
+
+
+# ----- get_addresses_batch — geocodificação reversa (Feature Endereço) -----
+
+
+def _geo_client():
+    """Client pronto para geocodificar (uid + url setados, sem autenticar)."""
+    c = WialonClient(token="fake_token")
+    c.uid = 999
+    c.gis_geocode_url = "https://geocode-maps.wialon.us/hst-api.wialon.us/gis_geocode"
+    return c
+
+
+def test_get_addresses_batch_retorna_enderecos_na_ordem():
+    c = _geo_client()
+    coords = [{"lon": -46.6, "lat": -23.5}, {"lon": -43.3, "lat": -22.8}]
+    with patch.object(
+        c._session, "post",
+        return_value=_fake_response(["Av. Paulista, SP", "Rua X, RJ"]),
+    ):
+        addrs = c.get_addresses_batch(coords)
+    assert addrs == ["Av. Paulista, SP", "Rua X, RJ"]
+
+
+def test_get_addresses_batch_string_vazia_vira_none():
+    c = _geo_client()
+    with patch.object(c._session, "post", return_value=_fake_response(["Rua X", ""])):
+        addrs = c.get_addresses_batch([{"lon": 1, "lat": 1}, {"lon": 2, "lat": 2}])
+    assert addrs == ["Rua X", None]
+
+
+def test_get_addresses_batch_coords_vazio_nao_chama_api():
+    c = _geo_client()
+    with patch.object(c._session, "post") as mock_post:
+        assert c.get_addresses_batch([]) == []
+    mock_post.assert_not_called()
+
+
+def test_get_addresses_batch_sem_uid_retorna_none():
+    c = _geo_client()
+    c.uid = None
+    with patch.object(c._session, "post") as mock_post:
+        addrs = c.get_addresses_batch([{"lon": 1, "lat": 1}, {"lon": 2, "lat": 2}])
+    assert addrs == [None, None]
+    mock_post.assert_not_called()
+
+
+def test_get_addresses_batch_erro_api_retorna_none():
+    c = _geo_client()
+    with patch.object(c._session, "post", return_value=_fake_response({"error": 7})):
+        addrs = c.get_addresses_batch([{"lon": 1, "lat": 1}])
+    assert addrs == [None]
+
+
+def test_get_addresses_batch_usa_post_com_uid_e_flags():
+    """Confere o contrato: POST com coords/flags/uid — sem gis_sid/search_provider."""
+    c = _geo_client()
+    with patch.object(
+        c._session, "post", return_value=_fake_response(["Rua X"])
+    ) as mock_post:
+        c.get_addresses_batch([{"lon": -43.3, "lat": -22.8}])
+    _, kwargs = mock_post.call_args
+    body = kwargs["data"]
+    assert body["uid"] == 999
+    assert body["flags"] == WialonClient.GEOCODE_FLAGS
+    assert "gis_sid" not in body and "search_provider" not in body
+    assert '"lon": -43.3' in body["coords"] or '"lon":-43.3' in body["coords"]
+
+
+def test_get_addresses_batch_divide_em_lotes():
+    """Mais que GEOCODE_BATCH_SIZE coords → múltiplos POSTs, ordem preservada."""
+    c = _geo_client()
+    n = WialonClient.GEOCODE_BATCH_SIZE + 10
+    coords = [{"lon": i, "lat": i} for i in range(n)]
+
+    def fake_post(url, data=None, timeout=None):
+        enviados = json.loads(data["coords"])
+        return _fake_response([f"addr{c['lon']}" for c in enviados])
+
+    with patch.object(c._session, "post", side_effect=fake_post) as mock_post:
+        addrs = c.get_addresses_batch(coords)
+
+    assert mock_post.call_count == 2  # 1000 + 10
+    assert len(addrs) == n
+    assert addrs[0] == "addr0" and addrs[-1] == f"addr{n-1}"
