@@ -92,8 +92,9 @@ resto da onda.
       quando a imagem não existe. Sem screenshots, o manual não mostra nenhum
       placeholder — só o texto. As `<img>` + `<figcaption>` permanecem no markup:
       se um dia caírem imagens em `docs/manual/img/`, renderizam com legenda, sem
-      retrabalho. (Os `div.placeholder` antigos ficaram inertes — serão removidos
-      pelas Fases 1–4 conforme cada seção é reescrita.)
+      retrabalho. (Os 11 `div.placeholder` antigos e a CSS órfã `.shot .placeholder`
+      foram removidos — 1 na Fase 3 e os 10 restantes numa varredura final ao fim
+      da onda.)
 - [x] **Bump de versão:** hero e rodapé de `1.3.0` → `1.4.0`.
 - [x] **Índice cresce por fase** (decisão refinada): em vez de âncoras órfãs
       "em breve", cada Fase 1–4 adiciona sua entrada no `nav.toc` **junto** com a

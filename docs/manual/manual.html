@@ -100,18 +100,6 @@
     box-shadow: var(--shadow); background: var(--surface);
   }
   .shot img { display: block; width: 100%; height: auto; }
-  .shot .placeholder {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 8px; padding: 48px 24px; text-align: center;
-    background: repeating-linear-gradient(45deg, #fafbfc, #fafbfc 12px, #f0f2f5 12px, #f0f2f5 24px);
-    color: var(--muted); min-height: 200px;
-  }
-  .shot .placeholder .icon { font-size: 36px; opacity: .5; }
-  .shot .placeholder .fname {
-    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    background: var(--text); color: #fff; padding: 3px 10px; border-radius: 6px; font-size: 13px;
-  }
-  .shot .placeholder .hint { font-size: 13px; max-width: 380px; }
   figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: center; }
 
   /* Callouts */
@@ -198,11 +186,6 @@
         <div class="shot">
           <img src="img/01-abrir-app.png" alt="Abrindo o app"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/01-abrir-app.png</span>
-            <span class="hint">Print do ícone do app ou do aviso de segurança do Windows ao abrir pela primeira vez.</span>
-          </div>
         </div>
         <figcaption>Aviso do Windows na primeira execução</figcaption>
       </figure>
@@ -228,11 +211,6 @@
         <div class="shot">
           <img src="img/02-config-wialon.png" alt="Seção Wialon nas Configurações"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/02-config-wialon.png</span>
-            <span class="hint">Print da tela de Configurações mostrando a seção "Wialon API — Conta 1" com o campo de token e os botões.</span>
-          </div>
         </div>
         <figcaption>Seção do token na tela de Configurações</figcaption>
       </figure>
@@ -261,11 +239,6 @@
         <div class="shot">
           <img src="img/03-token-conectado.png" alt="Token testado com sucesso"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/03-token-conectado.png</span>
-            <span class="hint">Print mostrando a mensagem verde "✅ Conectado como..." após clicar em Testar.</span>
-          </div>
         </div>
         <figcaption>Confirmação de conexão bem-sucedida</figcaption>
       </figure>
@@ -290,11 +263,6 @@
         <div class="shot">
           <img src="img/04-tela-inicial.png" alt="Tela inicial"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/04-tela-inicial.png</span>
-            <span class="hint">Print da tela inicial (Home) com os três cartões: Wialon API, Veículos e Google Drive.</span>
-          </div>
         </div>
         <figcaption>Tela inicial com os cartões de status</figcaption>
       </figure>
@@ -360,11 +328,6 @@
         <div class="shot">
           <img src="img/06-conta-2.png" alt="Segunda conta"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/06-conta-2.png</span>
-            <span class="hint">Print da seção "Wialon API — Conta 2" preenchida (opcional, só se o cliente usa 2 contas).</span>
-          </div>
         </div>
         <figcaption>Configuração da segunda conta</figcaption>
       </figure>
@@ -379,11 +342,6 @@
         <div class="shot">
           <img src="img/07-tela-exportar.png" alt="Tela de exportação"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/07-tela-exportar.png</span>
-            <span class="hint">Print da tela de Exportação completa, mostrando Mês, Ano, Formato e opções.</span>
-          </div>
         </div>
         <figcaption>Tela de Exportação</figcaption>
       </figure>
@@ -409,11 +367,6 @@
         <div class="shot">
           <img src="img/08-exportacao-andamento.png" alt="Exportação em andamento"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/08-exportacao-andamento.png</span>
-            <span class="hint">Print durante a exportação, mostrando o registro de progresso (log) preenchendo.</span>
-          </div>
         </div>
         <figcaption>Acompanhe o progresso pelo registro na tela</figcaption>
       </figure>
@@ -427,11 +380,6 @@
         <div class="shot">
           <img src="img/09-exportacao-concluida.png" alt="Exportação concluída"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/09-exportacao-concluida.png</span>
-            <span class="hint">Print da mensagem "EXPORTAÇÃO CONCLUÍDA" com o resumo (veículos, registros, arquivos).</span>
-          </div>
         </div>
         <figcaption>Resumo ao final da exportação</figcaption>
       </figure>
@@ -466,11 +414,6 @@
         <div class="shot">
           <img src="img/10-arquivos-gerados.png" alt="Arquivos gerados"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/10-arquivos-gerados.png</span>
-            <span class="hint">Print da pasta de exportação aberta no Windows Explorer, mostrando os arquivos CSV/Excel gerados.</span>
-          </div>
         </div>
         <figcaption>Arquivos organizados por mês</figcaption>
       </figure>
@@ -479,11 +422,6 @@
         <div class="shot">
           <img src="img/11-planilha-aberta.png" alt="Planilha aberta"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/11-planilha-aberta.png</span>
-            <span class="hint">Print de um relatório aberto no Excel, mostrando as colunas (Data/Hora, Velocidade, Tensão do Veículo, etc).</span>
-          </div>
         </div>
         <figcaption>Exemplo de relatório aberto no Excel</figcaption>
       </figure>
