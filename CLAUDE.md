@@ -13,7 +13,9 @@ src/cli/         — main
 tests/           — pytest
 docs/desenvolvimento/  — PLANO_REFACTOR.md (ativo), PLANO_MOTORISTA_RFID.md (futuro)
 docs/arquivo/          — planos e docs históricos concluídos
-docs/wialon/           — TOKEN_AUTORIZACAO.md, GEOCODIFICACAO.md
+docs/wialon/           — GEOCODIFICACAO.md
+docs/manual/           — manual.html (manual do usuário final, embarcado)
+docs/cliente/          — USER_GUIDE.md (guia técnico/CLI)
 docs/wialon-api-docs/  — documentação oficial da API Wialon
 ```
 
@@ -50,7 +52,7 @@ Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nu
 - **Motorista:** `params["rfid_tag"]` = código do cartão RFID → casar com `c` (Código) do motorista no resource (`drvrs`). A lista vem de `core/search_items` em `avl_resource` com flag `256` (Drivers). O nome usa **forward-fill por veículo** (o vínculo persiste entre mensagens). Requer ACL de ver motoristas no token; sem ela, coluna vira `N/D`
 - **Endereço (geocode):** `POST {gis_geocode}/{host_api}/gis_geocode` com `coords`+`flags=1255211008`+`uid` (de `login["user"]["id"]`). Host da API **dentro do path**; **não** enviar `gis_sid` nem `search_provider` (o `error=7` é o provider recusado, NÃO billing). POST (GET estoura em ~150 coords). Deduplicar coords (~4 casas) e cachear no export
 
-**Token:** `docs/wialon/TOKEN_AUTORIZACAO.md` — gerado via formulário web, NÃO via API.
+**Token:** gerado via fluxo de autorização web do Wialon (login → o token volta na URL, após `access_token=`), **NÃO** via API. Passo a passo no manual do cliente (`docs/manual/manual.html`, seção 2).
 
 ## Git
 

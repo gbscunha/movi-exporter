@@ -76,7 +76,7 @@
 | 2 | Configuração inicial completa (token, fluxo real, self-sufficient) | Baixo | ✅ Feito |
 | 3 | Google Drive + variáveis de ambiente (`.env`) | Baixo | ✅ Feito |
 | 4 | Telas restantes (Geral/tema, atualizações, Home) + FAQ final | Baixo | ✅ Feito |
-| 5 | Consolidar docs de apoio (arquivar GUIA, corrigir USER_GUIDE, CLAUDE.md) | Baixo | ⬜ Todo |
+| 5 | Consolidar docs de apoio (arquivar GUIA, corrigir USER_GUIDE, CLAUDE.md) | Baixo | ✅ Feito |
 
 ---
 
@@ -224,23 +224,24 @@ reaberto e lido de ponta a ponta sem imagens.
 
 Agora que o manual é a fonte única, alinhar o resto da documentação.
 
-- [ ] **`docs/cliente/GUIA_CONFIGURACAO.md`:** conteúdo já absorvido (Fases 2–3) →
-      **arquivar** em `docs/arquivo/` **ou** reduzir a um redirect curto de uma
-      linha apontando para o manual. (Decisão do mantenedor no PR.)
-- [ ] **`docs/cliente/USER_GUIDE.md`** (doc de **dev/CLI**): corrigir drifts —
-  - remover `base_client.py` da árvore (deletado na Onda 4);
-  - versão/rodapé `1.0.0 / Jan 2025` → atual;
-  - `odometer` "N/A" → lido de `params` (m→km) — conferir com `CLAUDE.md`;
-  - tabela de flags do CLI: incluir `--upload/-u`, `--addresses/-A`, `--account/-a`;
-  - checklist "Funcionalidades planejadas": Upload Drive já está pronto.
-  - marcar no topo que é **doc técnico/CLI** (não o manual do cliente).
-- [ ] **`CLAUDE.md`:** a referência a `docs/wialon/TOKEN_AUTORIZACAO.md` (inexistente)
-      — recriar o arquivo **ou** repontar para a seção de token do manual.
-- [ ] Atualizar `PLANO_MOTORISTA_RFID.md` Fase 04 (docs) e este plano (status).
+- [x] **`GUIA_CONFIGURACAO.md` arquivado** em `docs/arquivo/` (decisão do
+      mantenedor). Conteúdo já absorvido nas Fases 2–3; manual é a fonte única.
+- [x] **`USER_GUIDE.md`** marcado no topo como doc **dev/CLI** e drifts corrigidos:
+      `base_client.py` removido da árvore; rodapé `1.0.0/Jan 2025` → v1.4.0;
+      `odometer` "N/A" → `params` (m→km); flags `--upload/-u`, `--addresses/-A`,
+      `--account/-a` adicionadas; checklist com Upload Drive concluído; fluxo de
+      token (4.3) repontado para o manual.
+- [x] **`CLAUDE.md`:** referência fantasma a `TOKEN_AUTORIZACAO.md` **repontada
+      para o manual** (decisão do mantenedor) — na linha do Token e na lista de
+      estrutura (que agora inclui `docs/manual/` e `docs/cliente/`). Mesma correção
+      em `.claude/skills/wialon-api.md`.
+- [x] **`PLANO_MOTORISTA_RFID.md`:** Fase 04 já concluída na v1.4.0 — mantido como
+      registro histórico (a menção ao GUIA descreve o que foi feito na época).
 
-**Verificação:** `grep -rn "base_client" docs/` volta vazio (ou só histórico
-arquivado); `grep -rn "TOKEN_AUTORIZACAO" CLAUDE.md` aponta para algo que existe;
-`pytest -q` + `ruff check src/`.
+**Verificação:** ✅ `grep TOKEN_AUTORIZACAO` limpo em `CLAUDE.md`/skills/docs ativos
+(resta só uma string de permissão em `settings.local.json`); `base_client` = 0 no
+USER_GUIDE; GUIA em `docs/arquivo/`; flags CLI presentes; `pytest -q` (237) verde;
+`ruff check src/` limpo.
 
 ---
 

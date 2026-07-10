@@ -2,6 +2,8 @@
 
 Guia completo para utilização do Movi Exporter App, uma ferramenta de automação para extração e exportação de dados de rastreamento veicular.
 
+> **Nota:** este é o guia **técnico / CLI** (para desenvolvedores). O manual do **usuário final** é o `docs/manual/manual.html`, aberto pelo botão **Manual** dentro do app.
+
 ---
 
 ## Índice
@@ -147,10 +149,7 @@ WIALON_PAGE_SIZE=1000
 
 ### 4.3 Obter Token Wialon
 
-1. Acesse o painel Wialon
-2. Vá em **Configurações** → **Tokens de Acesso**
-3. Crie um novo token com permissões de leitura
-4. Copie o token de 72 caracteres
+O token é gerado pelo fluxo de autorização web do Wialon: acesse a página de login, autentique-se e **o token volta na URL** (após `access_token=`). Copie esse valor e cole em `WIALON_TOKEN` no `.env` (ou use o botão **Gerar** na tela de Configurações do app). Passo a passo detalhado no manual do usuário (`docs/manual/manual.html`, seção 2).
 
 ---
 
@@ -217,6 +216,9 @@ python -m src.cli.main export [opções]
 | `--format` | `-f` | string | `csv` | Formato: `csv`, `xlsx` ou `both` |
 | `--no-consolidated` | - | flag | False | Não gerar arquivo consolidado |
 | `--output` | `-o` | string | `./exports` | Diretório de saída |
+| `--upload` | `-u` | flag | False | Enviar os arquivos para o Google Drive |
+| `--addresses` | `-A` | flag | False | Geocodificar e preencher a coluna Localização |
+| `--account` | `-a` | int | `1` | Conta Wialon a usar (1 ou 2) |
 
 **Exemplos:**
 
@@ -276,7 +278,7 @@ Obtidos via `export`:
 | `battery_voltage` | Voltagem da bateria (V) | float | Sensor ou `pwr_ext` |
 | `engine_hours` | Horas do motor | float | Sensor |
 | `driver` | Motorista (nome do cartão RFID) | string | `rfid_tag` + lista de motoristas |
-| `odometer` | Hodômetro | float | N/A (não disponível) |
+| `odometer` | Hodômetro (km) | float | `params.odometer` (metros → km) |
 | `address` | Endereço completo | string | Geocodificação (`gis_geocode`, opt-in) |
 
 ### 6.3 Parâmetros Buscados Automaticamente
@@ -471,7 +473,6 @@ movi_exporter_app/
 │   ├── cli/
 │   │   └── main.py              # Interface de linha de comando
 │   ├── clients/
-│   │   ├── base_client.py       # Classes base para clientes HTTP
 │   │   └── wialon_client.py     # Cliente da API Wialon
 │   ├── core/
 │   │   ├── config.py            # Configurações do ambiente
@@ -579,7 +580,7 @@ KNOWN_PARAMS = {
 ### 12.3 Funcionalidades Planejadas
 
 - [x] Geocodificação reversa (endereços)
-- [ ] Upload para Google Drive
+- [x] Upload para Google Drive
 - [ ] Interface web
 - [ ] Notificações por email
 - [ ] Relatórios PDF
@@ -596,5 +597,4 @@ Para dúvidas ou problemas:
 
 ---
 
-*Documentação gerada em: Janeiro 2025*
-*Versão: 1.0.0*
+*Guia técnico (dev/CLI) — atualizado para o app v1.4.0.*

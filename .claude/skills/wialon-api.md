@@ -135,7 +135,7 @@ while True:
 | 1 | Sessão expirada | Re-autenticar |
 | 4 | Parâmetros inválidos | Revisar params |
 | 7 | Acesso negado | Verificar permissões/billing |
-| 8 | Token inválido | Gerar novo token (ver TOKEN_AUTORIZACAO.md) |
+| 8 | Token inválido | Gerar novo token (fluxo no manual: `docs/manual/manual.html`, seção 2) |
 | 9 | Servidor indisponível | Retry |
 
 ## Duas contas
