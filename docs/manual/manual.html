@@ -162,6 +162,7 @@
     <a href="#exportar"><span class="num">6</span>Fazer exportação</a>
     <a href="#arquivos"><span class="num">7</span>Encontrar arquivos</a>
     <a href="#relatorio"><span class="num">8</span>Entendendo o relatório</a>
+    <a href="#env"><span class="num">9</span>Variáveis de ambiente</a>
     <a href="#faq"><span class="num">?</span>Dúvidas comuns</a>
   </nav>
 
@@ -312,21 +313,37 @@
 
       <figure>
         <div class="shot">
-          <img src="img/05-config-drive.png" alt="Configuração do Google Drive"
+          <img src="img/05-config-drive.png" alt="Seção Google Drive nas Configurações"
                onerror="this.closest('figure').style.display='none';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/05-config-drive.png</span>
-            <span class="hint">Print da seção "Google Drive" nas Configurações.</span>
-          </div>
         </div>
         <figcaption>Seção Google Drive nas Configurações</figcaption>
       </figure>
 
+      <h3>4.1 — O que você precisa</h3>
       <ul class="plain">
-        <li><b>Credenciais</b> — o arquivo de autenticação do Google. Mostra "✅ Encontrado" quando está presente.</li>
-        <li><b>ID da pasta</b> — o identificador da pasta de destino no Drive.</li>
+        <li><b>Arquivo de credenciais</b> (<code>client_secrets.json</code>) — o arquivo de autenticação do Google. <b>Solicite ao desenvolvedor</b> e coloque-o na <b>mesma pasta</b> do <code>MoviExporter.exe</code>.</li>
+        <li><b>ID da pasta do Drive</b> — identifica a pasta de destino dos relatórios (veja abaixo como obter).</li>
       </ul>
+
+      <h3>4.2 — Descobrir o ID da pasta</h3>
+      <ol class="steps">
+        <li>Abra o <b>Google Drive</b> no navegador e entre na pasta de destino.</li>
+        <li>Olhe a URL: <code>drive.google.com/drive/folders/<b>ESTE_TRECHO</b></code>.</li>
+        <li>Copie o trecho depois de <code>/folders/</code> — esse é o ID da pasta.</li>
+      </ol>
+
+      <h3>4.3 — Configurar no app</h3>
+      <p>Em <b>Configurações → Google Drive</b>:</p>
+      <ul class="plain">
+        <li><b>Credenciais</b> — mostra <b>"✅ Encontrado"</b> quando o <code>client_secrets.json</code> está na pasta certa.</li>
+        <li><b>ID da pasta</b> — cole o ID copiado e clique em <b>Salvar</b>.</li>
+      </ul>
+      <p>Depois, marque <b>"Upload para Google Drive"</b> na tela de exportação para o envio automático.</p>
+
+      <div class="box info">
+        <b>Organização no Drive</b>
+        Os relatórios sobem organizados por mês. Se você usa <b>duas contas</b>, cada uma vai para sua subpasta (<code>Conta 1/</code> e <code>Conta 2/</code>), sem misturar.
+      </div>
     </section>
 
     <!-- 5. CONTA 2 -->
@@ -515,6 +532,41 @@
       <div class="box tip">
         <b>Coluna Localização (endereço)</b>
         Só é preenchida quando você marca <b>"Incluir endereço (mais lento)"</b> na tela de exportação. O endereço é obtido a partir das coordenadas; pontos sem endereço mapeado saem como <code>N/D</code>.
+      </div>
+    </section>
+
+    <!-- 9. VARIÁVEIS DE AMBIENTE -->
+    <section id="env">
+      <h2><span class="step-n">9</span>Variáveis de ambiente <span style="font-size:14px;color:var(--muted);font-weight:400">(avançado)</span></h2>
+      <p>Para uso normal <b>você não precisa mexer aqui</b>: o token e o ID da pasta do Drive são gravados pelo próprio app quando você clica em <b>Salvar</b> nas Configurações. Esta seção é só para ajustes avançados.</p>
+      <p>As configurações ficam num arquivo chamado <code>.env</code>, na mesma pasta do <code>MoviExporter.exe</code>.</p>
+
+      <h3>Criar o arquivo <code>.env</code> no Windows</h3>
+      <ol class="steps">
+        <li>Abra o <b>Bloco de Notas</b>.</li>
+        <li>Em <b>Arquivo → Salvar como</b>, escolha <b>"Tipo: Todos os arquivos"</b>.</li>
+        <li>Nomeie exatamente <code>.env</code> (com o ponto, <b>sem</b> <code>.txt</code>) e salve na mesma pasta do <code>.exe</code>.</li>
+      </ol>
+
+      <table class="cols">
+        <thead>
+          <tr><th>Variável</th><th>Obrigatória</th><th>Padrão</th><th>O que é</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>WIALON_TOKEN</td><td>Sim</td><td>—</td><td>Token da Conta 1. O app grava ao clicar em Salvar.</td></tr>
+          <tr><td>WIALON_TOKEN_2</td><td>Não</td><td>—</td><td>Token da Conta 2 (se você usa duas contas).</td></tr>
+          <tr><td>WIALON_BASE_URL</td><td>Não</td><td>hst-api.wialon.com/wialon/ajax.html</td><td>Endereço da API Wialon — não altere sem necessidade.</td></tr>
+          <tr><td>EXPORT_DIR</td><td>Não</td><td>./exports</td><td>Pasta onde os relatórios são salvos.</td></tr>
+          <tr><td>WIALON_PAGE_SIZE</td><td>Não</td><td>1000</td><td>Mensagens por página na busca de histórico (500–2000).</td></tr>
+          <tr><td>GOOGLE_DRIVE_CREDENTIALS_FILE</td><td>Não</td><td>./client_secrets.json</td><td>Caminho do arquivo de credenciais do Drive.</td></tr>
+          <tr><td>GOOGLE_DRIVE_FOLDER_ID</td><td>Não</td><td>—</td><td>ID da pasta de destino no Drive. O app grava ao clicar em Salvar.</td></tr>
+          <tr><td>APP_THEME</td><td>Não</td><td>dark</td><td>Tema inicial (<code>dark</code> ou <code>light</code>). Normalmente ajustado em Configurações → Geral.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="box warn">
+        <b>Cuidado ao editar à mão</b>
+        Não use aspas nos valores e não deixe espaços antes ou depois do <code>=</code>. O arquivo deve se chamar <code>.env</code> (sem <code>.txt</code>).
       </div>
     </section>
 

@@ -74,7 +74,7 @@
 | 0 | Fundação text-first + bump v1.4.0 | Baixo | ✅ Feito |
 | 1 | Recursos v1.4.0: Motorista + Localização + "Entendendo o relatório" | Baixo | ✅ Feito |
 | 2 | Configuração inicial completa (token, fluxo real, self-sufficient) | Baixo | ✅ Feito |
-| 3 | Google Drive + variáveis de ambiente (`.env`) | Baixo | ⬜ Todo |
+| 3 | Google Drive + variáveis de ambiente (`.env`) | Baixo | ✅ Feito |
 | 4 | Telas restantes (Geral/tema, atualizações, Home) + FAQ final | Baixo | ⬜ Todo |
 | 5 | Consolidar docs de apoio (arquivar GUIA, corrigir USER_GUIDE, CLAUDE.md) | Baixo | ⬜ Todo |
 
@@ -164,7 +164,8 @@ manual reaberto. Fluxo validado com o mantenedor.
 
 Absorver o conteúdo do `GUIA_CONFIGURACAO.md` para o manual ser self-sufficient.
 
-- [ ] **Seção Google Drive (opcional)** completa:
+- [x] **Seção Google Drive (opcional)** completa (4.1 o que precisa · 4.2 achar o
+      ID da pasta · 4.3 configurar no app · box de subpastas por conta):
   - O que é preciso: arquivo `client_secrets.json` (**solicitar ao desenvolvedor**)
     na mesma pasta do `.exe`, e o **ID da pasta** de destino.
   - Como pegar o **ID da pasta**: abrir a pasta no Drive e copiar o trecho da URL
@@ -172,7 +173,7 @@ Absorver o conteúdo do `GUIA_CONFIGURACAO.md` para o manual ser self-sufficient
   - Onde configurar no app (seção Google Drive das Configurações) e o que os status
     "Encontrado"/"ID da pasta" significam.
   - Subpastas por conta (`Conta 1/`, `Conta 2/`) no envio automático.
-- [ ] **Nova seção "Variáveis de ambiente (arquivo `.env`)"** — referência para
+- [x] **Nova seção "Variáveis de ambiente" (seção 9, avançado)** — referência para
       quem quiser ajustes avançados:
   - Como criar o `.env` no Windows (Bloco de Notas → "Todos os arquivos" → `.env`,
     sem `.txt`) — passo do `GUIA_CONFIGURACAO`.
@@ -184,8 +185,9 @@ Absorver o conteúdo do `GUIA_CONFIGURACAO.md` para o manual ser self-sufficient
     Configurações; editar o `.env` à mão só é necessário para as vars avançadas
     (`EXPORT_DIR`, `WIALON_PAGE_SIZE`).
 
-**Verificação:** conferir nomes/defaults das variáveis contra `config.py` e
-`.env.example`; manual abre e as duas seções leem bem sem imagem.
+**Verificação:** ✅ as 8 variáveis do `config.py` conferidas 1:1 na tabela (script);
+`<section>` 11/11; âncora `#env` com TOC + seção; `pytest -q` (237) verde; `ruff`
+limpo; manual reaberto. Placeholder da figura do Drive removido (limpeza incremental).
 
 ---
 
