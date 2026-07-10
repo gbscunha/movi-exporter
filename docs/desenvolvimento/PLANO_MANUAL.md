@@ -75,7 +75,7 @@
 | 1 | Recursos v1.4.0: Motorista + Localização + "Entendendo o relatório" | Baixo | ✅ Feito |
 | 2 | Configuração inicial completa (token, fluxo real, self-sufficient) | Baixo | ✅ Feito |
 | 3 | Google Drive + variáveis de ambiente (`.env`) | Baixo | ✅ Feito |
-| 4 | Telas restantes (Geral/tema, atualizações, Home) + FAQ final | Baixo | ⬜ Todo |
+| 4 | Telas restantes (Geral/tema, atualizações, Home) + FAQ final | Baixo | ✅ Feito |
 | 5 | Consolidar docs de apoio (arquivar GUIA, corrigir USER_GUIDE, CLAUDE.md) | Baixo | ⬜ Todo |
 
 ---
@@ -197,22 +197,24 @@ limpo; manual reaberto. Placeholder da figura do Drive removido (limpeza increme
 
 Fechar a cobertura de **todas** as funcionalidades e revisar o FAQ.
 
-- [ ] **Configurações → Geral:** tema **Escuro/Claro/Sistema** (lembrado entre
-      sessões) e o controle de **tamanho de página** (page size) da busca de
-      histórico — o que é e quando mexer.
-- [ ] **Tela inicial (Home):** detalhar o bloco **Resumo de exportações** (última
-      exportação + botão abrir pasta, sugestão do próximo mês, estatísticas do ano)
-      e os botões **Testar Conexões** / **Ver Veículos**.
-- [ ] **Atualizações do app:** botão **Sobre** (versão, links) e a verificação
-      automática de nova versão (como o app avisa e o que fazer).
-- [ ] **FAQ final:** revisar/reordenar; garantir cobertura de: 0 registros, `N/D`,
-      Tensão do Veículo vs. Bateria Interna, token não precisa reconfigurar, aviso
-      do Windows, tema, onde abrir o manual, Motorista/Localização (das Fases 1–2).
-- [ ] **Suporte:** rodapé com canal de contato (substituir placeholders do
-      `GUIA_CONFIGURACAO` por um texto neutro combinado com o mantenedor).
+- [x] **Configurações (Geral + Exportação):** nova **seção 10 "Preferências e
+      atualizações"** — tema Escuro/Claro/Sistema (lembrado) e o slider "Registros
+      por página" (100–5000, padrão 1000). Também corrigi a faixa do page size na
+      tabela da Fase 3 (estava "500–2000"; o slider real é **100–5000**).
+- [x] **Tela inicial (Home):** já coberta pela seção 3 (Resumo de exportações com
+      abrir pasta + sugestão de mês + estatísticas do ano; botões Testar Conexões /
+      Ver Veículos) — mantida.
+- [x] **Atualizações do app:** seção 10 (botão Sobre + verificação automática) +
+      FAQ "Como sei se saiu uma versão nova?".
+- [x] **FAQ final:** cobertura conferida (0 registros, N/D, tensões, token, aviso
+      do Windows, tema, manual, Motorista/Localização); +1 item de atualização
+      (FAQ 9 → 10).
+- [x] **Suporte:** rodapé do manual já é neutro ("entre em contato com o suporte").
+      Placeholders (email/WhatsApp `XX`) vivem no `GUIA_CONFIGURACAO` → Fase 5.
 
-**Verificação:** varrer o app tela a tela e confirmar que cada função aparece no
-manual; manual abre e lê como um documento completo, coerente, sem imagens.
+**Verificação:** ✅ page size 100–5000 (não 500–2000); `#prefs` com TOC + seção;
+`<section>` 12/12; FAQ 10 itens; `pytest -q` (237) verde; `ruff` limpo; manual
+reaberto e lido de ponta a ponta sem imagens.
 
 ---
 

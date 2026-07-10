@@ -163,6 +163,7 @@
     <a href="#arquivos"><span class="num">7</span>Encontrar arquivos</a>
     <a href="#relatorio"><span class="num">8</span>Entendendo o relatório</a>
     <a href="#env"><span class="num">9</span>Variáveis de ambiente</a>
+    <a href="#prefs"><span class="num">10</span>Preferências e atualizações</a>
     <a href="#faq"><span class="num">?</span>Dúvidas comuns</a>
   </nav>
 
@@ -557,7 +558,7 @@
           <tr><td>WIALON_TOKEN_2</td><td>Não</td><td>—</td><td>Token da Conta 2 (se você usa duas contas).</td></tr>
           <tr><td>WIALON_BASE_URL</td><td>Não</td><td>hst-api.wialon.com/wialon/ajax.html</td><td>Endereço da API Wialon — não altere sem necessidade.</td></tr>
           <tr><td>EXPORT_DIR</td><td>Não</td><td>./exports</td><td>Pasta onde os relatórios são salvos.</td></tr>
-          <tr><td>WIALON_PAGE_SIZE</td><td>Não</td><td>1000</td><td>Mensagens por página na busca de histórico (500–2000).</td></tr>
+          <tr><td>WIALON_PAGE_SIZE</td><td>Não</td><td>1000</td><td>Mensagens por página na busca de histórico (100–5000).</td></tr>
           <tr><td>GOOGLE_DRIVE_CREDENTIALS_FILE</td><td>Não</td><td>./client_secrets.json</td><td>Caminho do arquivo de credenciais do Drive.</td></tr>
           <tr><td>GOOGLE_DRIVE_FOLDER_ID</td><td>Não</td><td>—</td><td>ID da pasta de destino no Drive. O app grava ao clicar em Salvar.</td></tr>
           <tr><td>APP_THEME</td><td>Não</td><td>dark</td><td>Tema inicial (<code>dark</code> ou <code>light</code>). Normalmente ajustado em Configurações → Geral.</td></tr>
@@ -568,6 +569,20 @@
         <b>Cuidado ao editar à mão</b>
         Não use aspas nos valores e não deixe espaços antes ou depois do <code>=</code>. O arquivo deve se chamar <code>.env</code> (sem <code>.txt</code>).
       </div>
+    </section>
+
+    <!-- 10. PREFERÊNCIAS E ATUALIZAÇÕES -->
+    <section id="prefs">
+      <h2><span class="step-n">10</span>Preferências e atualizações</h2>
+
+      <h3>Tema (claro / escuro)</h3>
+      <p>Em <b>Configurações → Geral → Tema</b>, escolha <b>Escuro</b>, <b>Claro</b> ou <b>Sistema</b> (acompanha o tema do Windows). A escolha é lembrada na próxima vez que abrir o app.</p>
+
+      <h3>Registros por página</h3>
+      <p>Em <b>Configurações → Exportação</b>, o controle <b>"Registros por página"</b> (de <b>100 a 5000</b>, padrão <b>1000</b>) define quantas mensagens o app busca por vez na Wialon. É um ajuste avançado — em geral não precisa mexer.</p>
+
+      <h3>Sobre e atualizações</h3>
+      <p>No rodapé do menu lateral, o botão <b>Sobre</b> mostra a <b>versão atual</b> do app e alguns links. Ao abrir, o app <b>verifica automaticamente</b> se há uma versão mais nova e avisa quando houver.</p>
     </section>
 
     <!-- FAQ -->
@@ -612,6 +627,11 @@
       <details>
         <summary>Como mudo entre tema claro e escuro?</summary>
         <p>Em <b>Configurações → Geral → Tema</b>, escolha <b>Escuro</b>, <b>Claro</b> ou <b>Sistema</b> (segue o tema do seu computador). A escolha é lembrada na próxima vez que abrir o app.</p>
+      </details>
+
+      <details>
+        <summary>Como sei se saiu uma versão nova do app?</summary>
+        <p>Ao abrir, o Movi Exporter verifica automaticamente se há uma versão mais nova e mostra um aviso quando houver. Você também confere a versão atual no botão <b>Sobre</b> (rodapé do menu lateral).</p>
       </details>
 
       <details>
