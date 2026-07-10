@@ -21,10 +21,11 @@
 **Fatos verificados no código (contrato a respeitar no texto):**
 
 - App em **v1.4.0** (`src/gui/__init__.py`); manual diz 1.3.0 (hero + rodapé).
-- Botão **Gerar** (Configurações) abre `https://hosting.wialon.com/login.html`;
-  depois de logar, o token é criado em **Config. da conta → Aplicações → Tokens**
-  (`settings.py:20-22, 236-238`). O texto atual do manual descreve um caminho
-  inconsistente ("Aplicativos e tokens") — **corrigir**.
+- Fluxo de token **confirmado pelo mantenedor**: botão **Gerar** abre o login da
+  Wialon; após logar, o **token volta na própria URL** (após `access_token=`) e é
+  copiado para o app. O comentário em `settings.py:20-22` sugeria criar o token em
+  "Config. da conta → Aplicações → Tokens", mas **não é** o fluxo usado. O botão
+  está **correto** — sem fix de código. Corrigido no manual na Fase 2.
 - **Salvar** grava no `.env` via `set_env_value` (`settings.py:240-263`); **Testar**
   valida e mostra "Conectado como…". Ou seja, o usuário **não precisa** editar o
   `.env` à mão para o token — o app faz isso.
@@ -72,7 +73,7 @@
 |------|-----------|-------|--------|
 | 0 | Fundação text-first + bump v1.4.0 | Baixo | ✅ Feito |
 | 1 | Recursos v1.4.0: Motorista + Localização + "Entendendo o relatório" | Baixo | ✅ Feito |
-| 2 | Configuração inicial completa (token, fluxo real, self-sufficient) | Baixo | ⬜ Todo |
+| 2 | Configuração inicial completa (token, fluxo real, self-sufficient) | Baixo | ✅ Feito |
 | 3 | Google Drive + variáveis de ambiente (`.env`) | Baixo | ⬜ Todo |
 | 4 | Telas restantes (Geral/tema, atualizações, Home) + FAQ final | Baixo | ⬜ Todo |
 | 5 | Consolidar docs de apoio (arquivar GUIA, corrigir USER_GUIDE, CLAUDE.md) | Baixo | ⬜ Todo |
@@ -136,24 +137,24 @@ verde; `ruff check src/` limpo; manual reaberto no navegador.
 
 Reescrever o passo do token com o **fluxo real**, para o usuário conseguir do zero.
 
-- [ ] **Corrigir o fluxo do token** (hoje inconsistente). Caminho real:
-  1. Configurações → seção **Wialon API — Conta 1** → botão **Gerar**.
-  2. Abre `https://hosting.wialon.com/login.html` → logar com usuário/senha.
-  3. Na Wialon: **Configurações da conta → Aplicações → Tokens → Criar**, validade
-     **Ilimitado**, com acesso de **leitura** aos veículos **e a motoristas**
-     (para a coluna Motorista funcionar).
-  4. Copiar o token gerado.
-- [ ] **Salvar e testar no app:** colar no campo Token → **Salvar** (grava no `.env`
-      automaticamente) → **Testar** (mostra "Conectado como…" em verde). Deixar
-      explícito que **não** é preciso editar arquivo nenhum à mão para o token.
-- [ ] Dica do **botão de olho** (mostrar/ocultar token) — manter.
-- [ ] **Segunda conta (opcional):** mesma coisa na seção "Conta 2"; explicar o
-      **seletor de conta na sidebar** e as subpastas `Conta 1/` e `Conta 2/`.
-- [ ] Nota de **ACL de motoristas** ligada aqui (o token precisa dela para a coluna
-      Motorista) — cross-link com a Fase 1.
+- [x] **Fluxo do token corrigido** — o passo 2.2 mandava criar token em
+      "Configurações da conta → Aplicativos e tokens" (errado). Fluxo real
+      (confirmado pelo mantenedor):
+  1. Configurações → seção **Wialon API — Conta 1** → botão **Gerar** (abre o login
+     da Wialon no navegador).
+  2. Logar e autorizar.
+  3. A Wialon devolve o **token na barra de endereços**, após `access_token=`.
+  4. Copiar esse trecho da URL e colar no app.
+- [x] **Salvar e testar:** seção 2.3 (Salvar grava o token; Testar → "Conectado
+      como…") já estava correta — mantida.
+- [x] Box **"Onde está o token?"** apontando o `access_token=` na URL.
+- [x] Box **"Para a coluna Motorista funcionar"** (ACL de ver motoristas +
+      "Código" do cartão) — cross-link com a Fase 1.
+- [x] **Segunda conta:** já coberta pela seção 5 do manual — mantida.
 
-**Verificação:** seguir o passo a passo contra o app real (botão Gerar abre a URL
-certa; Salvar → `.env`; Testar → "Conectado como…").
+**Verificação:** ✅ `grep "Aplicativos e tokens"` = 0 (texto errado removido);
+`access_token=` presente; `<section>` 10/10; `pytest -q` (237) verde; `ruff` limpo;
+manual reaberto. Fluxo validado com o mantenedor.
 
 ---
 

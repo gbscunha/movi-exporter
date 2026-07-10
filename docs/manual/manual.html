@@ -238,10 +238,15 @@
       <h3>2.2 — Gerar o token na Wialon</h3>
       <ol class="steps">
         <li>Clique no botão <b>Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
-        <li>Faça login com seu usuário e senha da Wialon.</li>
-        <li>Na Wialon, vá em <b>Configurações da conta → Aplicativos e tokens</b> e crie um novo token com acesso de leitura aos veículos.</li>
-        <li>Copie o token gerado (uma sequência longa de letras e números).</li>
+        <li>Faça login com seu usuário e senha da Wialon e autorize o acesso.</li>
+        <li>Depois do login, a Wialon gera o token e o devolve <b>na barra de endereços do navegador</b>, logo após <code>access_token=</code>.</li>
+        <li><b>Copie</b> o token da URL — a sequência longa após <code>access_token=</code> (até o próximo <code>&amp;</code>, se houver).</li>
       </ol>
+
+      <div class="box tip">
+        <b>Onde está o token?</b>
+        Depois de logar, olhe a <b>barra de endereços</b> do navegador: o token é o trecho que vem após <code>access_token=</code> — uma sequência longa de letras e números. É esse valor que você copia e cola no app.
+      </div>
 
       <h3>2.3 — Salvar e testar no app</h3>
       <ol class="steps">
@@ -266,6 +271,11 @@
       <div class="box tip">
         <b>Dica</b>
         O botão de olho ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
+      </div>
+
+      <div class="box info">
+        <b>Para a coluna Motorista funcionar</b>
+        Se você usa identificação de motorista por cartão RFID, o token precisa ter permissão de <b>ver motoristas</b> (marque o acesso aos motoristas ao autorizar) e cada cartão precisa estar com o campo <b>"Código"</b> preenchido na Wialon. Sem isso, a coluna Motorista do relatório sai como <code>N/D</code>.
       </div>
     </section>
 
