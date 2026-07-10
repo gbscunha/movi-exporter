@@ -71,7 +71,7 @@
 | Fase | Descrição | Risco | Status |
 |------|-----------|-------|--------|
 | 0 | Fundação text-first + bump v1.4.0 | Baixo | ✅ Feito |
-| 1 | Recursos v1.4.0: Motorista + Localização + "Entendendo o relatório" | Baixo | ⬜ Todo |
+| 1 | Recursos v1.4.0: Motorista + Localização + "Entendendo o relatório" | Baixo | ✅ Feito |
 | 2 | Configuração inicial completa (token, fluxo real, self-sufficient) | Baixo | ⬜ Todo |
 | 3 | Google Drive + variáveis de ambiente (`.env`) | Baixo | ⬜ Todo |
 | 4 | Telas restantes (Geral/tema, atualizações, Home) + FAQ final | Baixo | ⬜ Todo |
@@ -111,23 +111,22 @@ resto da onda.
 
 Documentar as duas features-título da última release, hoje **ausentes**.
 
-- [ ] **Passo "Fazer exportação":** adicionar o checkbox **"Incluir endereço (mais
-      lento)"** à lista de opções — explicar que ativa a coluna Localização e deixa
-      o export mais demorado (geocodificação), e que vem **desmarcado** por padrão.
-- [ ] **Nova seção "Entendendo o relatório"** (a que faltava): tabela de **todas as
-      colunas** do arquivo em PT-BR, com uma linha por coluna e o que significa —
-      incluindo **Motorista** e **Localização**. Espelhar a tradução real
-      (`exporter.py:71-95`).
-- [ ] Explicar a coluna **Motorista**: vem do cartão RFID lido pelo veículo; sai
-      `N/D` quando não há cartão na linha, quando o cartão está sem "Código", ou
-      quando o token não tem permissão de ver motoristas.
-- [ ] Explicar a coluna **Localização**: endereço geocodificado das coordenadas;
-      só preenchida se o checkbox foi marcado; pontos sem endereço mapeado → `N/D`.
-- [ ] **FAQ:** adicionar "Por que a coluna Motorista está vazia/N/D?" e "Por que
-      não aparece o endereço?" apontando causa + como corrigir.
+- [x] **Passo "Fazer exportação":** checkbox **"Incluir endereço (mais lento)"**
+      adicionado às opções — ativa a coluna Localização, deixa o export mais
+      demorado (geocodificação) e vem **desmarcado** por padrão.
+- [x] **Nova seção "Entendendo o relatório"** (step 8): tabela das **18 colunas** do
+      arquivo em PT-BR na ordem real, uma linha por coluna, incluindo **Motorista**
+      e **Localização**. Traduções conferidas 1:1 contra `exporter.py:71-95`.
+- [x] Explicou a coluna **Motorista** (box + FAQ): RFID; `N/D` sem cartão, sem
+      "Código" ou sem ACL de ver motoristas.
+- [x] Explicou a coluna **Localização** (box + FAQ): endereço geocodificado; só se
+      o checkbox foi marcado; sem endereço mapeado → `N/D`.
+- [x] **FAQ:** duas entradas novas ("coluna Motorista vazia — como preencher?" e
+      "coluna Localização vazia — por quê?"). FAQ passou de 7 → 9 itens.
 
-**Verificação:** conferir os nomes de coluna contra `exporter.py` (contrato de
-colunas); manual abre e as duas seções/FAQ leem bem sem imagem.
+**Verificação:** ✅ 18 linhas na tabela; script cruzou as 20 traduções do
+`exporter.py` → nenhuma faltando; `<section>` balanceado (10/10); `pytest -q` (237)
+verde; `ruff check src/` limpo; manual reaberto no navegador.
 
 ---
 

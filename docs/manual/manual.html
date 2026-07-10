@@ -127,6 +127,12 @@
   ul.plain { margin: 10px 0 10px 22px; }
   ul.plain li { margin-bottom: 6px; }
 
+  /* Tabela de colunas do relatório */
+  table.cols { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  table.cols th, table.cols td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.cols th { background: var(--brand-soft); color: var(--text); font-weight: 600; }
+  table.cols td:first-child { font-weight: 600; white-space: nowrap; }
+
   /* FAQ */
   details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
   details summary { font-weight: 600; cursor: pointer; }
@@ -155,6 +161,7 @@
     <a href="#conta2"><span class="num">5</span>Segunda conta</a>
     <a href="#exportar"><span class="num">6</span>Fazer exportação</a>
     <a href="#arquivos"><span class="num">7</span>Encontrar arquivos</a>
+    <a href="#relatorio"><span class="num">8</span>Entendendo o relatório</a>
     <a href="#faq"><span class="num">?</span>Dúvidas comuns</a>
   </nav>
 
@@ -360,6 +367,7 @@
         <li>Se você tem duas contas, confirme no menu lateral qual <b>Conta</b> está selecionada.</li>
         <li>Marque <b>"Gerar arquivo consolidado"</b> se quiser um único arquivo com todos os veículos juntos.</li>
         <li>Marque <b>"Upload para Google Drive"</b> se configurou o Drive e quer envio automático.</li>
+        <li>Marque <b>"Incluir endereço (mais lento)"</b> se quiser a coluna <b>Localização</b> preenchida com o endereço de cada ponto. Vem <b>desmarcado</b> por padrão — a busca de endereços deixa a exportação mais demorada.</li>
         <li>Para exportar <b>todos</b> os veículos, deixe <b>"Todos os veículos"</b> selecionado. Para escolher veículos específicos, marque <b>"Selecionar veículos"</b> e clique em <b>Carregar</b> (veja a busca abaixo).</li>
         <li>Clique em <b>Iniciar Exportação</b>.</li>
       </ol>
@@ -453,6 +461,53 @@
       </figure>
     </section>
 
+    <!-- 8. ENTENDENDO O RELATÓRIO -->
+    <section id="relatorio">
+      <h2><span class="step-n">8</span>Entendendo o relatório</h2>
+      <p>Cada linha do arquivo é uma <b>posição registrada</b> do veículo: data, hora, local e as leituras dos sensores naquele instante. As colunas aparecem sempre nesta ordem:</p>
+
+      <table class="cols">
+        <thead>
+          <tr><th>Coluna</th><th>O que é</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Data de Exportação</td><td>Quando este relatório foi gerado pelo app.</td></tr>
+          <tr><td>Sistema de Origem</td><td>Sistema de rastreamento de onde vieram os dados (Wialon).</td></tr>
+          <tr><td>ID do Veículo</td><td>Identificador do veículo na Wialon.</td></tr>
+          <tr><td>Nome do Veículo</td><td>Nome do veículo como cadastrado na Wialon.</td></tr>
+          <tr><td>Placa</td><td>Placa cadastrada na Wialon.</td></tr>
+          <tr><td>Data/Hora</td><td>Momento em que a posição foi registrada.</td></tr>
+          <tr><td>Latitude</td><td>Coordenada geográfica (norte/sul) do ponto.</td></tr>
+          <tr><td>Longitude</td><td>Coordenada geográfica (leste/oeste) do ponto.</td></tr>
+          <tr><td>Velocidade (km/h)</td><td>Velocidade do veículo naquele instante.</td></tr>
+          <tr><td>Odômetro (km)</td><td>Distância acumulada pelo veículo, em quilômetros.</td></tr>
+          <tr><td>Ignição</td><td>Se o motor estava ligado ou desligado.</td></tr>
+          <tr><td>Localização</td><td>Endereço do ponto. Só é preenchido se você marcar <b>"Incluir endereço"</b> na exportação.</td></tr>
+          <tr><td>Nível de Combustível (%)</td><td>Combustível no tanque, quando o veículo tem esse sensor.</td></tr>
+          <tr><td>RPM</td><td>Rotação do motor.</td></tr>
+          <tr><td>Tensão do Veículo (V)</td><td>Bateria do veículo (~12V a 28V).</td></tr>
+          <tr><td>Bateria Interna (V)</td><td>Bateria de reserva do próprio rastreador (~4V).</td></tr>
+          <tr><td>Horas de Motor</td><td>Total de horas que o motor funcionou (horímetro).</td></tr>
+          <tr><td>Motorista</td><td>Nome do motorista, pelo cartão RFID lido no veículo.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="box info">
+        <b>O que significa "N/D"?</b>
+        "N/D" = <b>Não Disponível</b>: aquele sensor não enviou dado naquele instante (ex.: um veículo parado pode não reportar tensão do motor). É normal e esperado — melhor do que uma célula vazia.
+      </div>
+
+      <div class="box tip">
+        <b>Coluna Motorista (cartão RFID)</b>
+        O nome vem do cartão RFID passado no veículo, casado com a lista de <b>Motoristas</b> da Wialon. Para sair preenchida: o token precisa ter permissão de <b>ver motoristas</b> e cada cartão precisa estar com o campo <b>"Código"</b> preenchido na Wialon. Linhas sem cartão lido (ou fora dessas condições) saem como <code>N/D</code> — o resto do relatório funciona normalmente.
+      </div>
+
+      <div class="box tip">
+        <b>Coluna Localização (endereço)</b>
+        Só é preenchida quando você marca <b>"Incluir endereço (mais lento)"</b> na tela de exportação. O endereço é obtido a partir das coordenadas; pontos sem endereço mapeado saem como <code>N/D</code>.
+      </div>
+    </section>
+
     <!-- FAQ -->
     <section id="faq">
       <h2>Dúvidas comuns</h2>
@@ -465,6 +520,16 @@
       <details>
         <summary>O que significa "N/D" em algumas colunas?</summary>
         <p>"N/D" = "Não Disponível". Indica que aquele sensor não enviou dado naquele momento (ex: um veículo parado pode não reportar tensão do motor). É normal e esperado.</p>
+      </details>
+
+      <details>
+        <summary>A coluna Motorista está vazia (N/D). Como preencher?</summary>
+        <p>O nome do motorista vem do cartão RFID. Para aparecer: o token da Wialon precisa ter permissão de <b>ver motoristas</b> e cada cartão precisa estar com o campo <b>"Código"</b> preenchido na aba Motoristas da Wialon. Sem isso, ou em linhas onde nenhum cartão foi passado, a coluna fica <b>N/D</b> — o restante do relatório continua normal.</p>
+      </details>
+
+      <details>
+        <summary>Marquei a exportação mas a coluna Localização está vazia. Por quê?</summary>
+        <p>A coluna Localização só é preenchida se você marcar <b>"Incluir endereço (mais lento)"</b> na tela de exportação (vem desmarcada por padrão porque deixa o processo mais demorado). Pontos sem endereço mapeado também podem sair como <b>N/D</b>.</p>
       </details>
 
       <details>
