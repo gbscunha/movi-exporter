@@ -100,18 +100,6 @@
     box-shadow: var(--shadow); background: var(--surface);
   }
   .shot img { display: block; width: 100%; height: auto; }
-  .shot .placeholder {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 8px; padding: 48px 24px; text-align: center;
-    background: repeating-linear-gradient(45deg, #fafbfc, #fafbfc 12px, #f0f2f5 12px, #f0f2f5 24px);
-    color: var(--muted); min-height: 200px;
-  }
-  .shot .placeholder .icon { font-size: 36px; opacity: .5; }
-  .shot .placeholder .fname {
-    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-    background: var(--text); color: #fff; padding: 3px 10px; border-radius: 6px; font-size: 13px;
-  }
-  .shot .placeholder .hint { font-size: 13px; max-width: 380px; }
   figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: center; }
 
   /* Callouts */
@@ -126,6 +114,12 @@
 
   ul.plain { margin: 10px 0 10px 22px; }
   ul.plain li { margin-bottom: 6px; }
+
+  /* Tabela de colunas do relatório */
+  table.cols { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  table.cols th, table.cols td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.cols th { background: var(--brand-soft); color: var(--text); font-weight: 600; }
+  table.cols td:first-child { font-weight: 600; white-space: nowrap; }
 
   /* FAQ */
   details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
@@ -155,6 +149,9 @@
     <a href="#conta2"><span class="num">5</span>Segunda conta</a>
     <a href="#exportar"><span class="num">6</span>Fazer exportação</a>
     <a href="#arquivos"><span class="num">7</span>Encontrar arquivos</a>
+    <a href="#relatorio"><span class="num">8</span>Entendendo o relatório</a>
+    <a href="#env"><span class="num">9</span>Variáveis de ambiente</a>
+    <a href="#prefs"><span class="num">10</span>Preferências e atualizações</a>
     <a href="#faq"><span class="num">?</span>Dúvidas comuns</a>
   </nav>
 
@@ -162,7 +159,7 @@
     <div class="hero">
       <h1>📘 Manual de Uso — Movi Exporter</h1>
       <p>Guia passo a passo para extrair os relatórios mensais de rastreamento dos seus veículos.</p>
-      <span class="ver">Versão 1.3.0</span>
+      <span class="ver">Versão 1.4.0</span>
     </div>
 
     <!-- INTRODUÇÃO -->
@@ -188,12 +185,7 @@
       <figure>
         <div class="shot">
           <img src="img/01-abrir-app.png" alt="Abrindo o app"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/01-abrir-app.png</span>
-            <span class="hint">Print do ícone do app ou do aviso de segurança do Windows ao abrir pela primeira vez.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Aviso do Windows na primeira execução</figcaption>
       </figure>
@@ -218,12 +210,7 @@
       <figure>
         <div class="shot">
           <img src="img/02-config-wialon.png" alt="Seção Wialon nas Configurações"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/02-config-wialon.png</span>
-            <span class="hint">Print da tela de Configurações mostrando a seção "Wialon API — Conta 1" com o campo de token e os botões.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Seção do token na tela de Configurações</figcaption>
       </figure>
@@ -231,10 +218,15 @@
       <h3>2.2 — Gerar o token na Wialon</h3>
       <ol class="steps">
         <li>Clique no botão <b>Gerar</b>. Isso abre a página de login da Wialon no seu navegador.</li>
-        <li>Faça login com seu usuário e senha da Wialon.</li>
-        <li>Na Wialon, vá em <b>Configurações da conta → Aplicativos e tokens</b> e crie um novo token com acesso de leitura aos veículos.</li>
-        <li>Copie o token gerado (uma sequência longa de letras e números).</li>
+        <li>Faça login com seu usuário e senha da Wialon e autorize o acesso.</li>
+        <li>Depois do login, a Wialon gera o token e o devolve <b>na barra de endereços do navegador</b>, logo após <code>access_token=</code>.</li>
+        <li><b>Copie</b> o token da URL — a sequência longa após <code>access_token=</code> (até o próximo <code>&amp;</code>, se houver).</li>
       </ol>
+
+      <div class="box tip">
+        <b>Onde está o token?</b>
+        Depois de logar, olhe a <b>barra de endereços</b> do navegador: o token é o trecho que vem após <code>access_token=</code> — uma sequência longa de letras e números. É esse valor que você copia e cola no app.
+      </div>
 
       <h3>2.3 — Salvar e testar no app</h3>
       <ol class="steps">
@@ -246,12 +238,7 @@
       <figure>
         <div class="shot">
           <img src="img/03-token-conectado.png" alt="Token testado com sucesso"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/03-token-conectado.png</span>
-            <span class="hint">Print mostrando a mensagem verde "✅ Conectado como..." após clicar em Testar.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Confirmação de conexão bem-sucedida</figcaption>
       </figure>
@@ -259,6 +246,11 @@
       <div class="box tip">
         <b>Dica</b>
         O botão de olho ao lado do campo mostra/esconde o token, caso precise conferir o que foi colado.
+      </div>
+
+      <div class="box info">
+        <b>Para a coluna Motorista funcionar</b>
+        Se você usa identificação de motorista por cartão RFID, o token precisa ter permissão de <b>ver motoristas</b> (marque o acesso aos motoristas ao autorizar) e cada cartão precisa estar com o campo <b>"Código"</b> preenchido na Wialon. Sem isso, a coluna Motorista do relatório sai como <code>N/D</code>.
       </div>
     </section>
 
@@ -270,12 +262,7 @@
       <figure>
         <div class="shot">
           <img src="img/04-tela-inicial.png" alt="Tela inicial"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/04-tela-inicial.png</span>
-            <span class="hint">Print da tela inicial (Home) com os três cartões: Wialon API, Veículos e Google Drive.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Tela inicial com os cartões de status</figcaption>
       </figure>
@@ -295,21 +282,37 @@
 
       <figure>
         <div class="shot">
-          <img src="img/05-config-drive.png" alt="Configuração do Google Drive"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/05-config-drive.png</span>
-            <span class="hint">Print da seção "Google Drive" nas Configurações.</span>
-          </div>
+          <img src="img/05-config-drive.png" alt="Seção Google Drive nas Configurações"
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Seção Google Drive nas Configurações</figcaption>
       </figure>
 
+      <h3>4.1 — O que você precisa</h3>
       <ul class="plain">
-        <li><b>Credenciais</b> — o arquivo de autenticação do Google. Mostra "✅ Encontrado" quando está presente.</li>
-        <li><b>ID da pasta</b> — o identificador da pasta de destino no Drive.</li>
+        <li><b>Arquivo de credenciais</b> (<code>client_secrets.json</code>) — o arquivo de autenticação do Google. <b>Solicite ao desenvolvedor</b> e coloque-o na <b>mesma pasta</b> do <code>MoviExporter.exe</code>.</li>
+        <li><b>ID da pasta do Drive</b> — identifica a pasta de destino dos relatórios (veja abaixo como obter).</li>
       </ul>
+
+      <h3>4.2 — Descobrir o ID da pasta</h3>
+      <ol class="steps">
+        <li>Abra o <b>Google Drive</b> no navegador e entre na pasta de destino.</li>
+        <li>Olhe a URL: <code>drive.google.com/drive/folders/<b>ESTE_TRECHO</b></code>.</li>
+        <li>Copie o trecho depois de <code>/folders/</code> — esse é o ID da pasta.</li>
+      </ol>
+
+      <h3>4.3 — Configurar no app</h3>
+      <p>Em <b>Configurações → Google Drive</b>:</p>
+      <ul class="plain">
+        <li><b>Credenciais</b> — mostra <b>"✅ Encontrado"</b> quando o <code>client_secrets.json</code> está na pasta certa.</li>
+        <li><b>ID da pasta</b> — cole o ID copiado e clique em <b>Salvar</b>.</li>
+      </ul>
+      <p>Depois, marque <b>"Upload para Google Drive"</b> na tela de exportação para o envio automático.</p>
+
+      <div class="box info">
+        <b>Organização no Drive</b>
+        Os relatórios sobem organizados por mês. Se você usa <b>duas contas</b>, cada uma vai para sua subpasta (<code>Conta 1/</code> e <code>Conta 2/</code>), sem misturar.
+      </div>
     </section>
 
     <!-- 5. CONTA 2 -->
@@ -324,12 +327,7 @@
       <figure>
         <div class="shot">
           <img src="img/06-conta-2.png" alt="Segunda conta"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/06-conta-2.png</span>
-            <span class="hint">Print da seção "Wialon API — Conta 2" preenchida (opcional, só se o cliente usa 2 contas).</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Configuração da segunda conta</figcaption>
       </figure>
@@ -343,12 +341,7 @@
       <figure>
         <div class="shot">
           <img src="img/07-tela-exportar.png" alt="Tela de exportação"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/07-tela-exportar.png</span>
-            <span class="hint">Print da tela de Exportação completa, mostrando Mês, Ano, Formato e opções.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Tela de Exportação</figcaption>
       </figure>
@@ -360,6 +353,7 @@
         <li>Se você tem duas contas, confirme no menu lateral qual <b>Conta</b> está selecionada.</li>
         <li>Marque <b>"Gerar arquivo consolidado"</b> se quiser um único arquivo com todos os veículos juntos.</li>
         <li>Marque <b>"Upload para Google Drive"</b> se configurou o Drive e quer envio automático.</li>
+        <li>Marque <b>"Incluir endereço (mais lento)"</b> se quiser a coluna <b>Localização</b> preenchida com o endereço de cada ponto. Vem <b>desmarcado</b> por padrão — a busca de endereços deixa a exportação mais demorada.</li>
         <li>Para exportar <b>todos</b> os veículos, deixe <b>"Todos os veículos"</b> selecionado. Para escolher veículos específicos, marque <b>"Selecionar veículos"</b> e clique em <b>Carregar</b> (veja a busca abaixo).</li>
         <li>Clique em <b>Iniciar Exportação</b>.</li>
       </ol>
@@ -372,12 +366,7 @@
       <figure>
         <div class="shot">
           <img src="img/08-exportacao-andamento.png" alt="Exportação em andamento"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/08-exportacao-andamento.png</span>
-            <span class="hint">Print durante a exportação, mostrando o registro de progresso (log) preenchendo.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Acompanhe o progresso pelo registro na tela</figcaption>
       </figure>
@@ -390,12 +379,7 @@
       <figure>
         <div class="shot">
           <img src="img/09-exportacao-concluida.png" alt="Exportação concluída"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/09-exportacao-concluida.png</span>
-            <span class="hint">Print da mensagem "EXPORTAÇÃO CONCLUÍDA" com o resumo (veículos, registros, arquivos).</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Resumo ao final da exportação</figcaption>
       </figure>
@@ -429,12 +413,7 @@
       <figure>
         <div class="shot">
           <img src="img/10-arquivos-gerados.png" alt="Arquivos gerados"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/10-arquivos-gerados.png</span>
-            <span class="hint">Print da pasta de exportação aberta no Windows Explorer, mostrando os arquivos CSV/Excel gerados.</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Arquivos organizados por mês</figcaption>
       </figure>
@@ -442,15 +421,106 @@
       <figure>
         <div class="shot">
           <img src="img/11-planilha-aberta.png" alt="Planilha aberta"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="placeholder" style="display:none">
-            <span class="icon">📷</span>
-            <span class="fname">img/11-planilha-aberta.png</span>
-            <span class="hint">Print de um relatório aberto no Excel, mostrando as colunas (Data/Hora, Velocidade, Tensão do Veículo, etc).</span>
-          </div>
+               onerror="this.closest('figure').style.display='none';" />
         </div>
         <figcaption>Exemplo de relatório aberto no Excel</figcaption>
       </figure>
+    </section>
+
+    <!-- 8. ENTENDENDO O RELATÓRIO -->
+    <section id="relatorio">
+      <h2><span class="step-n">8</span>Entendendo o relatório</h2>
+      <p>Cada linha do arquivo é uma <b>posição registrada</b> do veículo: data, hora, local e as leituras dos sensores naquele instante. As colunas aparecem sempre nesta ordem:</p>
+
+      <table class="cols">
+        <thead>
+          <tr><th>Coluna</th><th>O que é</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Data de Exportação</td><td>Quando este relatório foi gerado pelo app.</td></tr>
+          <tr><td>Sistema de Origem</td><td>Sistema de rastreamento de onde vieram os dados (Wialon).</td></tr>
+          <tr><td>ID do Veículo</td><td>Identificador do veículo na Wialon.</td></tr>
+          <tr><td>Nome do Veículo</td><td>Nome do veículo como cadastrado na Wialon.</td></tr>
+          <tr><td>Placa</td><td>Placa cadastrada na Wialon.</td></tr>
+          <tr><td>Data/Hora</td><td>Momento em que a posição foi registrada.</td></tr>
+          <tr><td>Latitude</td><td>Coordenada geográfica (norte/sul) do ponto.</td></tr>
+          <tr><td>Longitude</td><td>Coordenada geográfica (leste/oeste) do ponto.</td></tr>
+          <tr><td>Velocidade (km/h)</td><td>Velocidade do veículo naquele instante.</td></tr>
+          <tr><td>Odômetro (km)</td><td>Distância acumulada pelo veículo, em quilômetros.</td></tr>
+          <tr><td>Ignição</td><td>Se o motor estava ligado ou desligado.</td></tr>
+          <tr><td>Localização</td><td>Endereço do ponto. Só é preenchido se você marcar <b>"Incluir endereço"</b> na exportação.</td></tr>
+          <tr><td>Nível de Combustível (%)</td><td>Combustível no tanque, quando o veículo tem esse sensor.</td></tr>
+          <tr><td>RPM</td><td>Rotação do motor.</td></tr>
+          <tr><td>Tensão do Veículo (V)</td><td>Bateria do veículo (~12V a 28V).</td></tr>
+          <tr><td>Bateria Interna (V)</td><td>Bateria de reserva do próprio rastreador (~4V).</td></tr>
+          <tr><td>Horas de Motor</td><td>Total de horas que o motor funcionou (horímetro).</td></tr>
+          <tr><td>Motorista</td><td>Nome do motorista, pelo cartão RFID lido no veículo.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="box info">
+        <b>O que significa "N/D"?</b>
+        "N/D" = <b>Não Disponível</b>: aquele sensor não enviou dado naquele instante (ex.: um veículo parado pode não reportar tensão do motor). É normal e esperado — melhor do que uma célula vazia.
+      </div>
+
+      <div class="box tip">
+        <b>Coluna Motorista (cartão RFID)</b>
+        O nome vem do cartão RFID passado no veículo, casado com a lista de <b>Motoristas</b> da Wialon. Para sair preenchida: o token precisa ter permissão de <b>ver motoristas</b> e cada cartão precisa estar com o campo <b>"Código"</b> preenchido na Wialon. Linhas sem cartão lido (ou fora dessas condições) saem como <code>N/D</code> — o resto do relatório funciona normalmente.
+      </div>
+
+      <div class="box tip">
+        <b>Coluna Localização (endereço)</b>
+        Só é preenchida quando você marca <b>"Incluir endereço (mais lento)"</b> na tela de exportação. O endereço é obtido a partir das coordenadas; pontos sem endereço mapeado saem como <code>N/D</code>.
+      </div>
+    </section>
+
+    <!-- 9. VARIÁVEIS DE AMBIENTE -->
+    <section id="env">
+      <h2><span class="step-n">9</span>Variáveis de ambiente <span style="font-size:14px;color:var(--muted);font-weight:400">(avançado)</span></h2>
+      <p>Para uso normal <b>você não precisa mexer aqui</b>: o token e o ID da pasta do Drive são gravados pelo próprio app quando você clica em <b>Salvar</b> nas Configurações. Esta seção é só para ajustes avançados.</p>
+      <p>As configurações ficam num arquivo chamado <code>.env</code>, na mesma pasta do <code>MoviExporter.exe</code>.</p>
+
+      <h3>Criar o arquivo <code>.env</code> no Windows</h3>
+      <ol class="steps">
+        <li>Abra o <b>Bloco de Notas</b>.</li>
+        <li>Em <b>Arquivo → Salvar como</b>, escolha <b>"Tipo: Todos os arquivos"</b>.</li>
+        <li>Nomeie exatamente <code>.env</code> (com o ponto, <b>sem</b> <code>.txt</code>) e salve na mesma pasta do <code>.exe</code>.</li>
+      </ol>
+
+      <table class="cols">
+        <thead>
+          <tr><th>Variável</th><th>Obrigatória</th><th>Padrão</th><th>O que é</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>WIALON_TOKEN</td><td>Sim</td><td>—</td><td>Token da Conta 1. O app grava ao clicar em Salvar.</td></tr>
+          <tr><td>WIALON_TOKEN_2</td><td>Não</td><td>—</td><td>Token da Conta 2 (se você usa duas contas).</td></tr>
+          <tr><td>WIALON_BASE_URL</td><td>Não</td><td>hst-api.wialon.com/wialon/ajax.html</td><td>Endereço da API Wialon — não altere sem necessidade.</td></tr>
+          <tr><td>EXPORT_DIR</td><td>Não</td><td>./exports</td><td>Pasta onde os relatórios são salvos.</td></tr>
+          <tr><td>WIALON_PAGE_SIZE</td><td>Não</td><td>1000</td><td>Mensagens por página na busca de histórico (100–5000).</td></tr>
+          <tr><td>GOOGLE_DRIVE_CREDENTIALS_FILE</td><td>Não</td><td>./client_secrets.json</td><td>Caminho do arquivo de credenciais do Drive.</td></tr>
+          <tr><td>GOOGLE_DRIVE_FOLDER_ID</td><td>Não</td><td>—</td><td>ID da pasta de destino no Drive. O app grava ao clicar em Salvar.</td></tr>
+          <tr><td>APP_THEME</td><td>Não</td><td>dark</td><td>Tema inicial (<code>dark</code> ou <code>light</code>). Normalmente ajustado em Configurações → Geral.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="box warn">
+        <b>Cuidado ao editar à mão</b>
+        Não use aspas nos valores e não deixe espaços antes ou depois do <code>=</code>. O arquivo deve se chamar <code>.env</code> (sem <code>.txt</code>).
+      </div>
+    </section>
+
+    <!-- 10. PREFERÊNCIAS E ATUALIZAÇÕES -->
+    <section id="prefs">
+      <h2><span class="step-n">10</span>Preferências e atualizações</h2>
+
+      <h3>Tema (claro / escuro)</h3>
+      <p>Em <b>Configurações → Geral → Tema</b>, escolha <b>Escuro</b>, <b>Claro</b> ou <b>Sistema</b> (acompanha o tema do Windows). A escolha é lembrada na próxima vez que abrir o app.</p>
+
+      <h3>Registros por página</h3>
+      <p>Em <b>Configurações → Exportação</b>, o controle <b>"Registros por página"</b> (de <b>100 a 5000</b>, padrão <b>1000</b>) define quantas mensagens o app busca por vez na Wialon. É um ajuste avançado — em geral não precisa mexer.</p>
+
+      <h3>Sobre e atualizações</h3>
+      <p>No rodapé do menu lateral, o botão <b>Sobre</b> mostra a <b>versão atual</b> do app e alguns links. Ao abrir, o app <b>verifica automaticamente</b> se há uma versão mais nova e avisa quando houver.</p>
     </section>
 
     <!-- FAQ -->
@@ -465,6 +535,16 @@
       <details>
         <summary>O que significa "N/D" em algumas colunas?</summary>
         <p>"N/D" = "Não Disponível". Indica que aquele sensor não enviou dado naquele momento (ex: um veículo parado pode não reportar tensão do motor). É normal e esperado.</p>
+      </details>
+
+      <details>
+        <summary>A coluna Motorista está vazia (N/D). Como preencher?</summary>
+        <p>O nome do motorista vem do cartão RFID. Para aparecer: o token da Wialon precisa ter permissão de <b>ver motoristas</b> e cada cartão precisa estar com o campo <b>"Código"</b> preenchido na aba Motoristas da Wialon. Sem isso, ou em linhas onde nenhum cartão foi passado, a coluna fica <b>N/D</b> — o restante do relatório continua normal.</p>
+      </details>
+
+      <details>
+        <summary>Marquei a exportação mas a coluna Localização está vazia. Por quê?</summary>
+        <p>A coluna Localização só é preenchida se você marcar <b>"Incluir endereço (mais lento)"</b> na tela de exportação (vem desmarcada por padrão porque deixa o processo mais demorado). Pontos sem endereço mapeado também podem sair como <b>N/D</b>.</p>
       </details>
 
       <details>
@@ -488,13 +568,18 @@
       </details>
 
       <details>
+        <summary>Como sei se saiu uma versão nova do app?</summary>
+        <p>Ao abrir, o Movi Exporter verifica automaticamente se há uma versão mais nova e mostra um aviso quando houver. Você também confere a versão atual no botão <b>Sobre</b> (rodapé do menu lateral).</p>
+      </details>
+
+      <details>
         <summary>Onde abro este manual de dentro do app?</summary>
         <p>No rodapé do menu lateral há os botões <b>Manual</b> (abre este guia no navegador) e <b>Sobre</b> (versão do app, links e verificação de atualização).</p>
       </details>
     </section>
 
     <footer>
-      Movi Exporter · Manual de Uso v1.3.0<br />
+      Movi Exporter · Manual de Uso v1.4.0<br />
       Em caso de dúvidas, entre em contato com o suporte.
     </footer>
 
