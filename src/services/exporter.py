@@ -532,6 +532,86 @@ class DataExporter:
             account_name,
         )
 
+    def consolidated_csv_path(
+        self,
+        month: int,
+        year: int,
+        account_name: Optional[str] = None,
+    ) -> Path:
+        """Caminho do CSV consolidado do mês (cria o diretório).
+
+        Usado pela exportação em lotes (`VehicleService`) pra fixar UM caminho
+        antes do primeiro `append_consolidated_batch` e reusar o mesmo arquivo
+        em todos os lotes seguintes — chamar de novo geraria um nome com outro
+        timestamp.
+        """
+        month_dir = self._create_month_directory(month, year, account_name)
+        filename = self._generate_filename("Histórico_Consolidado", extension="csv")
+        return month_dir / filename
+
+    def append_consolidated_batch(
+        self,
+        batch_history: Dict[str, List[Dict[str, Any]]],
+        vehicles_info: Dict[str, Dict[str, str]],
+        file_path: Path,
+        export_date: str,
+        write_header: bool,
+    ) -> int:
+        """Acrescenta um lote ao CSV consolidado (modo append), sem acumular em memória.
+
+        Contraparte "streaming" de `_export_consolidated_history`: usada pela
+        exportação em lotes pra manter o pico de memória limitado ao tamanho
+        de um lote (ex. 100 veículos) em vez do histórico da frota inteira —
+        frotas grandes (900+ veículos) travavam o app montando um único
+        DataFrame gigante só no final.
+
+        `export_date` é fixado pelo chamador (não `datetime.now()` a cada
+        lote) pra todas as linhas do consolidado saírem com o mesmo timestamp,
+        mesmo levando o export inteiro várias horas.
+
+        Só a primeira chamada (`write_header=True`) deve gravar o cabeçalho E
+        o BOM UTF-8 (`utf-8-sig`) — chamar `utf-8-sig` de novo em modo append
+        insere um BOM extra no MEIO do arquivo, corrompendo a linha. Lotes
+        seguintes usam `utf-8` puro em modo append.
+
+        Returns:
+            Quantidade de registros gravados neste lote (0 se vazio).
+        """
+        if not batch_history:
+            return 0
+
+        all_records = []
+        system_source = "unknown"
+        for vid, history in batch_history.items():
+            vehicle_data = vehicles_info.get(vid, {})
+            for record in history:
+                if system_source == "unknown":
+                    system_source = record.get("system_source", "unknown")
+                all_records.append(
+                    self._clean_history_record(
+                        record, vehicle_data.get("name"), vehicle_data.get("plate")
+                    )
+                )
+
+        if not all_records:
+            return 0
+
+        df = pd.DataFrame(all_records)
+        df = df.sort_values(["vehicle_id", "timestamp"])
+        df = self._add_metadata_to_dataframe(df, system_source, export_date=export_date)
+        df = self._translate_columns(df)
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(
+            file_path,
+            index=False,
+            encoding="utf-8-sig" if write_header else "utf-8",
+            mode="w" if write_header else "a",
+            header=write_header,
+        )
+
+        return len(all_records)
+
     def export_consolidated_history_to_csv(
         self,
         all_history: Dict[str, List[Dict[str, Any]]],

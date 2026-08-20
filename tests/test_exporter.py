@@ -148,6 +148,69 @@ def test_consolidado_csv_inclui_multiplos_veiculos(exporter):
     assert set(df["Placa"].tolist()) == {"A", "B"}
 
 
+# ---------- Consolidado em lotes (append) ----------
+
+
+def test_append_consolidated_batch_grava_cabecalho_so_na_primeira_chamada(
+    exporter, tmp_path
+):
+    """Dois lotes no mesmo arquivo: só o primeiro grava cabeçalho, e o
+    resultado final tem os registros dos dois — sem duplicar cabeçalho."""
+    file_path = tmp_path / "consolidado.csv"
+    export_date = "2026-08-20T00:00:00"
+
+    n1 = exporter.append_consolidated_batch(
+        {"1": [_record(vehicle_id=1, plate="A")]},
+        {"1": {"name": "V1", "plate": "A"}},
+        file_path,
+        export_date=export_date,
+        write_header=True,
+    )
+    n2 = exporter.append_consolidated_batch(
+        {"2": [_record(vehicle_id=2, plate="B")]},
+        {"2": {"name": "V2", "plate": "B"}},
+        file_path,
+        export_date=export_date,
+        write_header=False,
+    )
+
+    assert (n1, n2) == (1, 1)
+    df = pd.read_csv(file_path)
+    assert len(df) == 2
+    assert list(df["ID do Veículo"]) == [1, 2]
+    assert (df["Data de Exportação"] == export_date).all()
+
+
+def test_append_consolidated_batch_bom_so_no_inicio_do_arquivo(exporter, tmp_path):
+    """`utf-8-sig` no 2º lote (em modo append) injetaria um BOM no MEIO do
+    arquivo — regressão vista antes de fixar o encoding por chamada."""
+    file_path = tmp_path / "consolidado.csv"
+    export_date = "2026-08-20T00:00:00"
+
+    exporter.append_consolidated_batch(
+        {"1": [_record(vehicle_id=1)]}, {}, file_path,
+        export_date=export_date, write_header=True,
+    )
+    exporter.append_consolidated_batch(
+        {"2": [_record(vehicle_id=2)]}, {}, file_path,
+        export_date=export_date, write_header=False,
+    )
+
+    content = file_path.read_bytes()
+    bom = b"\xef\xbb\xbf"
+    assert content.startswith(bom)
+    assert content.count(bom) == 1
+
+
+def test_append_consolidated_batch_lote_vazio_nao_escreve(exporter, tmp_path):
+    file_path = tmp_path / "consolidado.csv"
+    n = exporter.append_consolidated_batch(
+        {}, {}, file_path, export_date="2026-08-20T00:00:00", write_header=True
+    )
+    assert n == 0
+    assert not file_path.exists()
+
+
 # ---------- Listagem de veículos ----------
 
 

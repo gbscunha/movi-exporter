@@ -16,6 +16,7 @@ A transformação de dados brutos acontece aqui, antes da normalização.
 import calendar
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from statistics import median
 from typing import Any, Callable, Dict, List, Optional
 
@@ -39,6 +40,13 @@ VOLTAGE_SWAP_LOW_V = 6
 # (nível rua) — deduplica pontos praticamente idênticos sem perder o número da
 # casa, reduzindo drasticamente as chamadas ao gis_geocode.
 ADDRESS_COORD_PRECISION = 4
+
+# Veículos por lote na exportação mensal. Processar a frota inteira de uma vez
+# acumula o histórico de TODOS os veículos em memória até montar o consolidado
+# no final — em contas grandes (900+ veículos) isso trava o app. Processando
+# em lotes, cada um escreve sua fatia do consolidado (append) e libera a
+# memória antes do próximo — pico de memória limitado a um lote, não à frota.
+EXPORT_BATCH_SIZE = 100
 
 
 @dataclass
@@ -425,27 +433,42 @@ class VehicleService:
 
             duplicated_plates = self._detect_duplicate_plates(vehicles)
 
-            all_history: Dict[str, List[Dict[str, Any]]] = {}
-            vehicles_info: Dict[str, Dict[str, str]] = {}  # para o consolidado
+            if consolidated and export_format == "xlsx":
+                logger.info(
+                    "Obs: o consolidado é gerado em CSV mesmo com formato "
+                    "Excel selecionado — o Excel não suporta mais de ~1 "
+                    "milhão de linhas, e o consolidado da frota costuma "
+                    "passar disso. Os arquivos por veículo seguem em xlsx."
+                )
 
-            for index, vehicle in enumerate(vehicles, start=1):
-                # Cancelamento cooperativo: checado entre veículos. Um veículo já
-                # em processamento termina; os seguintes não são tocados.
-                if should_cancel is not None and should_cancel():
-                    result.cancelled = True
-                    logger.warning(
-                        f"Exportação cancelada pelo usuário após "
-                        f"{result.processed_vehicles} veículo(s)."
+            # Ordena por ID antes de particionar em lotes: cada lote é gravado
+            # no consolidado assim que termina (append), então é essa ordem —
+            # não uma reordenação global no final — que garante o arquivo
+            # final saindo por ID do veículo, igual sempre saiu.
+            vehicles_sorted = sorted(vehicles, key=lambda v: v.get("id") or 0)
+            batches = [
+                vehicles_sorted[i : i + EXPORT_BATCH_SIZE]
+                for i in range(0, len(vehicles_sorted), EXPORT_BATCH_SIZE)
+            ]
+            total_batches = len(batches)
+
+            # Timestamp único pro consolidado inteiro — sem isso, cada lote
+            # gravaria sua fatia com um "Data de Exportação" diferente (o
+            # export de uma frota grande leva horas).
+            export_date = datetime.now().isoformat()
+            consolidated_path: Optional[Path] = None
+            wrote_consolidated_header = False
+            processed_so_far = 0
+
+            for batch_num, batch in enumerate(batches, start=1):
+                if total_batches > 1:
+                    logger.info(
+                        f"── Lote {batch_num}/{total_batches}: "
+                        f"{len(batch)} veículo(s) ──"
                     )
-                    break
 
-                # Notifica a GUI do progresso (veículo atual / total).
-                if on_progress is not None:
-                    vehicle_name = vehicle.get("nm", f"Veículo {vehicle.get('id')}")
-                    on_progress(index, result.total_vehicles, vehicle_name)
-
-                self._process_vehicle(
-                    vehicle,
+                batch_history, batch_vehicles_info = self._process_batch(
+                    batch,
                     month,
                     year,
                     export_format,
@@ -453,26 +476,48 @@ class VehicleService:
                     account_name,
                     duplicated_plates,
                     result,
-                    all_history,
-                    vehicles_info,
+                    on_progress,
+                    should_cancel,
+                    processed_so_far,
                 )
+                processed_so_far += len(batch)
 
-            # Cancelado: pula consolidado e upload (entrega parcial fica só nos
-            # arquivos individuais já gravados).
+                # Só grava o lote no consolidado se ele terminou sem
+                # cancelamento — mesmo critério "tudo ou nada" que o
+                # consolidado sempre teve (ver bloco de cancelamento abaixo).
+                if consolidated and batch_history and not result.cancelled:
+                    if consolidated_path is None:
+                        consolidated_path = self.exporter.consolidated_csv_path(
+                            month, year, account_name
+                        )
+                    written = self.exporter.append_consolidated_batch(
+                        batch_history,
+                        batch_vehicles_info,
+                        consolidated_path,
+                        export_date=export_date,
+                        write_header=not wrote_consolidated_header,
+                    )
+                    if written:
+                        wrote_consolidated_header = True
+
+                if result.cancelled:
+                    break
+
+            # Cancelado: descarta qualquer consolidado parcial já gravado em
+            # disco (mesmo comportamento de sempre — entrega parcial fica só
+            # nos arquivos individuais já gerados) e pula o upload.
             if result.cancelled:
+                if consolidated_path is not None and consolidated_path.exists():
+                    consolidated_path.unlink()
+                    logger.debug(
+                        f"Consolidado parcial descartado (exportação "
+                        f"cancelada): {consolidated_path}"
+                    )
                 logger.info("Exportação interrompida — consolidado e upload pulados.")
                 return result
 
-            self._export_consolidated(
-                all_history,
-                vehicles_info,
-                month,
-                year,
-                export_format,
-                consolidated,
-                account_name,
-                result,
-            )
+            if wrote_consolidated_header:
+                result.exported_files.append(str(consolidated_path))
 
             self._maybe_upload(result, month, year, upload_to_drive)
 
@@ -502,6 +547,64 @@ class VehicleService:
                 self.client.logout()
             except Exception as e:
                 logger.debug(f"Erro: {e}")
+
+    def _process_batch(
+        self,
+        batch: List[Dict[str, Any]],
+        month: int,
+        year: int,
+        export_format: str,
+        consolidated: bool,
+        account_name: Optional[str],
+        duplicated_plates: set,
+        result: ExportResult,
+        on_progress: Optional[Callable[[int, int, str], None]],
+        should_cancel: Optional[Callable[[], bool]],
+        progress_offset: int,
+    ) -> tuple[Dict[str, List[Dict[str, Any]]], Dict[str, Dict[str, str]]]:
+        """Processa um lote de veículos (mesma lógica por veículo de sempre).
+
+        Retorna o histórico e as infos SÓ deste lote (não da frota inteira) —
+        é isso que mantém o pico de memória limitado a `EXPORT_BATCH_SIZE`.
+        `progress_offset` é quantos veículos já foram processados em lotes
+        anteriores, pra `on_progress` continuar reportando o índice global
+        (1..total_vehicles) e não reiniciar a cada lote.
+        """
+        batch_history: Dict[str, List[Dict[str, Any]]] = {}
+        batch_vehicles_info: Dict[str, Dict[str, str]] = {}
+
+        for offset, vehicle in enumerate(batch, start=1):
+            # Cancelamento cooperativo: checado entre veículos. Um veículo já
+            # em processamento termina; os seguintes não são tocados.
+            if should_cancel is not None and should_cancel():
+                result.cancelled = True
+                logger.warning(
+                    f"Exportação cancelada pelo usuário após "
+                    f"{result.processed_vehicles} veículo(s)."
+                )
+                break
+
+            # Notifica a GUI do progresso (veículo atual / total, índice global).
+            if on_progress is not None:
+                vehicle_name = vehicle.get("nm", f"Veículo {vehicle.get('id')}")
+                on_progress(
+                    progress_offset + offset, result.total_vehicles, vehicle_name
+                )
+
+            self._process_vehicle(
+                vehicle,
+                month,
+                year,
+                export_format,
+                consolidated,
+                account_name,
+                duplicated_plates,
+                result,
+                batch_history,
+                batch_vehicles_info,
+            )
+
+        return batch_history, batch_vehicles_info
 
     def _resolve_and_filter_vehicles(
         self, vehicle_ids: Optional[List[int]]
@@ -623,45 +726,6 @@ class VehicleService:
             logger.error(error_msg)
             result.errors.append(error_msg)
             result.failed_vehicles += 1
-
-    def _export_consolidated(
-        self,
-        all_history: Dict[str, List[Dict[str, Any]]],
-        vehicles_info: Dict[str, Dict[str, str]],
-        month: int,
-        year: int,
-        export_format: str,
-        consolidated: bool,
-        account_name: Optional[str],
-        result: ExportResult,
-    ) -> None:
-        """Gera o arquivo consolidado — SEMPRE em CSV, independente do formato.
-
-        O consolidado junta todos os veículos num único arquivo, que facilmente
-        passa do limite de 1.048.576 linhas do Excel (.xlsx) — uma frota grande
-        estoura esse teto e o xlsx falha. CSV não tem limite e é o formato
-        adequado para um dataset desse porte (análise/BI).
-        """
-        if not (consolidated and all_history):
-            return
-
-        logger.info("Gerando arquivo consolidado (CSV)...")
-        if export_format == "xlsx":
-            logger.info(
-                "Obs: o consolidado é gerado em CSV mesmo com formato "
-                "Excel selecionado — o Excel não suporta mais de ~1 "
-                "milhão de linhas, e o consolidado da frota costuma "
-                "passar disso. Os arquivos por veículo seguem em xlsx."
-            )
-        file_path = self.exporter.export_consolidated_history_to_csv(
-            all_history,
-            month,
-            year,
-            vehicles_info=vehicles_info,
-            account_name=account_name,
-        )
-        if file_path:
-            result.exported_files.append(file_path)
 
     def _maybe_upload(
         self,
