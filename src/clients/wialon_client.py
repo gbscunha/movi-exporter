@@ -276,6 +276,29 @@ class WialonClient:
                 return field_data.get("v")
         return None
 
+    def _extract_plate(self, item: Dict[str, Any]) -> Optional[str]:
+        """Placa do veículo: profile field, com fallback pro nome da unidade.
+
+        Prioriza o profile field `registration_plate` (fonte oficial). Se ele
+        vier vazio, usa o nome da unidade (`nm`) — nesta frota (Conta 1 e
+        Conta 2) o nome da unidade na Wialon já É a placa; sem esse fallback,
+        contas que não preenchem o profile field ficam com `N/D` e o arquivo
+        exportado cai pro ID do veículo no nome em vez da placa.
+        """
+        plate = self.extract_profile_field(item, "registration_plate")
+        if plate:
+            return plate
+
+        name = (item.get("nm") or "").strip()
+        if name:
+            logger.debug(
+                f"Veículo {item.get('id')}: sem registration_plate — "
+                f"usando nome da unidade '{name}' como placa (fallback)."
+            )
+            return name
+
+        return None
+
     def list_vehicles(self) -> List[Dict[str, Any]]:
         """
         Lista todos os veículos (units) disponíveis.
@@ -305,7 +328,7 @@ class WialonClient:
 
         # Enriquece cada item com dados extraídos dos profile fields
         for item in items:
-            item["_plate"] = self.extract_profile_field(item, "registration_plate")
+            item["_plate"] = self._extract_plate(item)
             item["_brand"] = self.extract_profile_field(item, "brand")
             item["_model"] = self.extract_profile_field(item, "model")
             item["_vin"] = self.extract_profile_field(item, "vin")
