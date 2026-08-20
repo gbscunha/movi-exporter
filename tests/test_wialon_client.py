@@ -151,6 +151,36 @@ def test_normalize_sensor_nome_desconhecido_vira_snake_case():
     assert _client()._normalize_sensor_name("Acionamento de Prancha") == "acionamento_de_prancha"
 
 
+# ----- _extract_plate — fallback pro nome da unidade quando falta o profile field -----
+
+
+def test_extract_plate_usa_profile_field_quando_presente():
+    """Profile field `registration_plate` é a fonte oficial e tem prioridade."""
+    item = {
+        "id": 1,
+        "nm": "FXI2D14",
+        "pflds": {"1": {"n": "registration_plate", "v": "ABC1234"}},
+    }
+    assert _client()._extract_plate(item) == "ABC1234"
+
+
+def test_extract_plate_fallback_para_nome_da_unidade():
+    """Sem profile field, usa o nome da unidade (`nm`) como placa.
+
+    Reproduz o caso real da Conta 2: veículo sem `registration_plate`
+    cadastrado, mas nomeado 'FXI2D14' na Wialon — arquivo exportado caía pro
+    ID em vez da placa. Na Conta 1, Nome do Veículo e Placa sempre batem
+    (confirmado nos exports reais), então o nome é um fallback confiável.
+    """
+    item = {"id": 402367464, "nm": "FXI2D14", "pflds": {}}
+    assert _client()._extract_plate(item) == "FXI2D14"
+
+
+def test_extract_plate_sem_profile_field_e_sem_nome_fica_none():
+    item = {"id": 4, "nm": "", "pflds": {}}
+    assert _client()._extract_plate(item) is None
+
+
 # ----- list_drivers — mapa código RFID → nome (Fase 01, Motorista RFID) -----
 
 
