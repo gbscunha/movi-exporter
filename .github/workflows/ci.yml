@@ -11,7 +11,11 @@ jobs:
         with:
           python-version: "3.12"
       - name: 📦 Instalar dependências
-        run: pip install -r requirements.txt pytest ruff
+        # ruff sem versão travada: uma release nova pode mudar regras
+        # habilitadas por padrão e quebrar o CI sem nenhuma mudança de código
+        # (aconteceu em 20/08/2026 — 452 erros novos do nada). Trava na versão
+        # já validada localmente.
+        run: pip install -r requirements.txt pytest "ruff==0.15.14"
       - name: 🧪 pytest
         run: pytest -q
       - name: 🧹 ruff
