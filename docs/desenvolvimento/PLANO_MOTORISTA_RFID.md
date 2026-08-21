@@ -1,7 +1,7 @@
 # Plano de Implementação — Nome do Motorista (RFID)
 
 > **Origem:** pedido do cliente — coluna "Motorista" sai sempre vazia hoje.
-> **Ciclo:** `.claude/skills/xp-cycle.md`
+> **Ciclo:** `.claude/skills/xp-cycle/SKILL.md`
 > **Branch:** `feat/motorista-rfid`
 > **Regra:** cada fase é autônoma — não quebra o app se parar aqui. Commit ao final de cada fase.
 
