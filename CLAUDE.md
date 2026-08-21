@@ -11,7 +11,7 @@ src/services/    — vehicle_service, wialon_transformer, normalizer, exporter, 
 src/gui/         — app, frames/, components/, dialogs/, updater
 src/cli/         — main
 tests/           — pytest
-docs/desenvolvimento/  — PLANO_REFACTOR.md (ativo), PLANO_MOTORISTA_RFID.md (futuro)
+docs/desenvolvimento/  — PLANO_REFACTOR.md (ativo), PLANO_MOTORISTA_RFID.md (concluído, mantido como registro)
 docs/arquivo/          — planos e docs históricos concluídos
 docs/wialon/           — GEOCODIFICACAO.md
 docs/manual/           — manual.html (manual do usuário final, embarcado)
