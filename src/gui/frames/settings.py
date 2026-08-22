@@ -206,7 +206,9 @@ class SettingsFrame(ctk.CTkFrame):
                 icons.TRIANGLE_WARNING,
             )
         else:
-            self._set_token_status(account, "Status: sem token configurado", Colors.MUTED)
+            self._set_token_status(
+                account, "Status: sem token configurado", Colors.MUTED
+            )
 
         # Aliases para compatibilidade com testes/smoke da Fase 10 (Conta 1).
         if account == 1:
@@ -243,8 +245,10 @@ class SettingsFrame(ctk.CTkFrame):
         token = widgets["entry"].get().strip()
         if not token:
             self._set_token_status(
-                account, "Cole um token válido antes de salvar.",
-                Colors.ERROR, icons.TRIANGLE_WARNING,
+                account,
+                "Cole um token válido antes de salvar.",
+                Colors.ERROR,
+                icons.TRIANGLE_WARNING,
             )
             return
 
@@ -268,8 +272,10 @@ class SettingsFrame(ctk.CTkFrame):
         token = widgets["entry"].get().strip()
         if not token:
             self._set_token_status(
-                account, "Cole um token antes de testar a conexão.",
-                Colors.ERROR, icons.TRIANGLE_WARNING,
+                account,
+                "Cole um token antes de testar a conexão.",
+                Colors.ERROR,
+                icons.TRIANGLE_WARNING,
             )
             return
 
@@ -293,7 +299,7 @@ class SettingsFrame(ctk.CTkFrame):
     def _on_token_test_ok(self, account: int, username: str):
         """Callback executado na thread da GUI após teste bem-sucedido."""
         if username:
-            text = f"Status: Conectado como \"{username}\""
+            text = f'Status: Conectado como "{username}"'
         else:
             text = "Status: Conectado"
         self._set_token_status(account, text, Colors.SUCCESS, icons.CIRCLE_CHECK)
@@ -313,8 +319,11 @@ class SettingsFrame(ctk.CTkFrame):
         section.grid_columnconfigure(1, weight=1)
 
         title = ctk.CTkLabel(
-            section, text="  Exportação", image=icons.get(icons.FOLDER, size=18),
-            compound="left", font=ctk.CTkFont(size=16, weight="bold")
+            section,
+            text="  Exportação",
+            image=icons.get(icons.FOLDER, size=18),
+            compound="left",
+            font=ctk.CTkFont(size=16, weight="bold"),
         )
         title.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 10), sticky="w")
 
@@ -334,22 +343,31 @@ class SettingsFrame(ctk.CTkFrame):
         self.export_dir_entry.bind("<KeyRelease>", lambda _e: self._recompute_dirty())
 
         self.browse_btn = ctk.CTkButton(
-            section, text="", image=icons.get(icons.FOLDER_OPEN, size=16, on_accent=True),
-            width=40, command=self._browse_export_dir
+            section,
+            text="",
+            image=icons.get(icons.FOLDER_OPEN, size=16, on_accent=True),
+            width=40,
+            command=self._browse_export_dir,
         )
         self.browse_btn.grid(row=1, column=2, padx=(5, 4), pady=10)
 
         # Ponto laranja indicando que este campo tem alteração não salva (#20).
         self.export_dir_dot = ctk.CTkLabel(
-            section, text="●", text_color=Colors.WARNING,
-            font=ctk.CTkFont(size=16), width=16,
+            section,
+            text="●",
+            text_color=Colors.WARNING,
+            font=ctk.CTkFont(size=16),
+            width=16,
         )
         self.export_dir_dot.grid(row=1, column=3, padx=(0, 15), pady=10)
         self.export_dir_dot.grid_remove()  # escondido até haver alteração
 
         # Erro de validação inline, abaixo do campo (#21).
         self.export_dir_error = ctk.CTkLabel(
-            section, text="", text_color=Colors.ERROR, font=ctk.CTkFont(size=12),
+            section,
+            text="",
+            text_color=Colors.ERROR,
+            font=ctk.CTkFont(size=12),
             compound="left",
         )
         self.export_dir_error.grid(
@@ -366,7 +384,9 @@ class SettingsFrame(ctk.CTkFrame):
         page_size = settings.WIALON_PAGE_SIZE or 1000
 
         slider_row = ctk.CTkFrame(section, fg_color="transparent")
-        slider_row.grid(row=3, column=1, columnspan=3, padx=10, pady=(10, 15), sticky="w")
+        slider_row.grid(
+            row=3, column=1, columnspan=3, padx=10, pady=(10, 15), sticky="w"
+        )
 
         self.page_size_var = ctk.IntVar(value=page_size)
         self.page_size_slider = ctk.CTkSlider(
@@ -386,8 +406,11 @@ class SettingsFrame(ctk.CTkFrame):
         self.page_size_value_label.grid(row=0, column=1)
 
         self.page_size_dot = ctk.CTkLabel(
-            slider_row, text="●", text_color=Colors.WARNING,
-            font=ctk.CTkFont(size=16), width=16,
+            slider_row,
+            text="●",
+            text_color=Colors.WARNING,
+            font=ctk.CTkFont(size=16),
+            width=16,
         )
         self.page_size_dot.grid(row=0, column=2, padx=(8, 0))
         self.page_size_dot.grid_remove()
@@ -461,8 +484,11 @@ class SettingsFrame(ctk.CTkFrame):
         section.grid_columnconfigure(1, weight=1)
 
         title = ctk.CTkLabel(
-            section, text="  Google Drive", image=icons.get(icons.CLOUD, size=18),
-            compound="left", font=ctk.CTkFont(size=16, weight="bold")
+            section,
+            text="  Google Drive",
+            image=icons.get(icons.CLOUD, size=18),
+            compound="left",
+            font=ctk.CTkFont(size=16, weight="bold"),
         )
         title.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 10), sticky="w")
 
@@ -485,7 +511,9 @@ class SettingsFrame(ctk.CTkFrame):
             image=icons.get(status_icon, size=14, color=status_color),
             compound="left",
         )
-        self.creds_label.grid(row=1, column=1, columnspan=2, padx=10, pady=10, sticky="w")
+        self.creds_label.grid(
+            row=1, column=1, columnspan=2, padx=10, pady=10, sticky="w"
+        )
 
         # ID da pasta no Drive — mostrado por completo (não é segredo) com
         # botões de copiar e abrir no navegador (#29).
@@ -503,14 +531,20 @@ class SettingsFrame(ctk.CTkFrame):
             self.folder_entry.insert(0, folder_id)
 
         self.folder_copy_btn = ctk.CTkButton(
-            section, text="", image=icons.get(icons.COPY, size=16, on_accent=True),
-            width=40, command=self._copy_folder_id
+            section,
+            text="",
+            image=icons.get(icons.COPY, size=16, on_accent=True),
+            width=40,
+            command=self._copy_folder_id,
         )
         self.folder_copy_btn.grid(row=2, column=2, padx=(0, 4), pady=(10, 15))
 
         self.folder_open_btn = ctk.CTkButton(
-            section, text="", image=icons.get(icons.LINK, size=16, on_accent=True),
-            width=40, command=self._open_drive_folder
+            section,
+            text="",
+            image=icons.get(icons.LINK, size=16, on_accent=True),
+            width=40,
+            command=self._open_drive_folder,
         )
         self.folder_open_btn.grid(row=2, column=3, padx=(0, 15), pady=(10, 15))
 
@@ -544,8 +578,11 @@ class SettingsFrame(ctk.CTkFrame):
         section.grid_columnconfigure(1, weight=1)
 
         title = ctk.CTkLabel(
-            section, text="  Geral", image=icons.get(icons.GEAR, size=18),
-            compound="left", font=ctk.CTkFont(size=16, weight="bold")
+            section,
+            text="  Geral",
+            image=icons.get(icons.GEAR, size=18),
+            compound="left",
+            font=ctk.CTkFont(size=16, weight="bold"),
         )
         title.grid(row=0, column=0, columnspan=2, padx=15, pady=(15, 10), sticky="w")
 
@@ -558,7 +595,9 @@ class SettingsFrame(ctk.CTkFrame):
         # mapeados para os valores que o CustomTkinter entende.
         self._theme_labels = {"dark": "Escuro", "light": "Claro", "system": "Sistema"}
         self._theme_values = {v: k for k, v in self._theme_labels.items()}
-        current = settings.APP_THEME if settings.APP_THEME in self._theme_labels else "dark"
+        current = (
+            settings.APP_THEME if settings.APP_THEME in self._theme_labels else "dark"
+        )
 
         self.theme_var = ctk.StringVar(value=self._theme_labels[current])
         self.theme_menu = ctk.CTkOptionMenu(

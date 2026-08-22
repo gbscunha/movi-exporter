@@ -39,11 +39,7 @@ def test_busca_por_placa(ctk_root):
 def test_busca_por_id(ctk_root):
     ef = _frame_with_vehicles(ctk_root)
     ef.search_var.set("250")  # id 250 e qualquer outro que contenha "250"
-    ids = [
-        v["id"]
-        for v in ef.vehicles
-        if ef._matches_search(v, "250")
-    ]
+    ids = [v["id"] for v in ef.vehicles if ef._matches_search(v, "250")]
     assert 250 in ids
 
 
@@ -94,7 +90,10 @@ def test_append_carrega_proximo_lote(ctk_root):
     ef = _frame_with_vehicles(ctk_root, n=839)
     assert sum(1 for k in ef.vehicle_checkboxes if isinstance(k, int)) == ef._MAX_RENDER
     ef._append_next_batch()
-    assert sum(1 for k in ef.vehicle_checkboxes if isinstance(k, int)) == 2 * ef._MAX_RENDER
+    assert (
+        sum(1 for k in ef.vehicle_checkboxes if isinstance(k, int))
+        == 2 * ef._MAX_RENDER
+    )
 
 
 def test_nova_busca_reseta_lote(ctk_root):
@@ -108,7 +107,9 @@ def test_nova_busca_reseta_lote(ctk_root):
 
 def test_label_com_e_sem_placa(ctk_root):
     ef = ExportFrame(ctk_root)
-    assert "ABC1234" in ef._vehicle_label({"id": 1, "name": "VTR01", "plate": "ABC1234"})
+    assert "ABC1234" in ef._vehicle_label(
+        {"id": 1, "name": "VTR01", "plate": "ABC1234"}
+    )
     # Sem placa, mostra só o nome
     assert ef._vehicle_label({"id": 2, "name": "VTR02", "plate": ""}) == "VTR02"
 
@@ -116,4 +117,6 @@ def test_label_com_e_sem_placa(ctk_root):
 def test_label_nome_igual_placa_nao_duplica(ctk_root):
     """Nome == placa não deve virar 'X · X' — mostra só o nome."""
     ef = ExportFrame(ctk_root)
-    assert ef._vehicle_label({"id": 3, "name": "SRX6A12", "plate": "SRX6A12"}) == "SRX6A12"
+    assert (
+        ef._vehicle_label({"id": 3, "name": "SRX6A12", "plate": "SRX6A12"}) == "SRX6A12"
+    )

@@ -138,7 +138,10 @@ def test_suntech_odometro_m_asgn1_so_no_model_197():
     """m_asgn1 é odômetro APENAS no ST380 (model 197), onde foi validado."""
     profile = SuntechProfile()
     # model 197 → usa m_asgn1
-    assert profile.extract_odometer_meters({"model": 197, "m_asgn1": 240131878}) == 240131878.0
+    assert (
+        profile.extract_odometer_meters({"model": 197, "m_asgn1": 240131878})
+        == 240131878.0
+    )
     # model 170 → m_asgn1 NÃO é odômetro, ignora
     assert profile.extract_odometer_meters({"model": 170, "m_asgn1": 7}) is None
 

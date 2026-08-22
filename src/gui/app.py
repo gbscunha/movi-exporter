@@ -24,26 +24,26 @@ from src.gui.updater import AutoUpdater
 
 class MoviExporterApp(ctk.CTk):
     """Janela principal da aplicação."""
-    
+
     def __init__(self):
         super().__init__()
-        
+
         # Configuração da janela
         self.title(f"Movi Exporter v{__version__}")
         self.geometry("1100x700")
         self.minsize(900, 600)
-        
+
         # Tema — lê a preferência salva (padrão "dark"). O usuário troca em
         # Configurações e a escolha é lembrada no próximo boot.
         ctk.set_appearance_mode(settings.APP_THEME)
         ctk.set_default_color_theme("blue")
         # Sobrescreve o acento azul pelo vermelho da marca Movi.
         apply_movi_theme()
-        
+
         # Grid principal
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
-        
+
         # Frames
         self.frames: dict[str, ctk.CTkFrame] = {}
         self.current_frame: Optional[str] = None
@@ -61,7 +61,7 @@ class MoviExporterApp(ctk.CTk):
         self._create_sidebar()
         self._create_main_area()
         self._create_status_bar()
-        
+
         # Iniciar na tela Home
         self.show_frame("home")
 
@@ -72,14 +72,14 @@ class MoviExporterApp(ctk.CTk):
 
         # Verificar atualizações em background
         self._check_updates_async()
-    
+
     def _create_sidebar(self):
         """Cria a barra lateral de navegação."""
         self.sidebar = SidebarFrame(
             self,
             on_navigate=self.show_frame,
             account_state=self.account_state,
-            width=200
+            width=200,
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew")
 
@@ -105,38 +105,40 @@ class MoviExporterApp(ctk.CTk):
         # Posicionar todos os frames (só um visível por vez)
         for frame in self.frames.values():
             frame.grid(row=0, column=0, sticky="nsew")
-    
+
     def _create_status_bar(self):
         """Cria a barra de status."""
         self.status_bar = StatusBar(self)
         self.status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
-    
+
     def show_frame(self, name: str):
         """Mostra um frame específico."""
         if name in self.frames:
             self.frames[name].tkraise()
             self.current_frame = name
             self.sidebar.set_active(name)
-    
+
     def update_status(self, message: str, status_type: str = "info"):
         """Atualiza a barra de status."""
         self.status_bar.set_status(message, status_type)
-    
+
     def _check_updates_async(self):
         """Verifica atualizações em background."""
+
         def check():
             updater = AutoUpdater()
             has_update, version, url = updater.check_for_updates()
-            
+
             if has_update:
                 self.after(0, lambda: self._show_update_dialog(version, url))
-        
+
         thread = threading.Thread(target=check, daemon=True)
         thread.start()
-    
+
     def _show_update_dialog(self, version: str, download_url: str):
         """Mostra diálogo de atualização disponível."""
         from src.gui.dialogs.update_dialog import UpdateDialog
+
         dialog = UpdateDialog(self, version, download_url)
         dialog.grab_set()
 

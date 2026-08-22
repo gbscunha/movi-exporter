@@ -13,10 +13,28 @@ def test_fonte_disponivel():
 def test_constantes_sao_glifos_de_um_caractere():
     """Cada constante de ícone é um único caractere no range FontAwesome."""
     nomes = [
-        "PLUG", "EYE", "EYE_SLASH", "SAVE", "SEARCH", "FOLDER_OPEN", "FOLDER",
-        "PLAY", "REFRESH", "LIST", "GEAR", "HOME", "FILE_EXPORT", "UPLOAD",
-        "CLOUD", "CIRCLE_CHECK", "CIRCLE_XMARK", "TRIANGLE_WARNING", "COPY",
-        "LINK", "TRUCK", "CALENDAR",
+        "PLUG",
+        "EYE",
+        "EYE_SLASH",
+        "SAVE",
+        "SEARCH",
+        "FOLDER_OPEN",
+        "FOLDER",
+        "PLAY",
+        "REFRESH",
+        "LIST",
+        "GEAR",
+        "HOME",
+        "FILE_EXPORT",
+        "UPLOAD",
+        "CLOUD",
+        "CIRCLE_CHECK",
+        "CIRCLE_XMARK",
+        "TRIANGLE_WARNING",
+        "COPY",
+        "LINK",
+        "TRUCK",
+        "CALENDAR",
     ]
     for nome in nomes:
         glifo = getattr(icons, nome)

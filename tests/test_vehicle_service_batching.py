@@ -20,9 +20,7 @@ def _gps_page():
 
 
 def _fleet(n):
-    return [
-        {"id": i, "nm": f"V{i}", "_plate": f"PLT{i:04d}"} for i in range(1, n + 1)
-    ]
+    return [{"id": i, "nm": f"V{i}", "_plate": f"PLT{i:04d}"} for i in range(1, n + 1)]
 
 
 def test_export_em_lotes_gera_um_unico_consolidado_com_toda_a_frota(
@@ -66,7 +64,10 @@ def test_progresso_reportado_e_continuo_entre_lotes(tmp_path, monkeypatch):
     seen = []
     svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
     svc.export_monthly_data(
-        month=4, year=2026, export_format="csv", consolidated=True,
+        month=4,
+        year=2026,
+        export_format="csv",
+        consolidated=True,
         on_progress=lambda current, total, name: seen.append((current, total)),
     )
 
@@ -94,7 +95,10 @@ def test_cancelamento_no_2o_lote_descarta_consolidado_do_1o_lote_tambem(
 
     svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
     result = svc.export_monthly_data(
-        month=4, year=2026, export_format="csv", consolidated=True,
+        month=4,
+        year=2026,
+        export_format="csv",
+        consolidated=True,
         should_cancel=should_cancel,
     )
 

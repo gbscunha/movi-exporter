@@ -50,7 +50,7 @@ _ExportParams = namedtuple(
 
 class ExportFrame(ctk.CTkFrame):
     """Tela de configuração e execução de exportação."""
-    
+
     # Cores do log por nível, como pares [claro, escuro] — a tag do tkinter
     # aceita só uma cor, então resolvemos a do tema atual em _configure_log_tags.
     # No claro, INFO era branco e sumia no fundo claro (bug reportado).
@@ -62,7 +62,7 @@ class ExportFrame(ctk.CTkFrame):
         "ERROR": ["#C62828", "#F44336"],
         "CRITICAL": ["#C62828", "#FF5722"],
     }
-    
+
     def __init__(
         self,
         master,
@@ -87,9 +87,7 @@ class ExportFrame(ctk.CTkFrame):
         self.grid_rowconfigure(3, weight=1)
 
         self.title = ctk.CTkLabel(
-            self,
-            text="Exportar Dados",
-            font=ctk.CTkFont(size=28, weight="bold")
+            self, text="Exportar Dados", font=ctk.CTkFont(size=28, weight="bold")
         )
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
 
@@ -102,7 +100,7 @@ class ExportFrame(ctk.CTkFrame):
         # Reage à troca de conta feita na sidebar (estado global).
         if self.account_state is not None:
             self.account_state.register(self._on_account_changed)
-    
+
     def _create_config_section(self):
         """Cria seção de configuração.
 
@@ -173,7 +171,9 @@ class ExportFrame(ctk.CTkFrame):
             text="OPÇÕES",
             font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
             text_color=Colors.MUTED,
-        ).grid(row=0, column=0, columnspan=2, padx=Space.MD, pady=(Space.SM, 2), sticky="w")
+        ).grid(
+            row=0, column=0, columnspan=2, padx=Space.MD, pady=(Space.SM, 2), sticky="w"
+        )
 
         self.consolidated_var = ctk.BooleanVar(value=True)
         self.consolidated_check = ctk.CTkCheckBox(
@@ -292,27 +292,37 @@ class ExportFrame(ctk.CTkFrame):
 
         self.all_vehicles_var = ctk.BooleanVar(value=True)
         self.all_radio = ctk.CTkRadioButton(
-            mode_row, text="Todos os veículos", variable=self.all_vehicles_var,
-            value=True, command=self._toggle_vehicle_selection,
+            mode_row,
+            text="Todos os veículos",
+            variable=self.all_vehicles_var,
+            value=True,
+            command=self._toggle_vehicle_selection,
         )
         self.all_radio.grid(row=0, column=0, padx=(0, 16), pady=4, sticky="w")
 
         self.specific_radio = ctk.CTkRadioButton(
-            mode_row, text="Escolher manualmente", variable=self.all_vehicles_var,
-            value=False, command=self._toggle_vehicle_selection,
+            mode_row,
+            text="Escolher manualmente",
+            variable=self.all_vehicles_var,
+            value=False,
+            command=self._toggle_vehicle_selection,
         )
         self.specific_radio.grid(row=0, column=1, padx=0, pady=4, sticky="w")
 
         self.load_btn = ctk.CTkButton(
-            mode_row, text=" Carregar",
+            mode_row,
+            text=" Carregar",
             image=icons.get(icons.REFRESH, size=16, on_accent=True),
-            width=110, command=self._load_vehicles,
+            width=110,
+            command=self._load_vehicles,
         )
         self.load_btn.grid(row=0, column=3, padx=0, pady=4, sticky="e")
 
         # --- Linha 1: busca + ações em massa (discretas) + contador ---
         # Só visível no modo "Escolher manualmente".
-        self.vehicles_toolbar = ctk.CTkFrame(self.vehicles_frame, fg_color="transparent")
+        self.vehicles_toolbar = ctk.CTkFrame(
+            self.vehicles_frame, fg_color="transparent"
+        )
         self.vehicles_toolbar.grid(row=1, column=0, padx=12, pady=(0, 6), sticky="ew")
         self.vehicles_toolbar.grid_columnconfigure(0, weight=1)
 
@@ -327,30 +337,37 @@ class ExportFrame(ctk.CTkFrame):
 
         # Ações em massa como texto discreto (não competem com a lista).
         self.mark_all_btn = ctk.CTkButton(
-            self.vehicles_toolbar, text="Marcar todos", width=120,
-            fg_color="transparent", hover=False, text_color=Colors.PRIMARY,
+            self.vehicles_toolbar,
+            text="Marcar todos",
+            width=120,
+            fg_color="transparent",
+            hover=False,
+            text_color=Colors.PRIMARY,
             command=lambda: self._set_filtered_selection(True),
         )
         self.mark_all_btn.grid(row=0, column=1, padx=0)
 
         self.unmark_all_btn = ctk.CTkButton(
-            self.vehicles_toolbar, text="Limpar todos", width=120,
-            fg_color="transparent", hover=False, text_color=Colors.MUTED,
+            self.vehicles_toolbar,
+            text="Limpar todos",
+            width=120,
+            fg_color="transparent",
+            hover=False,
+            text_color=Colors.MUTED,
             command=lambda: self._set_filtered_selection(False),
         )
         self.unmark_all_btn.grid(row=0, column=2, padx=(0, 10))
 
         self.selection_count_label = ctk.CTkLabel(
-            self.vehicles_toolbar, text="",
+            self.vehicles_toolbar,
+            text="",
             font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
         )
         self.selection_count_label.grid(row=0, column=3, padx=0)
 
         # --- Linha 2: lista rolável (ocupa o espaço restante da vista) ---
         self.vehicles_scroll = ctk.CTkScrollableFrame(self.vehicles_frame)
-        self.vehicles_scroll.grid(
-            row=2, column=0, padx=12, pady=(0, 12), sticky="nsew"
-        )
+        self.vehicles_scroll.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="nsew")
         self.vehicles_scroll.grid_columnconfigure((0, 1), weight=1)
         self._wire_infinite_scroll()
 
@@ -398,9 +415,7 @@ class ExportFrame(ctk.CTkFrame):
         header_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(
-            header_frame,
-            text="Progresso:",
-            font=ctk.CTkFont(weight="bold")
+            header_frame, text="Progresso:", font=ctk.CTkFont(weight="bold")
         ).grid(row=0, column=0, sticky="w")
 
         self.progress_label = ctk.CTkLabel(
@@ -415,31 +430,40 @@ class ExportFrame(ctk.CTkFrame):
         toolbar = ctk.CTkFrame(header_frame, fg_color="transparent")
         toolbar.grid(row=0, column=2, sticky="e")
         ctk.CTkButton(
-            toolbar, text="", image=icons.get(icons.TRASH, size=14),
-            width=30, command=self._clear_log,
+            toolbar,
+            text="",
+            image=icons.get(icons.TRASH, size=14),
+            width=30,
+            command=self._clear_log,
         ).grid(row=0, column=0, padx=2)
         ctk.CTkButton(
-            toolbar, text="", image=icons.get(icons.COPY, size=14),
-            width=30, command=self._copy_log,
+            toolbar,
+            text="",
+            image=icons.get(icons.COPY, size=14),
+            width=30,
+            command=self._copy_log,
         ).grid(row=0, column=1, padx=2)
         ctk.CTkButton(
-            toolbar, text="", image=icons.get(icons.SAVE, size=14),
-            width=30, command=self._save_log,
+            toolbar,
+            text="",
+            image=icons.get(icons.SAVE, size=14),
+            width=30,
+            command=self._save_log,
         ).grid(row=0, column=2, padx=2)
-        
+
         self.log_text = ctk.CTkTextbox(progress_frame, height=200)
         self.log_text.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
-        
+
         # Configurar tags de cores para diferentes níveis de log
         # CTkTextbox usa tkinter Text internamente
         self._configure_log_tags()
-        
+
         # Barra de progresso — escondida quando não há export rodando (#27).
         self.progress_bar = ctk.CTkProgressBar(progress_frame)
         self.progress_bar.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
         self.progress_bar.set(0)
         self.progress_bar.grid_remove()  # idle: oculta
-    
+
     def _configure_log_tags(self):
         """Configura as tags de cor do log conforme o tema atual.
 
@@ -451,7 +475,7 @@ class ExportFrame(ctk.CTkFrame):
         text_widget = self.log_text._textbox
         for level, pair in self.LOG_COLORS.items():
             text_widget.tag_configure(level, foreground=pair[idx])
-    
+
     def _create_action_buttons(self):
         """Cria botões de ação."""
         actions_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -503,7 +527,7 @@ class ExportFrame(ctk.CTkFrame):
         except Exception as e:
             logger.debug(f"Erro ao abrir pasta: {e}")
             messagebox.showerror("Erro", f"Não foi possível abrir a pasta: {e}")
-    
+
     def _toggle_vehicle_selection(self):
         """Alterna visibilidade da barra de seleção de veículos."""
         if self.all_vehicles_var.get():
@@ -516,14 +540,14 @@ class ExportFrame(ctk.CTkFrame):
                 self._load_vehicles()
             else:
                 self._render_vehicle_list()
-    
+
     def _load_vehicles(self):
         """Carrega lista de veículos."""
         self.load_btn.configure(state="disabled", text="Carregando...")
         # Limpa o log para não acumular mensagens de carregamentos anteriores (#25).
         self._clear_log()
         self._log("🔌 Conectando ao Wialon...", "INFO")
-        
+
         def load():
             try:
                 if not self.service:
@@ -532,15 +556,17 @@ class ExportFrame(ctk.CTkFrame):
                 self._log("📡 Buscando lista de veículos...", "INFO")
                 self.vehicles = self.service.list_vehicles()
                 self.after(0, self._populate_vehicle_list)
-                
+
             except Exception as e:
                 self._log(f"Erro ao carregar veículos: {e}", "ERROR")
             finally:
-                self.after(0, lambda: self.load_btn.configure(state="normal", text=" Carregar"))
-        
+                self.after(
+                    0, lambda: self.load_btn.configure(state="normal", text=" Carregar")
+                )
+
         thread = threading.Thread(target=load, daemon=True)
         thread.start()
-    
+
     def _populate_vehicle_list(self):
         """Inicializa o estado de seleção após carregar os veículos.
 
@@ -693,7 +719,7 @@ class ExportFrame(ctk.CTkFrame):
 
         selected = [vid for vid, sel in self._selection.items() if sel]
         return selected if selected else None
-    
+
     def _start_export(self):
         """Inicia a exportação em background (após validação e confirmação)."""
         if self.is_exporting:
@@ -863,9 +889,7 @@ class ExportFrame(ctk.CTkFrame):
             self.status_callback("Exportação sem dados para o período", "warning")
         self.after(
             0,
-            lambda: toast.show(
-                "Nenhum dado disponível para o período", kind="warning"
-            ),
+            lambda: toast.show("Nenhum dado disponível para o período", kind="warning"),
         )
 
     def _handle_export_success(self, result) -> None:
@@ -874,7 +898,9 @@ class ExportFrame(ctk.CTkFrame):
         self._log("═" * 50, "SUCCESS")
         self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
         self._log("═" * 50, "SUCCESS")
-        self._log(f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO")
+        self._log(
+            f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO"
+        )
         self._log(f"Registros: {result.total_records}", "INFO")
         self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
 
@@ -896,7 +922,9 @@ class ExportFrame(ctk.CTkFrame):
                 self._log(f"  {e}", "ERROR")
 
         if self.status_callback:
-            self.status_callback(f"Exportação concluída: {result.processed_vehicles} veículos", "success")
+            self.status_callback(
+                f"Exportação concluída: {result.processed_vehicles} veículos", "success"
+            )
         self.after(
             0,
             lambda: toast.show(
@@ -933,6 +961,7 @@ class ExportFrame(ctk.CTkFrame):
         Na primeira chamada, troca a barra indeterminada (pulsando) por uma
         barra determinada e passa a refletir a fração real (atual/total).
         """
+
         def update():
             # Primeira vez: para o "pulsar" e vira barra de progresso real.
             if self.progress_bar.cget("mode") != "determinate":
@@ -952,7 +981,7 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_bar.configure(mode="determinate")
         self.progress_bar.set(1)
         self.progress_label.configure(text="Concluído")
-    
+
     def _reset_export_button(self):
         """Restaura o botão para 'Iniciar Exportação' (a vista fica em Progresso)."""
         self.is_exporting = False
@@ -978,6 +1007,7 @@ class ExportFrame(ctk.CTkFrame):
         Reaplica as tags de cor para acompanhar o tema atual — assim, se o
         usuário trocou de tema, o próximo log já sai com as cores corretas.
         """
+
         def _do():
             self.log_text.delete("1.0", "end")
             self._configure_log_tags()
@@ -1020,27 +1050,29 @@ class ExportFrame(ctk.CTkFrame):
     def _log(self, message: str, level: str = "INFO"):
         """
         Adiciona mensagem ao log com cor baseada no nível.
-        
+
         Args:
             message: Texto a exibir
             level: Nível do log (DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL)
         """
+
         def update():
             text_widget = self.log_text._textbox
             # Insere texto com tag de cor
             text_widget.insert("end", message + "\n", level)
             self.log_text.see("end")
-        
+
         self.after(0, update)
-    
+
     def _setup_log_handler(self):
         """Configura handler para capturar logs do loguru."""
+
         def on_log(message: str, level: str):
             self._log(message, level)
-        
+
         self._log_handler = GUILogHandler(callback=on_log, min_level="INFO")
         self._log_handler.register()
-    
+
     def _teardown_log_handler(self):
         """Remove handler de logs."""
         if self._log_handler:

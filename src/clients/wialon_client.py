@@ -169,7 +169,9 @@ class WialonClient:
             gis_geocode = data.get("gis_geocode", "")
             if gis_geocode:
                 api_host = urlparse(self.base_url).netloc
-                self.gis_geocode_url = f"{gis_geocode.rstrip('/')}/{api_host}/gis_geocode"
+                self.gis_geocode_url = (
+                    f"{gis_geocode.rstrip('/')}/{api_host}/gis_geocode"
+                )
 
             # ID do usuário — credencial das chamadas GIS (campo `user.id`).
             user_obj = data.get("user")
@@ -259,7 +261,9 @@ class WialonClient:
         except requests.RequestException as e:
             raise WialonError(f"Erro de rede: {e}")
 
-    def extract_profile_field(self, item: Dict[str, Any], field_name: str) -> Optional[str]:
+    def extract_profile_field(
+        self, item: Dict[str, Any], field_name: str
+    ) -> Optional[str]:
         """
         Extrai um campo específico dos profile fields de um item.
 
@@ -421,9 +425,7 @@ class WialonClient:
             results.extend(self._geocode_chunk(chunk))
         return results
 
-    def _geocode_chunk(
-        self, chunk: List[Dict[str, float]]
-    ) -> List[Optional[str]]:
+    def _geocode_chunk(self, chunk: List[Dict[str, float]]) -> List[Optional[str]]:
         """Geocodifica um único lote via POST. Retorna None por item em falha."""
         coords = [{"lon": c["lon"], "lat": c["lat"]} for c in chunk]
         try:
@@ -491,16 +493,18 @@ class WialonClient:
         # Cria mapa de parâmetro base -> info do sensor
         sensor_map = {}
         for sensor_id, sensor_data in sensors.items():
-            formula = sensor_data.get("p", "")  # Fórmula completa (ex: io_2_94*const0.25)
+            formula = sensor_data.get(
+                "p", ""
+            )  # Fórmula completa (ex: io_2_94*const0.25)
             name = sensor_data.get("n", "")  # Nome do sensor
 
             if formula and name:
                 # Normaliza nome do sensor para snake_case
                 normalized_name = self._normalize_sensor_name(name)
-                
+
                 # Extrai parâmetro base da fórmula
                 base_param = self._extract_base_param(formula)
-                
+
                 if base_param:
                     sensor_map[base_param] = {
                         "name": normalized_name,
@@ -536,7 +540,7 @@ class WialonClient:
         # Encontra o primeiro operador (*,/,+,-)
         operators = ["*", "/", "+", "-"]
         min_pos = len(formula)
-        
+
         for op in operators:
             pos = formula.find(op)
             if pos != -1 and pos < min_pos:
@@ -573,11 +577,11 @@ class WialonClient:
             result = float(raw_value)
 
             # Encontra todas as operações const (ex: *const0.25, /const8)
-            operations = re.findall(r'([*/+-])const([\d.]+)', formula)
+            operations = re.findall(r"([*/+-])const([\d.]+)", formula)
 
             for op, const_str in operations:
                 const_value = float(const_str)
-                
+
                 if op == "*":
                     result = result * const_value
                 elif op == "/":
@@ -591,7 +595,9 @@ class WialonClient:
             return result
 
         except (ValueError, TypeError) as e:
-            logger.debug(f"Erro ao aplicar fórmula '{formula}' ao valor '{raw_value}': {e}")
+            logger.debug(
+                f"Erro ao aplicar fórmula '{formula}' ao valor '{raw_value}': {e}"
+            )
             return None
 
     def _normalize_sensor_name(self, name: str) -> str:
@@ -612,11 +618,23 @@ class WialonClient:
         # "Bateria dispositivo", "Bateria interna"... Se houver qualquer pista
         # de "interno/dispositivo/rastreador", é a bateria do tracker (~4V);
         # caso contrário, assume tensão do veículo (~12-28V).
-        battery_terms = ("bateria", "battery", "voltagem", "voltage", "tensão", "tensao")
+        battery_terms = (
+            "bateria",
+            "battery",
+            "voltagem",
+            "voltage",
+            "tensão",
+            "tensao",
+        )
         if any(t in name_lower for t in battery_terms):
             internal_hints = (
-                "interna", "interno", "dispositivo", "rastreador",
-                "device", "tracker", "backup",
+                "interna",
+                "interno",
+                "dispositivo",
+                "rastreador",
+                "device",
+                "tracker",
+                "backup",
             )
             if any(h in name_lower for h in internal_hints):
                 return "internal_battery_voltage"

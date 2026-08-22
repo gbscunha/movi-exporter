@@ -24,7 +24,9 @@ def test_apply_movi_theme_optionmenu_e_checkbox():
 def test_apply_movi_theme_progressbar():
     ctk.set_default_color_theme("blue")
     apply_movi_theme()
-    assert ctk.ThemeManager.theme["CTkProgressBar"]["progress_color"][0] == Colors.PRIMARY
+    assert (
+        ctk.ThemeManager.theme["CTkProgressBar"]["progress_color"][0] == Colors.PRIMARY
+    )
 
 
 def test_primary_tokens_existem():

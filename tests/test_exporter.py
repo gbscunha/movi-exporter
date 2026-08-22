@@ -41,9 +41,7 @@ def exporter(tmp_path):
 
 
 def test_cria_subpasta_mensal(exporter, tmp_path):
-    exporter.export_history_to_csv(
-        [_record()], "1", 4, 2026, vehicle_plate="TST-0001"
-    )
+    exporter.export_history_to_csv([_record()], "1", 4, 2026, vehicle_plate="TST-0001")
     assert (tmp_path / "2026-04").is_dir()
 
 
@@ -141,7 +139,9 @@ def test_consolidado_csv_inclui_multiplos_veiculos(exporter):
         "1": {"name": "V1", "plate": "A"},
         "2": {"name": "V2", "plate": "B"},
     }
-    path = exporter.export_consolidated_history_to_csv(history, 4, 2026, vehicles_info=info)
+    path = exporter.export_consolidated_history_to_csv(
+        history, 4, 2026, vehicles_info=info
+    )
 
     df = pd.read_csv(path)
     assert len(df) == 2
@@ -188,12 +188,18 @@ def test_append_consolidated_batch_bom_so_no_inicio_do_arquivo(exporter, tmp_pat
     export_date = "2026-08-20T00:00:00"
 
     exporter.append_consolidated_batch(
-        {"1": [_record(vehicle_id=1)]}, {}, file_path,
-        export_date=export_date, write_header=True,
+        {"1": [_record(vehicle_id=1)]},
+        {},
+        file_path,
+        export_date=export_date,
+        write_header=True,
     )
     exporter.append_consolidated_batch(
-        {"2": [_record(vehicle_id=2)]}, {}, file_path,
-        export_date=export_date, write_header=False,
+        {"2": [_record(vehicle_id=2)]},
+        {},
+        file_path,
+        export_date=export_date,
+        write_header=False,
     )
 
     content = file_path.read_bytes()
@@ -237,9 +243,7 @@ def test_get_export_stats_diretorio_inexistente(exporter):
 
 
 def test_get_export_stats_apos_export(exporter):
-    exporter.export_history_to_csv(
-        [_record()], "1", 4, 2026, vehicle_plate="TST-0001"
-    )
+    exporter.export_history_to_csv([_record()], "1", 4, 2026, vehicle_plate="TST-0001")
     stats = exporter.get_export_stats(month=4, year=2026)
     assert stats["exists"] is True
     assert stats["csv_files"] >= 1
