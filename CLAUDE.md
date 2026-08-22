@@ -35,7 +35,7 @@ python scripts/build.py               # build local
 git tag v1.x.x && git push origin v1.x.x   # trigger CI → release (valida __version__ = tag)
 ```
 
-Pegadinha: o venv local é Python **3.14**, mas CI e build usam **3.12** — não usar sintaxe/lib acima de 3.12. `ruff` está pinado em `0.15.14` no CI.
+Python **3.12** em tudo (venv, CI, build) — criar o venv com `python3.12 -m venv venv` (macOS: `brew install python@3.12 python-tk@3.12`); não usar sintaxe/lib acima de 3.12. `ruff` está pinado em `0.15.14` no CI.
 
 ## Convenções
 

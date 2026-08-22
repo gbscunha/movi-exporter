@@ -20,7 +20,7 @@ git clone <repo-url>
 cd movi_exporter_app
 
 # Crie e ative o ambiente virtual
-python3.14 -m venv venv
+python3.12 -m venv venv   # mesma versão do CI e do build (no macOS: brew install python@3.12 python-tk@3.12)
 source venv/bin/activate  # Linux/macOS
 # ou: venv\Scripts\activate  # Windows
 

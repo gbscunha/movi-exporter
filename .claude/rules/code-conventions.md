@@ -63,8 +63,8 @@ tests/         pytest, espelha src por módulo: tests/test_<modulo>.py
 
 ## Estilo
 
-- Python alvo: **3.12** (CI e build). O venv local pode ser mais novo (3.14) —
-  não usar sintaxe/lib que só exista acima de 3.12.
+- Python **3.12** em venv, CI e build (`python3.12 -m venv venv`; macOS precisa de
+  `python-tk@3.12` para o tkinter). Não usar sintaxe/lib que só exista acima de 3.12.
 - Type hints em toda interface pública (`typing.Dict/List/Optional` é o padrão
   do código; manter consistência no arquivo que está editando).
 - `ruff check src/` com regras default (E/F), versão pinada no CI (`0.15.14`).
