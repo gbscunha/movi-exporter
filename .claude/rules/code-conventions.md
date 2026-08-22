@@ -67,8 +67,10 @@ tests/         pytest, espelha src por módulo: tests/test_<modulo>.py
   `python-tk@3.12` para o tkinter). Não usar sintaxe/lib que só exista acima de 3.12.
 - Type hints em toda interface pública (`typing.Dict/List/Optional` é o padrão
   do código; manter consistência no arquivo que está editando).
-- `ruff check src/` com regras default (E/F), versão pinada no CI (`0.15.14`).
-  Não adicionar config de ruff/pyproject sem decisão explícita.
+- `ruff check src/` (regras default E/F) e `ruff format src/ tests/` (formatter
+  oficial; CI roda `--check`). Versão pinada no CI (`0.15.14`). Não adicionar
+  config de ruff/pyproject sem decisão explícita. Commits só de formatação
+  entram em `.git-blame-ignore-revs`.
 - Constantes de módulo em `UPPER_SNAKE` com comentário do porquê do valor.
 - Imports: stdlib → terceiros → `src.*`, em blocos separados.
 - Sem dependências novas sem perguntar (PyInstaller quebra com import

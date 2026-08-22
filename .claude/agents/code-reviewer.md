@@ -20,6 +20,7 @@ Sua evidência é a saída real dos comandos e o código que você leu.
    cada saída para o relatório:
    - `venv/bin/python -m pytest -q`
    - `venv/bin/ruff check src/`
+   - `venv/bin/ruff format --check src/ tests/`
    Se algum falhar, isso é bloqueante — não "interpretar" a falha como aceitável.
 3. **Ler o diff inteiro** (`git diff main...HEAD` ou o escopo informado) e os
    arquivos tocados no contexto completo, não só as linhas mudadas.
@@ -47,7 +48,8 @@ Sua evidência é a saída real dos comandos e o código que você leu.
 ```
 ## Comandos
 - pytest: <última linha>
-- ruff:   <última linha>
+- ruff check:  <última linha>
+- ruff format: <última linha>
 
 ## Invariantes
 ✅/❌ <cada uma, uma linha>

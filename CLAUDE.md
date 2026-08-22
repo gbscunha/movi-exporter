@@ -31,6 +31,7 @@ python -m src.gui.main                # rodar GUI
 python -m src.cli.main test           # testar conexão Wialon
 pytest -q                             # testes
 ruff check src/                       # lint
+ruff format src/ tests/               # formatter (CI roda --check)
 python scripts/build.py               # build local
 git tag v1.x.x && git push origin v1.x.x   # trigger CI → release (valida __version__ = tag)
 ```
@@ -76,9 +77,10 @@ A skill `wialon-api` (`.claude/skills/wialon-api/SKILL.md`) tem a referência co
 Antes de declarar qualquer tarefa concluída:
 1. `pytest -q` — todos os testes passam
 2. `ruff check src/` — zero erros
-3. GUI abre e a feature funciona (testar o caminho principal manualmente)
-4. Se mudou dados do export: abrir o arquivo gerado e confirmar colunas/valores
-5. Se mudou `wialon_client.py`: testar com token real e conferir `app.log`
+3. `ruff format --check src/ tests/` — nada a reformatar
+4. GUI abre e a feature funciona (testar o caminho principal manualmente)
+5. Se mudou dados do export: abrir o arquivo gerado e confirmar colunas/valores
+6. Se mudou `wialon_client.py`: testar com token real e conferir `app.log`
 
 ## Testes
 

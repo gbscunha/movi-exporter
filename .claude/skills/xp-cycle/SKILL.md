@@ -76,6 +76,7 @@ pytest -q   # todos os testes devem passar aqui
 ```bash
 pytest -q                 # todos os testes passam
 ruff check src/           # zero erros de lint
+ruff format --check src/ tests/   # formatação (rodar `ruff format src/ tests/` se reclamar)
 ```
 
 - Abrir o app e testar o caminho principal manualmente
@@ -165,7 +166,7 @@ precisar explicar de novo no futuro, documente agora.
 | GUI (telas, fluxo) | **manual** | — | CustomTkinter: ROI baixo para automatizar |
 | Export real | **manual** com token real | `exports/` + `app.log` | Obrigatório se mudou `wialon_client.py` ou colunas |
 
-Comandos: `pytest -q` · `ruff check src/` · `python -m src.gui.main` ·
+Comandos: `pytest -q` · `ruff check src/` · `ruff format src/ tests/` · `python -m src.gui.main` ·
 `python -m src.cli.main test`. Rodar com o `venv` ativo.
 
 ---
