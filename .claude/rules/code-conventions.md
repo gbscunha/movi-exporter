@@ -38,7 +38,7 @@ tests/         pytest, espelha src por módulo: tests/test_<modulo>.py
 |--------|-------|
 | Nova coluna no export | Spec em `docs/specs/` → transformer (`wialon_transformer.py`) → normalizer (mapping) → exporter (`OPTIONAL_SENSOR_COLS` + `COLUMN_TRANSLATIONS`) → golden test atualizado → manual do usuário (`docs/manual/manual.html`) |
 | Suporte a outro tracker | Novo módulo em `src/services/tracker_profiles/`, herdando `TrackerProfile` (`base.py`); registrar em `registry.py::DEFAULT_PROFILES` **antes** do `DefaultProfile` |
-| Nova chamada à Wialon | Método em `WialonClient` (usa `self._request(svc, params)`, `sid`/`gis_sid` corretos) → expor no `TrackingClient` se services precisarem → teste com `requests-mock` |
+| Nova chamada à Wialon | Método em `WialonClient` (usa `self._request(svc, params)`, `sid`/`gis_sid` corretos) → expor no `TrackingClient` se services precisarem → teste com `patch.object(client._session, "get", return_value=MagicMock())` (ver `tests/test_wialon_client.py`) |
 | Nova tela/ação na GUI | Frame em `src/gui/frames/`, lógica pura testável em módulo separado (ex.: `validation.py`, `account_state.py`); trabalho pesado em `threading.Thread(daemon=True)` e volta à UI com `self.after(0, ...)` |
 | Novo comando CLI | Subcomando em `src/cli/main.py` usando os mesmos services |
 
@@ -80,7 +80,10 @@ tests/         pytest, espelha src por módulo: tests/test_<modulo>.py
 
 - `pytest -q` na raiz (`pytest.ini` já aponta `pythonpath=.`).
 - Nomes descritivos em PT-BR: `test_parse_vehicle_ids_ignora_espacos()`.
-- Wialon sempre mockada com `requests-mock`; nunca token real em teste.
+- Wialon sempre mockada com `unittest.mock`: `patch.object(client._session, "get",
+  return_value=<MagicMock com .json()>)` — padrão de `tests/test_wialon_client.py`.
+  Config/env via `monkeypatch`. Nunca token real em teste. `requests-mock` **não**
+  está instalado — não assumir.
 - Fixtures compartilhadas em `tests/conftest.py` (`ctk_root` para widgets;
   pula sem display).
 - Mudou coluna/valor de export → atualizar o golden

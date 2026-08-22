@@ -36,7 +36,7 @@ validar. **Esperar aprovação.** Plano > 5 arquivos → quebrar em fatias.
 ## 4. Red → Green → Refactor
 
 - Escrever os testes primeiro (`tests/test_<modulo>.py`, nomes em PT-BR,
-  `requests-mock` para Wialon). Rodar `pytest -q` e **mostrar a falha**.
+  `patch.object(client._session, ...)`/`MagicMock` para a Wialon, como em `tests/test_wialon_client.py`). Rodar `pytest -q` e **mostrar a falha**.
 - Implementar o mínimo. `pytest -q` verde. `ruff check src/` limpo.
 - Refatorar com os testes protegendo. Conferir a checklist de invariantes da
   `xp-cycle`.

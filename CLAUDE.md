@@ -85,7 +85,7 @@ Antes de declarar qualquer tarefa concluída:
 ## Testes
 
 - Focar em `normalizer` (mapping wialon), `exporter` (colunas, N/D) e `wialon_client` (paginação, re-auth)
-- Usar `requests-mock` para mockar chamadas Wialon — sem gastar quota real
+- Mockar a Wialon com `patch.object(client._session, "get", return_value=MagicMock())` (padrão de `tests/test_wialon_client.py`) — nunca token real, sem gastar quota
 - Sem testes de GUI (CustomTkinter, ROI baixo)
 - Descrições em PT-BR: `test_normaliza_timestamp_unix_para_iso()`
 

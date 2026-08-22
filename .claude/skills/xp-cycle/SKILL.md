@@ -159,7 +159,7 @@ precisar explicar de novo no futuro, documente agora.
 | Camada | Ferramenta | Onde | Observação |
 |--------|-----------|------|------------|
 | Unidade (normalizer, transformer, exporter, tracker_profiles) | `pytest` | `tests/test_<modulo>.py` | Foco principal — lógica de dados |
-| Cliente Wialon (paginação, re-auth, erros) | `pytest` + `requests-mock` | `tests/test_wialon_client.py` | Nunca gastar quota real em teste |
+| Cliente Wialon (paginação, re-auth, erros) | `pytest` + `unittest.mock` (`patch.object` na `_session`) | `tests/test_wialon_client.py` | Nunca gastar quota real em teste |
 | Integração do pipeline | `pytest` | `tests/test_pipeline_integration.py`, `test_vehicle_service_export_golden.py` | Transformer → normalizer → exporter; golden file |
 | Config / env / CLI | `pytest` | `tests/test_config.py`, `test_env_writer.py`, `test_cli.py` | |
 | GUI (lógica pura: validação, tema, ícones, estado) | `pytest` (fixture `ctk_root`) | `tests/test_validation.py`, `test_theme.py`, `test_icons.py` | Pula sem display (CI headless) |
