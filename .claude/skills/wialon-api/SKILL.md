@@ -1,3 +1,8 @@
+---
+name: wialon-api
+description: Referência técnica da API Wialon usada pelo Movi Exporter (login stateful com sid/gis_sid, search_items, messages/load_interval, flagsMask, sensores, motorista RFID, geocodificação). Use sempre que for ler ou alterar src/clients/wialon_client.py, src/services/wialon_transformer.py, vehicle_service.py, tracker_profiles/ ou qualquer coisa que fale com a Wialon — antes de escrever código.
+---
+
 # Wialon API — Referência Técnica
 
 ## Autenticação

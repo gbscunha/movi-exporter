@@ -175,9 +175,7 @@ class DataNormalizer:
             "fuel_level": self._get_field(
                 record, mapping.get("fuel_level", "fuel_level"), default=None
             ),
-            "rpm": self._get_field(
-                record, mapping.get("rpm", "rpm"), default=None
-            ),
+            "rpm": self._get_field(record, mapping.get("rpm", "rpm"), default=None),
             "vehicle_voltage": self._get_field(
                 record, mapping.get("vehicle_voltage", "vehicle_voltage"), default=None
             ),

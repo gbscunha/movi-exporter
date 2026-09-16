@@ -97,7 +97,9 @@ def set_manager(manager: ToastManager) -> None:
     _manager = manager
 
 
-def show(message: str, kind: str = "info", duration_ms: int = _DEFAULT_DURATION_MS) -> None:
+def show(
+    message: str, kind: str = "info", duration_ms: int = _DEFAULT_DURATION_MS
+) -> None:
     """Atalho para exibir um toast pelo manager global, se houver.
 
     Seguro chamar mesmo sem manager configurado (ex: testes headless): vira no-op.

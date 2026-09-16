@@ -213,7 +213,9 @@ class WialonTransformer:
             calculated_value = self.client.apply_sensor_formula(param_value, formula)
 
             # Usa o handler apropriado para resolver o valor
-            resolved = self._resolve_sensor_value(sensor_name, param_value, calculated_value)
+            resolved = self._resolve_sensor_value(
+                sensor_name, param_value, calculated_value
+            )
 
             if resolved is not None and sensor_name in sensor_values:
                 sensor_values[sensor_name] = resolved

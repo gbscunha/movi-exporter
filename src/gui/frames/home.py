@@ -33,23 +33,23 @@ class HomeFrame(ctk.CTkFrame):
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        
+
         self.title = ctk.CTkLabel(
             self,
             text="Bem-vindo ao Movi Exporter",
-            font=ctk.CTkFont(size=28, weight="bold")
+            font=ctk.CTkFont(size=28, weight="bold"),
         )
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky="w")
-        
+
         # Subtítulo
         self.subtitle = ctk.CTkLabel(
             self,
             text="Exportação automatizada de dados de veículos Wialon",
             font=ctk.CTkFont(size=14),
-            text_color="gray"
+            text_color="gray",
         )
         self.subtitle.grid(row=1, column=0, columnspan=2, pady=(0, 30), sticky="w")
-        
+
         # Cards de status
         self._create_status_cards()
 
@@ -87,13 +87,13 @@ class HomeFrame(ctk.CTkFrame):
         if self.account_state is not None and settings.WIALON_TOKEN_2:
             return self.account_state.label
         return None
-    
+
     def _create_status_cards(self):
         """Cria os cards de status."""
         cards_frame = ctk.CTkFrame(self)
         cards_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 20))
         cards_frame.grid_columnconfigure((0, 1, 2), weight=1)
-        
+
         # Card: Conexão Wialon
         self.wialon_card = StatusCard(
             cards_frame,
@@ -101,7 +101,7 @@ class HomeFrame(ctk.CTkFrame):
             value="Verificando...",
         )
         self.wialon_card.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        
+
         # Card: Google Drive
         self.drive_card = StatusCard(
             cards_frame,
@@ -121,15 +121,13 @@ class HomeFrame(ctk.CTkFrame):
     def _create_quick_actions(self):
         """Cria botões de ações rápidas."""
         actions_label = ctk.CTkLabel(
-            self,
-            text="Ações Rápidas",
-            font=ctk.CTkFont(size=18, weight="bold")
+            self, text="Ações Rápidas", font=ctk.CTkFont(size=18, weight="bold")
         )
         actions_label.grid(row=3, column=0, columnspan=2, pady=(20, 10), sticky="w")
-        
+
         actions_frame = ctk.CTkFrame(self, fg_color="transparent")
         actions_frame.grid(row=4, column=0, columnspan=2, sticky="ew")
-        
+
         # Botão: Testar Conexão
         self.btn_test = ctk.CTkButton(
             actions_frame,
@@ -137,7 +135,7 @@ class HomeFrame(ctk.CTkFrame):
             image=icons.get(icons.REFRESH, size=18, on_accent=True),
             width=200,
             height=45,
-            command=self._check_status_async
+            command=self._check_status_async,
         )
         self.btn_test.grid(row=0, column=0, padx=5, pady=5)
 
@@ -283,18 +281,23 @@ class HomeFrame(ctk.CTkFrame):
                 self.service = self._build_service()
                 wialon_ok = self.service.test_connection()
 
-                self.after(0, lambda: self.wialon_card.set_value(
-                    "Conectado" if wialon_ok else "Desconectado",
-                    "success" if wialon_ok else "error"
-                ))
+                self.after(
+                    0,
+                    lambda: self.wialon_card.set_value(
+                        "Conectado" if wialon_ok else "Desconectado",
+                        "success" if wialon_ok else "error",
+                    ),
+                )
 
                 # Veículos (se conectou)
                 if wialon_ok:
                     vehicles = self.service.list_vehicles()
-                    self.after(0, lambda: self.vehicles_card.set_value(
-                        str(len(vehicles)),
-                        "success"
-                    ))
+                    self.after(
+                        0,
+                        lambda: self.vehicles_card.set_value(
+                            str(len(vehicles)), "success"
+                        ),
+                    )
                 else:
                     self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
 
@@ -305,15 +308,21 @@ class HomeFrame(ctk.CTkFrame):
             # Google Drive
             try:
                 from src.services.uploader import DriveUploader
+
                 uploader = DriveUploader()
                 drive_ok = uploader.test_connection()
 
-                self.after(0, lambda: self.drive_card.set_value(
-                    "Conectado" if drive_ok else "Não configurado",
-                    "success" if drive_ok else "warning"
-                ))
+                self.after(
+                    0,
+                    lambda: self.drive_card.set_value(
+                        "Conectado" if drive_ok else "Não configurado",
+                        "success" if drive_ok else "warning",
+                    ),
+                )
             except Exception:
-                self.after(0, lambda: self.drive_card.set_value("Não configurado", "warning"))
+                self.after(
+                    0, lambda: self.drive_card.set_value("Não configurado", "warning")
+                )
 
             # Habilita "Ver Veículos" só se a conexão Wialon foi bem sucedida.
             # Se falhou, deixa desabilitado — clicar não levaria a nada útil.
@@ -336,41 +345,43 @@ class HomeFrame(ctk.CTkFrame):
 
         try:
             vehicles = self.service.list_vehicles()
-            
+
             # Criar janela de listagem
             window = ctk.CTkToplevel(self)
             window.title("Veículos Disponíveis")
             window.geometry("600x400")
             window.transient(self.winfo_toplevel())
-            
+
             # Textbox com lista
             textbox = ctk.CTkTextbox(window, width=560, height=350)
             textbox.pack(padx=20, pady=20, fill="both", expand=True)
-            
+
             # Header
             header = f"{'ID':>12} | {'Nome':<30} | {'Placa':<15}\n"
             header += "=" * 60 + "\n"
             textbox.insert("end", header)
-            
+
             # Dados
             for vehicle in vehicles:
                 line = f"{vehicle['id']:>12} | {vehicle['name']:<30} | {vehicle.get('plate', ''):<15}\n"
                 textbox.insert("end", line)
-            
+
             textbox.insert("end", f"\nTotal: {len(vehicles)} veículos")
             textbox.configure(state="disabled")
-            
+
         except Exception as e:
             self._show_error(f"Erro ao listar veículos: {e}")
-    
+
     def _show_error(self, message: str):
         """Mostra mensagem de erro."""
         import tkinter.messagebox as mb
+
         mb.showerror("Erro", message)
 
     def _show_warning(self, message: str):
         """Mostra aviso (warning, não erro)."""
         import tkinter.messagebox as mb
+
         mb.showwarning("Aviso", message)
 
 

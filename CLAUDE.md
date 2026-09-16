@@ -5,13 +5,16 @@ App desktop Python que extrai dados mensais de rastreamento veicular da Wialon e
 ## Estrutura
 
 ```
-src/core/        — config, logger, env_writer
-src/clients/     — wialon_client (stateful)
-src/services/    — vehicle_service, wialon_transformer, normalizer, exporter, uploader
+src/core/        — config, logger, env_writer, service_factory
+src/clients/     — wialon_client (stateful), protocols
+src/services/    — vehicle_service, wialon_transformer, normalizer, exporter, uploader, tracker_profiles/
 src/gui/         — app, frames/, components/, dialogs/, updater
 src/cli/         — main
 tests/           — pytest
-docs/desenvolvimento/  — PLANO_REFACTOR.md (ativo), PLANO_MOTORISTA_RFID.md (concluído, mantido como registro)
+CHECKLIST.md / JOURNAL.md — estado vivo e história (pessoais, gitignored — ver "Estado do projeto")
+docs/specs/            — specs de feature (o "quê", DADO/QUANDO/ENTÃO)
+docs/decisions/        — ADRs (o "porquê")
+docs/desenvolvimento/  — PLANO_*.md das ondas 1–5 (concluídos, registro) + TEMPLATE_CHECKLIST.md
 docs/arquivo/          — planos e docs históricos concluídos
 docs/wialon/           — GEOCODIFICACAO.md
 docs/manual/           — manual.html (manual do usuário final, embarcado)
@@ -28,20 +31,23 @@ python -m src.gui.main                # rodar GUI
 python -m src.cli.main test           # testar conexão Wialon
 pytest -q                             # testes
 ruff check src/                       # lint
+ruff format src/ tests/               # formatter (CI roda --check)
 python scripts/build.py               # build local
-git tag v1.x.x && git push origin v1.x.x   # trigger CI → release
+git tag v1.x.x && git push origin v1.x.x   # trigger CI → release (valida __version__ = tag)
 ```
+
+Python **3.12** em tudo (venv, CI, build) — criar o venv com `python3.12 -m venv venv` (macOS: `brew install python@3.12 python-tk@3.12`); não usar sintaxe/lib acima de 3.12. `ruff` está pinado em `0.15.14` no CI.
 
 ## Convenções
 
-- Código e comentários em inglês; UI e mensagens em português brasileiro
+- Identificadores em inglês; docstrings, comentários, UI, mensagens e testes em português brasileiro
 - Type hints em toda interface pública
 - `N/D` para campos de sensor sem dado — nunca `NaN` nem string vazia visível ao cliente
 - Sem comentários óbvios — comentar apenas o *porquê* de algo não-óbvio
 
 ## Wialon API — regras críticas
 
-Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nunca quebram:
+A skill `wialon-api` (`.claude/skills/wialon-api/SKILL.md`) tem a referência completa — carregar antes de tocar `wialon_client`/`transformer`. Regras que nunca quebram:
 
 - API é **stateful** — usa `sid`, NÃO Bearer token
 - Login retorna **dois** session IDs: `eid` (API) e `gis_sid` (GIS) — usar o correto para cada chamada
@@ -71,23 +77,33 @@ Consulte `.claude/skills/wialon-api.md` para referência completa. Regras que nu
 Antes de declarar qualquer tarefa concluída:
 1. `pytest -q` — todos os testes passam
 2. `ruff check src/` — zero erros
-3. GUI abre e a feature funciona (testar o caminho principal manualmente)
-4. Se mudou dados do export: abrir o arquivo gerado e confirmar colunas/valores
-5. Se mudou `wialon_client.py`: testar com token real e conferir `app.log`
+3. `ruff format --check src/ tests/` — nada a reformatar
+4. GUI abre e a feature funciona (testar o caminho principal manualmente)
+5. Se mudou dados do export: abrir o arquivo gerado e confirmar colunas/valores
+6. Se mudou `wialon_client.py`: testar com token real e conferir `app.log`
 
 ## Testes
 
 - Focar em `normalizer` (mapping wialon), `exporter` (colunas, N/D) e `wialon_client` (paginação, re-auth)
-- Usar `requests-mock` para mockar chamadas Wialon — sem gastar quota real
+- Mockar a Wialon com `patch.object(client._session, "get", return_value=MagicMock())` (padrão de `tests/test_wialon_client.py`) — nunca token real, sem gastar quota
 - Sem testes de GUI (CustomTkinter, ROI baixo)
 - Descrições em PT-BR: `test_normaliza_timestamp_unix_para_iso()`
 
 ## Ciclo de desenvolvimento
 
-Consulte `.claude/skills/xp-cycle.md` para o ciclo completo.
-Resumo: **Consultar plano → Implementar fase → Verificar → Commitar → Atualizar status no PLANO_REFACTOR.md**
+Skill `xp-cycle` (`.claude/skills/xp-cycle/SKILL.md`) — obrigatória em feature, bug e refactor.
+Resumo: **Spec → Plan Mode → Teste (Red) → Implementar (Green) → Verificar → Refatorar → Commitar → `/my-verify` → CHECKLIST + JOURNAL**
 
-Skills disponíveis: `/nova-fase` (executa próxima fase do plano) · `/review` (revisa código da sessão)
+Comandos: `/new-feature <descrição>` (ciclo completo) · `/my-verify` (agente independente roda testes e confere invariantes) · `/review` (checklist rápido inline)
+Convenções detalhadas: `.claude/rules/code-conventions.md`.
+
+## Estado do projeto
+
+Toda sessão **abre lendo "Onde estou" no `CHECKLIST.md`** e **fecha registrando uma entry no `JOURNAL.md`** (estado no CHECKLIST, história no JOURNAL — nunca inflar o CHECKLIST com "Estado em DD-MM"). Ambos são pessoais (gitignored); se não existirem nesta máquina, recriar de `docs/desenvolvimento/TEMPLATE_CHECKLIST.md`. O "quê" de cada feature vai em `docs/specs/`; decisões estruturais viram ADR em `docs/decisions/`.
+
+## Skills do ecossistema
+
+Skills externas só com confirmação, auditadas e versionadas no projeto — política em `.claude/rules/skills-policy.md`. Regras deste projeto vencem sempre.
 
 ## Não faça
 
@@ -106,6 +122,6 @@ Skills disponíveis: `/nova-fase` (executa próxima fase do plano) · `/review` 
 ## Compactação
 
 Quando o contexto for compactado, preservar:
-- Fase atual do `PLANO_REFACTOR.md` e status de cada item
+- "Onde estou" do `CHECKLIST.md` e a fatia/spec em andamento
 - Arquivos modificados na sessão ainda não commitados
 - Decisões arquiteturais tomadas e erros encontrados

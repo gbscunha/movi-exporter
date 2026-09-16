@@ -93,15 +93,24 @@ def test_normalize_sensor_bateria_do_dispositivo_vai_para_interna():
     e o sensor s_asgn2 (4.1V, bateria interna do tracker) acabava mapeado
     para vehicle_voltage. Esse teste blinda a ordem.
     """
-    assert _client()._normalize_sensor_name("Bateria do dispositivo") == "internal_battery_voltage"
+    assert (
+        _client()._normalize_sensor_name("Bateria do dispositivo")
+        == "internal_battery_voltage"
+    )
 
 
 def test_normalize_sensor_bateria_do_rastreador_vai_para_interna():
-    assert _client()._normalize_sensor_name("Bateria do rastreador") == "internal_battery_voltage"
+    assert (
+        _client()._normalize_sensor_name("Bateria do rastreador")
+        == "internal_battery_voltage"
+    )
 
 
 def test_normalize_sensor_bateria_interna_vai_para_interna():
-    assert _client()._normalize_sensor_name("Bateria Interna") == "internal_battery_voltage"
+    assert (
+        _client()._normalize_sensor_name("Bateria Interna")
+        == "internal_battery_voltage"
+    )
 
 
 def test_normalize_sensor_bateria_dispositivo_sem_do_vai_para_interna():
@@ -110,11 +119,16 @@ def test_normalize_sensor_bateria_dispositivo_sem_do_vai_para_interna():
     Antes caía no genérico 'bateria' → vehicle_voltage (errado). Agora a
     palavra-chave 'dispositivo' garante internal_battery_voltage.
     """
-    assert _client()._normalize_sensor_name("Bateria dispositivo") == "internal_battery_voltage"
+    assert (
+        _client()._normalize_sensor_name("Bateria dispositivo")
+        == "internal_battery_voltage"
+    )
 
 
 def test_normalize_sensor_device_battery_vai_para_interna():
-    assert _client()._normalize_sensor_name("Device Battery") == "internal_battery_voltage"
+    assert (
+        _client()._normalize_sensor_name("Device Battery") == "internal_battery_voltage"
+    )
 
 
 def test_normalize_sensor_bateria_do_veiculo_vai_para_vehicle():
@@ -148,7 +162,10 @@ def test_normalize_sensor_combustivel():
 
 def test_normalize_sensor_nome_desconhecido_vira_snake_case():
     """Nomes sem correspondência ficam como snake_case do nome original."""
-    assert _client()._normalize_sensor_name("Acionamento de Prancha") == "acionamento_de_prancha"
+    assert (
+        _client()._normalize_sensor_name("Acionamento de Prancha")
+        == "acionamento_de_prancha"
+    )
 
 
 # ----- _extract_plate — fallback pro nome da unidade quando falta o profile field -----
@@ -244,9 +261,7 @@ def test_list_drivers_resource_sem_drivers_retorna_vazio():
 
 def test_list_drivers_aceita_drvrs_como_lista():
     """Alguns retornos trazem `drvrs` como lista em vez de dict."""
-    payload = {
-        "items": [{"drvrs": [{"c": "111", "n": "A"}, {"c": "222", "n": "B"}]}]
-    }
+    payload = {"items": [{"drvrs": [{"c": "111", "n": "A"}, {"c": "222", "n": "B"}]}]}
     client = _client()
     with patch.object(client, "_request", return_value=payload):
         drivers = client.list_drivers()
@@ -281,7 +296,8 @@ def test_get_addresses_batch_retorna_enderecos_na_ordem():
     c = _geo_client()
     coords = [{"lon": -46.6, "lat": -23.5}, {"lon": -43.3, "lat": -22.8}]
     with patch.object(
-        c._session, "post",
+        c._session,
+        "post",
         return_value=_fake_response(["Av. Paulista, SP", "Rua X, RJ"]),
     ):
         addrs = c.get_addresses_batch(coords)
@@ -348,4 +364,4 @@ def test_get_addresses_batch_divide_em_lotes():
 
     assert mock_post.call_count == 2  # 1000 + 10
     assert len(addrs) == n
-    assert addrs[0] == "addr0" and addrs[-1] == f"addr{n-1}"
+    assert addrs[0] == "addr0" and addrs[-1] == f"addr{n - 1}"

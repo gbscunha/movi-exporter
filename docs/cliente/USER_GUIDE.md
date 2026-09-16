@@ -597,4 +597,4 @@ Para dúvidas ou problemas:
 
 ---
 
-*Guia técnico (dev/CLI) — atualizado para o app v1.4.0.*
+*Guia técnico (dev/CLI) — atualizado para o app v1.5.0.*

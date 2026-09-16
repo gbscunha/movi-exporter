@@ -235,7 +235,7 @@ Agora que o manual é a fonte única, alinhar o resto da documentação.
 - [x] **`CLAUDE.md`:** referência fantasma a `TOKEN_AUTORIZACAO.md` **repontada
       para o manual** (decisão do mantenedor) — na linha do Token e na lista de
       estrutura (que agora inclui `docs/manual/` e `docs/cliente/`). Mesma correção
-      em `.claude/skills/wialon-api.md`.
+      em `.claude/skills/wialon-api/SKILL.md`.
 - [x] **`PLANO_MOTORISTA_RFID.md`:** Fase 04 já concluída na v1.4.0 — mantido como
       registro histórico (a menção ao GUIA descreve o que foi feito na época).
 

@@ -61,9 +61,7 @@ class SidebarFrame(ctk.CTkFrame):
 
         # --- Rodapé: ações (abaixo do espaçador) ---
         self._create_separator(row=21)
-        self._create_action_button(
-            "  Manual", icons.BOOK, self._open_manual, row=22
-        )
+        self._create_action_button("  Manual", icons.BOOK, self._open_manual, row=22)
         self._create_action_button(
             "  Sobre", icons.INFO_CIRCLE, self._open_about, row=23
         )
@@ -143,7 +141,7 @@ class SidebarFrame(ctk.CTkFrame):
         account = 2 if value == "Conta 2" else 1
         if self.account_state is not None:
             self.account_state.set_account(account)
-    
+
     def _create_nav_button(self, name: str, text: str, icon: str, row: int):
         """Cria um botão de navegação com ícone FontAwesome."""
         button = ctk.CTkButton(
@@ -159,7 +157,7 @@ class SidebarFrame(ctk.CTkFrame):
             # Texto theme-aware: botão é transparente quando inativo, então o
             # texto branco global não serve (sumia no modo claro — bug #1).
             text_color=self.nav_text_color,
-            command=lambda: self._on_click(name)
+            command=lambda: self._on_click(name),
         )
         button.grid(row=row, column=0, padx=10, pady=5, sticky="ew")
         self.buttons[name] = button
@@ -208,7 +206,7 @@ class SidebarFrame(ctk.CTkFrame):
         """Handler de clique no botão."""
         self.set_active(name)
         self.on_navigate(name)
-    
+
     def set_active(self, name: str):
         """Define o botão ativo."""
         # Reset todos
@@ -217,5 +215,5 @@ class SidebarFrame(ctk.CTkFrame):
                 btn.configure(fg_color=self.active_color)
             else:
                 btn.configure(fg_color=self.normal_color)
-        
+
         self.active_button = name

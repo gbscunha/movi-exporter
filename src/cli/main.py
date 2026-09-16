@@ -84,14 +84,16 @@ def cmd_list(account: int = 1) -> int:
             print("Nenhum veículo encontrado.")
             return 0
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"{'ID':>12} | {'Nome':<30} | {'Placa':<15}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         for vehicle in vehicles:
-            print(f"{vehicle['id']:>12} | {vehicle['name']:<30} | {vehicle.get('plate', ''):<15}")
+            print(
+                f"{vehicle['id']:>12} | {vehicle['name']:<30} | {vehicle.get('plate', ''):<15}"
+            )
 
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Total: {len(vehicles)} veículos")
 
         return 0
@@ -147,7 +149,9 @@ def cmd_export(
 
     # Quando Conta 2 está em uso, queremos subpasta dedicada
     # (mesmo comportamento da GUI quando ambas estão configuradas).
-    account_name = _account_label(account) if account == 2 or settings.WIALON_TOKEN_2 else None
+    account_name = (
+        _account_label(account) if account == 2 or settings.WIALON_TOKEN_2 else None
+    )
 
     try:
         result = service.export_monthly_data(
@@ -168,7 +172,9 @@ def cmd_export(
         print("=" * 60)
         print(f"Conta: {_account_label(account)}")
         print(f"Período: {month:02d}/{year}")
-        print(f"Veículos processados: {result.processed_vehicles}/{result.total_vehicles}")
+        print(
+            f"Veículos processados: {result.processed_vehicles}/{result.total_vehicles}"
+        )
         print(f"Veículos com erro: {result.failed_vehicles}")
         print(f"Total de registros: {result.total_records}")
         print(f"Taxa de sucesso: {result.success_rate:.1f}%")
@@ -219,16 +225,15 @@ def parse_vehicle_ids(value: str) -> List[int]:
             try:
                 ids.append(int(part))
             except ValueError:
-                raise argparse.ArgumentTypeError(
-                    f"ID de veículo inválido: {part}"
-                )
+                raise argparse.ArgumentTypeError(f"ID de veículo inválido: {part}")
     return ids
 
 
 def _add_account_arg(subparser: argparse.ArgumentParser) -> None:
     """Adiciona o argumento `--account` a um subparser."""
     subparser.add_argument(
-        "--account", "-a",
+        "--account",
+        "-a",
         type=int,
         choices=[1, 2],
         default=1,
@@ -277,7 +282,8 @@ Exemplos:
     default_year = now.year if now.month > 1 else now.year - 1
 
     export_parser.add_argument(
-        "--month", "-m",
+        "--month",
+        "-m",
         type=int,
         default=default_month,
         choices=range(1, 13),
@@ -286,14 +292,16 @@ Exemplos:
     )
 
     export_parser.add_argument(
-        "--year", "-y",
+        "--year",
+        "-y",
         type=int,
         default=default_year,
         help=f"Ano para exportar (padrão: {default_year})",
     )
 
     export_parser.add_argument(
-        "--vehicles", "-v",
+        "--vehicles",
+        "-v",
         type=parse_vehicle_ids,
         default=None,
         metavar="ID1,ID2,...",
@@ -301,7 +309,8 @@ Exemplos:
     )
 
     export_parser.add_argument(
-        "--format", "-f",
+        "--format",
+        "-f",
         choices=["csv", "xlsx", "both"],
         default="csv",
         help="Formato de exportação (padrão: csv)",
@@ -314,7 +323,8 @@ Exemplos:
     )
 
     export_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=str,
         default=None,
         metavar="DIR",
@@ -322,13 +332,15 @@ Exemplos:
     )
 
     export_parser.add_argument(
-        "--upload", "-u",
+        "--upload",
+        "-u",
         action="store_true",
         help="Faz upload dos arquivos para Google Drive",
     )
 
     export_parser.add_argument(
-        "--addresses", "-A",
+        "--addresses",
+        "-A",
         action="store_true",
         help="Geocodifica coordenadas e preenche a coluna Localização (mais lento)",
     )

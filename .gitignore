@@ -17,3 +17,5 @@ venv/
 .DS_Store
 app.log
 *.log
+/CHECKLIST.md
+/JOURNAL.md

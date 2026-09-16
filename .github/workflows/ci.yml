@@ -18,5 +18,7 @@ jobs:
         run: pip install -r requirements.txt pytest "ruff==0.15.14"
       - name: 🧪 pytest
         run: pytest -q
-      - name: 🧹 ruff
+      - name: 🧹 ruff check
         run: ruff check src/
+      - name: 🧹 ruff format
+        run: ruff format --check src/ tests/

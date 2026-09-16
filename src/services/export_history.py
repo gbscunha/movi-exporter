@@ -43,9 +43,7 @@ def _export_files(folder: Path) -> List[Path]:
     if not folder.is_dir():
         return []
     return [
-        f
-        for f in folder.iterdir()
-        if f.is_file() and f.suffix.lower() in _EXPORT_EXTS
+        f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in _EXPORT_EXTS
     ]
 
 

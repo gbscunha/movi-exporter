@@ -216,7 +216,11 @@ class VehicleService:
         to_fetch: Dict[tuple, Dict[str, float]] = {}
         for record in records:
             key = self._coord_key(record.get("latitude"), record.get("longitude"))
-            if key is not None and key not in self._address_cache and key not in to_fetch:
+            if (
+                key is not None
+                and key not in self._address_cache
+                and key not in to_fetch
+            ):
                 to_fetch[key] = {"lat": record["latitude"], "lon": record["longitude"]}
 
         if to_fetch:

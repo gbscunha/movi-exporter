@@ -38,7 +38,10 @@ def test_export_cancelado_para_no_meio(tmp_path):
 
     svc = VehicleService(client=mock_client, export_dir=str(tmp_path))
     result = svc.export_monthly_data(
-        month=4, year=2026, export_format="csv", consolidated=True,
+        month=4,
+        year=2026,
+        export_format="csv",
+        consolidated=True,
         should_cancel=should_cancel,
     )
 

@@ -7,6 +7,13 @@
 > **Contexto:** 1 cliente em produção (Windows), mantenedor solo. As escolhas
 > abaixo são deliberadamente **pragmáticas**: refatorar onde há ganho real,
 > evitar over-engineering.
+>
+> **Nota (2026-08-21):** onda **concluída** (todas as fases ✅). Os caminhos
+> `.claude/skills/xp-cycle.md`, `.claude/skills/wialon-api.md` e a skill
+> `/nova-fase` citados na Fase 2 foram substituídos por
+> `.claude/skills/xp-cycle/SKILL.md`, `.claude/skills/wialon-api/SKILL.md` e
+> `/new-feature` — ver `docs/decisions/ADR-0001-estrutura-dev-ia.md`. O texto
+> abaixo é mantido como registro histórico.
 
 ## Princípios desta onda
 
