@@ -149,7 +149,7 @@ WIALON_PAGE_SIZE=1000
 
 ### 4.3 Obter Token Wialon
 
-O token é gerado pelo fluxo de autorização web do Wialon: acesse a página de login, autentique-se e **o token volta na URL** (após `access_token=`). Copie esse valor e cole em `WIALON_TOKEN` no `.env` (ou use o botão **Gerar** na tela de Configurações do app). Passo a passo detalhado no manual do usuário (`docs/manual/manual.html`, seção 2).
+O token é gerado pelo fluxo de autorização web do Wialon: acesse a página de login, autentique-se e **o token volta na URL** (após `access_token=`). Copie esse valor e cole em `WIALON_TOKEN` no `.env` (ou use o botão **Gerar** na tela de Configurações do app). Passo a passo detalhado no manual do usuário (`docs/manual/manual.html`, seção "Conectar sua conta Wialon").
 
 ---
 
