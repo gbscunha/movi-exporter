@@ -33,9 +33,16 @@ def _html() -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _fontes_da_gui() -> str:
+def _rotulos_da_gui() -> set[str]:
+    """Textos literais de `text="..."` no fonte da GUI.
+
+    Olhar só os literais (e não o arquivo inteiro) é o que faz o teste pegar
+    uma renomeação: o nome antigo costuma sobreviver em comentários e
+    docstrings, e uma busca no texto bruto passaria batido.
+    """
     raiz = Path(__file__).resolve().parent.parent / "src" / "gui"
-    return "\n".join(p.read_text(encoding="utf-8") for p in raiz.rglob("*.py"))
+    fontes = "\n".join(p.read_text(encoding="utf-8") for p in raiz.rglob("*.py"))
+    return {t.strip() for t in re.findall(r'text=f?"([^"]*)"', fontes)}
 
 
 def test_manual_path_encontra_html_no_projeto():
@@ -83,10 +90,19 @@ def test_figuras_usam_images_e_degradam_sem_arquivo():
 
 
 def test_rotulos_citados_existem_na_gui():
-    """Rótulos que o manual cita precisam existir no fonte da GUI."""
+    """Rótulos que o manual cita precisam existir como texto de widget na GUI."""
     html = _html()
-    fontes = _fontes_da_gui()
+    rotulos_da_gui = _rotulos_da_gui()
 
     for rotulo in ROTULOS_DA_GUI:
-        assert rotulo in fontes, f"rótulo não existe mais na GUI: {rotulo!r}"
+        assert any(rotulo in texto for texto in rotulos_da_gui), (
+            f"rótulo não existe mais na GUI: {rotulo!r}"
+        )
         assert rotulo in html, f"rótulo da GUI não citado no manual: {rotulo!r}"
+
+
+def test_versao_do_manual_bate_com_a_do_app():
+    """O manual mostra a versão do app — evita o drift histórico de rótulo."""
+    from src.gui import __version__
+
+    assert f"Versão {__version__}" in _html()
