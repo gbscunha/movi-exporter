@@ -1,6 +1,6 @@
 # Spec — Manual do usuário refeito
 
-> **Status:** rascunho
+> **Status:** implementada
 > **Branch:** `docs/manual-usuario`
 > **Fatia no CHECKLIST:** Backlog → "Manual do usuário refeito"
 > **ADR relacionado:** —
@@ -92,7 +92,11 @@ validade.
 
 ## Riscos e perguntas abertas
 
-- E-mail de suporte ainda não informado — o manual entra com `[e-mail de suporte]`
-  até ser substituído.
+- ~~E-mail de suporte ainda não informado~~ — resolvido: `gabriel@itgraph.com.br`.
 - Validade real do token do cliente não observada; texto fica neutro
   ("quando o Testar falhar, gere outro").
+- Durante a implementação entrou de carona um fix fora desta spec: o campo
+  **ID da pasta no Drive** não era persistido (`GOOGLE_DRIVE_FOLDER_ID` nunca
+  era gravado). Sem ele, o passo "cole o ID e clique em Salvar alterações"
+  seria uma instrução falsa — por isso foi corrigido aqui, com teste
+  (`tests/test_settings_frame.py`), em commit próprio.

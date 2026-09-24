@@ -17,8 +17,10 @@ from src.gui import icons
 from src.gui.components import toast
 from src.gui.design import Colors
 
-# Página de login do Wialon. Depois de logado, o usuário gera o token
-# em Configurações da conta → Aplicações → Tokens.
+# Página de login do Wialon. Sem parâmetros na URL, a Wialon redireciona de
+# volta para a própria login.html com o token em `access_token=` — é dali que o
+# usuário copia. (Como nada é passado, valem os padrões da Wialon para duração e
+# nível de acesso do token.)
 URL_AUTORIZACAO_WIALON = "https://hosting.wialon.com/login.html"
 
 
