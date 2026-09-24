@@ -50,6 +50,7 @@ class SettingsFrame(ctk.CTkFrame):
         # "alterações não salvas" (#20).
         self._saved_export_dir = settings.EXPORT_DIR or "./exports"
         self._saved_page_size = settings.WIALON_PAGE_SIZE or 1000
+        self._saved_folder_id = settings.GOOGLE_DRIVE_FOLDER_ID or ""
 
         # Seções
         self._create_wialon_section(account=1)
@@ -424,16 +425,18 @@ class SettingsFrame(ctk.CTkFrame):
         """Recalcula campos alterados e atualiza pontos + botão do rodapé (#20)."""
         dir_changed = self.export_dir_entry.get().strip() != self._saved_export_dir
         size_changed = int(self.page_size_var.get()) != self._saved_page_size
+        folder_changed = self.folder_entry.get().strip() != self._saved_folder_id
 
         self._toggle_dot(self.export_dir_dot, dir_changed)
         self._toggle_dot(self.page_size_dot, size_changed)
+        self._toggle_dot(self.folder_dot, folder_changed)
 
         # Some que o campo voltou a ser válido enquanto o usuário digita.
         if self.export_dir_entry.get().strip():
             self.export_dir_error.grid_remove()
             self.export_dir_entry.configure(border_color=self._entry_default_border)
 
-        any_changed = dir_changed or size_changed
+        any_changed = dir_changed or size_changed or folder_changed
         self.save_changes_btn.configure(state="normal" if any_changed else "disabled")
         self.unsaved_label.configure(
             text="Você tem alterações não salvas" if any_changed else ""
@@ -463,9 +466,11 @@ class SettingsFrame(ctk.CTkFrame):
         self.export_dir_entry.configure(border_color=self._entry_default_border)
 
         page_size = int(self.page_size_var.get())
+        folder_id = self.folder_entry.get().strip()
         try:
             set_env_value("EXPORT_DIR", export_dir)
             set_env_value("WIALON_PAGE_SIZE", str(page_size))
+            set_env_value("GOOGLE_DRIVE_FOLDER_ID", folder_id)
             settings.reload()
         except Exception as e:
             logger.debug(f"Erro ao salvar configurações: {e}")
@@ -474,6 +479,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         self._saved_export_dir = export_dir
         self._saved_page_size = page_size
+        self._saved_folder_id = folder_id
         self._recompute_dirty()
         toast.show("Configurações salvas", kind="success")
 
@@ -529,6 +535,7 @@ class SettingsFrame(ctk.CTkFrame):
         self.folder_entry.grid(row=2, column=1, padx=10, pady=(10, 15), sticky="w")
         if folder_id:
             self.folder_entry.insert(0, folder_id)
+        self.folder_entry.bind("<KeyRelease>", lambda _e: self._recompute_dirty())
 
         self.folder_copy_btn = ctk.CTkButton(
             section,
@@ -546,7 +553,18 @@ class SettingsFrame(ctk.CTkFrame):
             width=40,
             command=self._open_drive_folder,
         )
-        self.folder_open_btn.grid(row=2, column=3, padx=(0, 15), pady=(10, 15))
+        self.folder_open_btn.grid(row=2, column=3, padx=(0, 4), pady=(10, 15))
+
+        # Ponto laranja de alteração não salva, igual ao do diretório (#20).
+        self.folder_dot = ctk.CTkLabel(
+            section,
+            text="●",
+            text_color=Colors.WARNING,
+            font=ctk.CTkFont(size=16),
+            width=16,
+        )
+        self.folder_dot.grid(row=2, column=4, padx=(0, 15), pady=(10, 15))
+        self.folder_dot.grid_remove()
 
     def _copy_folder_id(self):
         """Copia o ID da pasta do Drive para a área de transferência."""
