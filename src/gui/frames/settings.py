@@ -460,9 +460,9 @@ class SettingsFrame(ctk.CTkFrame):
         size_changed = int(self.page_size_var.get()) != self._saved_page_size
         folder_changed = self.folder_entry.get().strip() != self._saved_folder_id
 
-        self._toggle_dot(self.export_dir_dot, dir_changed)
-        self._toggle_dot(self.page_size_dot, size_changed)
-        self._toggle_dot(self.folder_dot, folder_changed)
+        self._toggle_visible(self.export_dir_dot, dir_changed)
+        self._toggle_visible(self.page_size_dot, size_changed)
+        self._toggle_visible(self.folder_dot, folder_changed)
 
         # Some que o campo voltou a ser válido enquanto o usuário digita.
         if self.export_dir_entry.get().strip():
@@ -471,10 +471,10 @@ class SettingsFrame(ctk.CTkFrame):
 
         any_changed = dir_changed or size_changed or folder_changed
         self.save_changes_btn.configure(state="normal" if any_changed else "disabled")
-        self._toggle_dot(self.unsaved_label, any_changed)
+        self._toggle_visible(self.unsaved_label, any_changed)
 
     @staticmethod
-    def _toggle_dot(widget, show: bool):
+    def _toggle_visible(widget, show: bool):
         """Mostra/esconde um indicador de alteração (ponto ou aviso do rodapé)."""
         if show:
             widget.grid()
