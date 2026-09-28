@@ -102,3 +102,66 @@ def test_listener_que_descadastra_nao_recebe():
     state.set_account(2)
 
     assert chamadas == {"a": 0, "b": 1}
+
+
+def test_label_de_pasta_nao_muda_com_nome_de_usuario():
+    """`label` nomeia a subpasta de export — nome de usuário não pode afetá-lo.
+
+    Contrato de disco: `exports/AAAA-MM/Conta 1/`. Se mudasse, os exports
+    antigos sumiriam do "Resumo de Exportações" (spec nome-usuario-no-seletor).
+    """
+    state = AccountState(1)
+    state.set_username(1, "lcmovi_mgr")
+    state.set_username(2, "lcmovi_adm")
+
+    assert state.label == "Conta 1"
+    state.set_account(2)
+    assert state.label == "Conta 2"
+
+
+def test_display_label_cai_para_conta_n_sem_nome():
+    """Sem nome conhecido, o seletor mostra o rótulo neutro."""
+    state = AccountState(1)
+    assert state.display_label(1) == "Conta 1"
+    assert state.display_label(2) == "Conta 2"
+
+
+def test_display_label_usa_nome_quando_conhecido():
+    state = AccountState(1)
+    state.set_username(1, "lcmovi_mgr")
+
+    assert state.display_label(1) == "lcmovi_mgr"
+    assert state.display_label(2) == "Conta 2"
+
+
+def test_display_label_desempata_nomes_iguais():
+    """Dois itens idênticos quebrariam a seleção do dropdown."""
+    state = AccountState(1)
+    state.set_username(1, "lcmovi_mgr")
+    state.set_username(2, "lcmovi_mgr")
+
+    assert state.display_label(1) == "lcmovi_mgr (Conta 1)"
+    assert state.display_label(2) == "lcmovi_mgr (Conta 2)"
+
+
+def test_set_username_notifica_listeners():
+    """A sidebar precisa saber que o nome chegou para atualizar os itens."""
+    state = AccountState(1)
+    chamadas = []
+    state.register_username_listener(lambda: chamadas.append(True))
+
+    state.set_username(1, "lcmovi_mgr")
+    assert len(chamadas) == 1
+
+    # Mesmo nome de novo não notifica (evita rebuild à toa).
+    state.set_username(1, "lcmovi_mgr")
+    assert len(chamadas) == 1
+
+
+def test_set_username_ignora_vazio():
+    """Autenticação sem nome não apaga o que já era conhecido."""
+    state = AccountState(1)
+    state.set_username(1, "lcmovi_mgr")
+    state.set_username(1, "")
+
+    assert state.display_label(1) == "lcmovi_mgr"

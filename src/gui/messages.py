@@ -304,6 +304,9 @@ class SidebarMsg:
 
     LABEL_CONTA = "Conta"
     CONTA = "Conta {numero}"
+    # Só quando os dois tokens são do mesmo usuário: dois itens idênticos
+    # quebrariam a seleção do dropdown.
+    CONTA_DESEMPATE = "{nome} (Conta {numero})"
     TOAST_MANUAL_NAO_ENCONTRADO = "Manual não encontrado"
 
 
