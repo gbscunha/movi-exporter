@@ -11,6 +11,7 @@ from src.core.config import settings
 from src.gui import __version__, icons
 from src.gui.account_state import AccountState
 from src.gui.design import Colors
+from src.gui.messages import SidebarMsg
 
 # Logo opcional — se o PNG existir em assets, é exibido no topo da sidebar;
 # senão, cai no texto "Movi Exporter".
@@ -50,9 +51,13 @@ class SidebarFrame(ctk.CTkFrame):
         self._create_separator(row=1)
 
         # --- Grupo: navegação ---
-        self._create_nav_button("home", "  Início", icons.HOME, row=2)
-        self._create_nav_button("export", "  Exportar", icons.FILE_EXPORT, row=3)
-        self._create_nav_button("settings", "  Configurações", icons.GEAR, row=4)
+        self._create_nav_button("home", f"  {SidebarMsg.NAV_INICIO}", icons.HOME, row=2)
+        self._create_nav_button(
+            "export", f"  {SidebarMsg.NAV_EXPORTAR}", icons.FILE_EXPORT, row=3
+        )
+        self._create_nav_button(
+            "settings", f"  {SidebarMsg.NAV_CONFIGURACOES}", icons.GEAR, row=4
+        )
 
         # --- Grupo: conta (só aparece se houver Conta 2 configurada) ---
         if self.account_state is not None and settings.WIALON_TOKEN_2:
@@ -61,15 +66,17 @@ class SidebarFrame(ctk.CTkFrame):
 
         # --- Rodapé: ações (abaixo do espaçador) ---
         self._create_separator(row=21)
-        self._create_action_button("  Manual", icons.BOOK, self._open_manual, row=22)
         self._create_action_button(
-            "  Sobre", icons.INFO_CIRCLE, self._open_about, row=23
+            f"  {SidebarMsg.ACAO_MANUAL}", icons.BOOK, self._open_manual, row=22
+        )
+        self._create_action_button(
+            f"  {SidebarMsg.ACAO_SOBRE}", icons.INFO_CIRCLE, self._open_about, row=23
         )
 
         # Versão (no rodapé) — clicável, abre as notas de versão.
         self.version_button = ctk.CTkButton(
             self,
-            text=f"v{__version__}",
+            text=SidebarMsg.VERSAO.format(versao=__version__),
             font=ctk.CTkFont(size=11),
             text_color="gray",
             fg_color="transparent",
@@ -108,7 +115,7 @@ class SidebarFrame(ctk.CTkFrame):
 
         self.logo_label = ctk.CTkLabel(
             self,
-            text="Movi Exporter",
+            text=SidebarMsg.TITULO,
             font=ctk.CTkFont(size=20, weight="bold"),
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 30))
@@ -120,7 +127,7 @@ class SidebarFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(
             container,
-            text="Conta",
+            text=SidebarMsg.LABEL_CONTA,
             font=ctk.CTkFont(size=11),
             text_color="gray",
             anchor="w",
@@ -129,7 +136,10 @@ class SidebarFrame(ctk.CTkFrame):
         self.account_var = ctk.StringVar(value=self.account_state.label)
         self.account_menu = ctk.CTkOptionMenu(
             container,
-            values=["Conta 1", "Conta 2"],
+            values=[
+                SidebarMsg.CONTA.format(numero=1),
+                SidebarMsg.CONTA.format(numero=2),
+            ],
             variable=self.account_var,
             command=self._on_account_selected,
         )
@@ -138,7 +148,7 @@ class SidebarFrame(ctk.CTkFrame):
 
     def _on_account_selected(self, value: str):
         """Traduz a seleção do dropdown e propaga ao estado global."""
-        account = 2 if value == "Conta 2" else 1
+        account = 2 if value == SidebarMsg.CONTA.format(numero=2) else 1
         if self.account_state is not None:
             self.account_state.set_account(account)
 
@@ -186,7 +196,7 @@ class SidebarFrame(ctk.CTkFrame):
         from src.gui.manual import open_manual
 
         if not open_manual():
-            toast.show("Manual não encontrado", kind="warning")
+            toast.show(SidebarMsg.TOAST_MANUAL_NAO_ENCONTRADO, kind="warning")
 
     def _open_about(self):
         """Abre o diálogo Sobre."""

@@ -6,6 +6,7 @@ import customtkinter as ctk
 from datetime import datetime
 
 from src.gui.design import Colors
+from src.gui.messages import StatusBarMsg
 
 
 class StatusBar(ctk.CTkFrame):
@@ -27,7 +28,7 @@ class StatusBar(ctk.CTkFrame):
 
         # Mensagem
         self.status_label = ctk.CTkLabel(
-            self, text="Pronto", font=ctk.CTkFont(size=11), anchor="w"
+            self, text=StatusBarMsg.PRONTO, font=ctk.CTkFont(size=11), anchor="w"
         )
         self.status_label.grid(row=0, column=1, sticky="w", pady=5)
 

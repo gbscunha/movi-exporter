@@ -16,9 +16,12 @@ from src.core.service_factory import WialonError, authenticate_token
 from src.gui import icons
 from src.gui.components import toast
 from src.gui.design import Colors
+from src.gui.messages import Common, SettingsMsg
 
-# Página de login do Wialon. Depois de logado, o usuário gera o token
-# em Configurações da conta → Aplicações → Tokens.
+# Página de login do Wialon. Sem parâmetros na URL, a Wialon redireciona de
+# volta para a própria login.html com o token em `access_token=` — é dali que o
+# usuário copia. (Como nada é passado, valem os padrões da Wialon para duração e
+# nível de acesso do token.)
 URL_AUTORIZACAO_WIALON = "https://hosting.wialon.com/login.html"
 
 
@@ -32,7 +35,7 @@ class SettingsFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         self.title = ctk.CTkLabel(
-            self, text="Configurações", font=ctk.CTkFont(size=28, weight="bold")
+            self, text=SettingsMsg.TITULO, font=ctk.CTkFont(size=28, weight="bold")
         )
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
 
@@ -50,6 +53,7 @@ class SettingsFrame(ctk.CTkFrame):
         # "alterações não salvas" (#20).
         self._saved_export_dir = settings.EXPORT_DIR or "./exports"
         self._saved_page_size = settings.WIALON_PAGE_SIZE or 1000
+        self._saved_folder_id = settings.GOOGLE_DRIVE_FOLDER_ID or ""
 
         # Seções
         self._create_wialon_section(account=1)
@@ -85,7 +89,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         self.save_changes_btn = ctk.CTkButton(
             bar,
-            text="  Salvar alterações",
+            text=f"  {SettingsMsg.BTN_SALVAR_ALTERACOES}",
             image=icons.get(icons.SAVE, size=16, on_accent=True),
             width=170,
             command=self._save_changes,
@@ -114,7 +118,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         title = ctk.CTkLabel(
             section,
-            text=f"  Wialon API — Conta {account}",
+            text=f"  {SettingsMsg.SECAO_WIALON.format(conta=account)}",
             image=icons.get(icons.PLUG, size=18),
             compound="left",
             font=ctk.CTkFont(size=16, weight="bold"),
@@ -122,7 +126,7 @@ class SettingsFrame(ctk.CTkFrame):
         title.grid(row=0, column=0, columnspan=6, padx=15, pady=(15, 10), sticky="w")
 
         # Linha do token + botões
-        ctk.CTkLabel(section, text="Token:").grid(
+        ctk.CTkLabel(section, text=SettingsMsg.LABEL_TOKEN).grid(
             row=1, column=0, padx=(15, 10), pady=10, sticky="w"
         )
 
@@ -130,7 +134,7 @@ class SettingsFrame(ctk.CTkFrame):
             section,
             width=320,
             show="*",
-            placeholder_text="Cole seu token Wialon aqui",
+            placeholder_text=SettingsMsg.PLACEHOLDER_TOKEN,
         )
         entry.grid(row=1, column=1, padx=(0, 5), pady=10, sticky="we")
         existing = self._token_for_account(account)
@@ -150,7 +154,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         open_btn = ctk.CTkButton(
             section,
-            text=" Gerar",
+            text=f" {SettingsMsg.BTN_GERAR}",
             image=icons.get(icons.LINK, size=16, on_accent=True),
             width=90,
             command=self._open_wialon_auth_page,
@@ -159,7 +163,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         save_btn = ctk.CTkButton(
             section,
-            text=" Salvar",
+            text=f" {SettingsMsg.BTN_SALVAR}",
             image=icons.get(icons.SAVE, size=16, on_accent=True),
             width=100,
             command=lambda a=account: self._save_wialon_token(a),
@@ -168,7 +172,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         test_btn = ctk.CTkButton(
             section,
-            text=" Testar",
+            text=f" {SettingsMsg.BTN_TESTAR}",
             image=icons.get(icons.SEARCH, size=16, on_accent=True),
             width=100,
             command=lambda a=account: self._test_wialon_token(a),
@@ -201,14 +205,12 @@ class SettingsFrame(ctk.CTkFrame):
         if existing:
             self._set_token_status(
                 account,
-                "Status: Não testado — clique em Testar",
+                SettingsMsg.STATUS_NAO_TESTADO,
                 Colors.WARNING,
                 icons.TRIANGLE_WARNING,
             )
         else:
-            self._set_token_status(
-                account, "Status: sem token configurado", Colors.MUTED
-            )
+            self._set_token_status(account, SettingsMsg.STATUS_SEM_TOKEN, Colors.MUTED)
 
         # Aliases para compatibilidade com testes/smoke da Fase 10 (Conta 1).
         if account == 1:
@@ -246,7 +248,7 @@ class SettingsFrame(ctk.CTkFrame):
         if not token:
             self._set_token_status(
                 account,
-                "Cole um token válido antes de salvar.",
+                SettingsMsg.ERRO_TOKEN_VAZIO_SALVAR,
                 Colors.ERROR,
                 icons.TRIANGLE_WARNING,
             )
@@ -258,13 +260,15 @@ class SettingsFrame(ctk.CTkFrame):
             settings.reload()
         except Exception as e:
             logger.debug(f"Erro ao salvar {env_key}: {e}")
-            messagebox.showerror("Erro", f"Não foi possível salvar o token: {e}")
+            messagebox.showerror(
+                Common.TITULO_ERRO, SettingsMsg.ERRO_SALVAR_TOKEN.format(erro=e)
+            )
             return
 
         self._set_token_status(
-            account, "Status: Token salvo no .env", Colors.SUCCESS, icons.SAVE
+            account, SettingsMsg.STATUS_SALVO, Colors.SUCCESS, icons.SAVE
         )
-        toast.show(f"Token da Conta {account} salvo", kind="success")
+        toast.show(SettingsMsg.TOAST_TOKEN_SALVO.format(conta=account), kind="success")
 
     def _test_wialon_token(self, account: int):
         """Testa o token da conta dada chamando authenticate() em background."""
@@ -273,14 +277,14 @@ class SettingsFrame(ctk.CTkFrame):
         if not token:
             self._set_token_status(
                 account,
-                "Cole um token antes de testar a conexão.",
+                SettingsMsg.ERRO_TOKEN_VAZIO_TESTAR,
                 Colors.ERROR,
                 icons.TRIANGLE_WARNING,
             )
             return
 
         self._set_token_status(
-            account, "Status: Testando conexão...", Colors.MUTED, icons.REFRESH
+            account, SettingsMsg.STATUS_TESTANDO, Colors.MUTED, icons.REFRESH
         )
         widgets["test_btn"].configure(state="disabled")
 
@@ -299,16 +303,19 @@ class SettingsFrame(ctk.CTkFrame):
     def _on_token_test_ok(self, account: int, username: str):
         """Callback executado na thread da GUI após teste bem-sucedido."""
         if username:
-            text = f'Status: Conectado como "{username}"'
+            text = SettingsMsg.STATUS_CONECTADO_COMO.format(usuario=username)
         else:
-            text = "Status: Conectado"
+            text = SettingsMsg.STATUS_CONECTADO
         self._set_token_status(account, text, Colors.SUCCESS, icons.CIRCLE_CHECK)
         self._token_widgets[account]["test_btn"].configure(state="normal")
 
     def _on_token_test_fail(self, account: int, error: str):
         """Callback executado na thread da GUI após teste falhar."""
         self._set_token_status(
-            account, f"Status: Falha — {error}", Colors.ERROR, icons.CIRCLE_XMARK
+            account,
+            SettingsMsg.STATUS_FALHA.format(erro=error),
+            Colors.ERROR,
+            icons.CIRCLE_XMARK,
         )
         self._token_widgets[account]["test_btn"].configure(state="normal")
 
@@ -320,7 +327,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         title = ctk.CTkLabel(
             section,
-            text="  Exportação",
+            text=f"  {SettingsMsg.SECAO_EXPORTACAO}",
             image=icons.get(icons.FOLDER, size=18),
             compound="left",
             font=ctk.CTkFont(size=16, weight="bold"),
@@ -328,7 +335,7 @@ class SettingsFrame(ctk.CTkFrame):
         title.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 10), sticky="w")
 
         # Diretório de exportação
-        ctk.CTkLabel(section, text="Diretório:").grid(
+        ctk.CTkLabel(section, text=SettingsMsg.LABEL_DIRETORIO).grid(
             row=1, column=0, padx=(15, 10), pady=10, sticky="w"
         )
 
@@ -377,7 +384,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         # Page size — slider de 100 a 5000 (passo 100) em vez de campo de
         # texto livre, evitando valores inválidos (#18).
-        ctk.CTkLabel(section, text="Registros por página:").grid(
+        ctk.CTkLabel(section, text=SettingsMsg.LABEL_REGISTROS_POR_PAGINA).grid(
             row=3, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
@@ -424,19 +431,21 @@ class SettingsFrame(ctk.CTkFrame):
         """Recalcula campos alterados e atualiza pontos + botão do rodapé (#20)."""
         dir_changed = self.export_dir_entry.get().strip() != self._saved_export_dir
         size_changed = int(self.page_size_var.get()) != self._saved_page_size
+        folder_changed = self.folder_entry.get().strip() != self._saved_folder_id
 
         self._toggle_dot(self.export_dir_dot, dir_changed)
         self._toggle_dot(self.page_size_dot, size_changed)
+        self._toggle_dot(self.folder_dot, folder_changed)
 
         # Some que o campo voltou a ser válido enquanto o usuário digita.
         if self.export_dir_entry.get().strip():
             self.export_dir_error.grid_remove()
             self.export_dir_entry.configure(border_color=self._entry_default_border)
 
-        any_changed = dir_changed or size_changed
+        any_changed = dir_changed or size_changed or folder_changed
         self.save_changes_btn.configure(state="normal" if any_changed else "disabled")
         self.unsaved_label.configure(
-            text="Você tem alterações não salvas" if any_changed else ""
+            text=SettingsMsg.AVISO_NAO_SALVO if any_changed else ""
         )
 
     @staticmethod
@@ -463,19 +472,24 @@ class SettingsFrame(ctk.CTkFrame):
         self.export_dir_entry.configure(border_color=self._entry_default_border)
 
         page_size = int(self.page_size_var.get())
+        folder_id = self.folder_entry.get().strip()
         try:
             set_env_value("EXPORT_DIR", export_dir)
             set_env_value("WIALON_PAGE_SIZE", str(page_size))
+            set_env_value("GOOGLE_DRIVE_FOLDER_ID", folder_id)
             settings.reload()
         except Exception as e:
             logger.debug(f"Erro ao salvar configurações: {e}")
-            messagebox.showerror("Erro", f"Não foi possível salvar: {e}")
+            messagebox.showerror(
+                Common.TITULO_ERRO, SettingsMsg.ERRO_SALVAR_CONFIG.format(erro=e)
+            )
             return
 
         self._saved_export_dir = export_dir
         self._saved_page_size = page_size
+        self._saved_folder_id = folder_id
         self._recompute_dirty()
-        toast.show("Configurações salvas", kind="success")
+        toast.show(SettingsMsg.TOAST_CONFIG_SALVA, kind="success")
 
     def _create_drive_section(self):
         """Cria seção de configuração do Google Drive."""
@@ -485,7 +499,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         title = ctk.CTkLabel(
             section,
-            text="  Google Drive",
+            text=f"  {SettingsMsg.SECAO_DRIVE}",
             image=icons.get(icons.CLOUD, size=18),
             compound="left",
             font=ctk.CTkFont(size=16, weight="bold"),
@@ -493,20 +507,26 @@ class SettingsFrame(ctk.CTkFrame):
         title.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 10), sticky="w")
 
         # Arquivo de credenciais
-        ctk.CTkLabel(section, text="Credenciais:").grid(
+        ctk.CTkLabel(section, text=SettingsMsg.LABEL_CREDENCIAIS).grid(
             row=1, column=0, padx=(15, 10), pady=10, sticky="w"
         )
 
         creds_file = settings.GOOGLE_DRIVE_CREDENTIALS_FILE or "./client_secrets.json"
         file_exists = os.path.exists(creds_file)
 
-        status = "Encontrado" if file_exists else "Não encontrado"
+        situacao = (
+            SettingsMsg.CREDENCIAIS_ENCONTRADAS
+            if file_exists
+            else SettingsMsg.CREDENCIAIS_AUSENTES
+        )
         status_color = Colors.SUCCESS if file_exists else Colors.ERROR
         status_icon = icons.CIRCLE_CHECK if file_exists else icons.CIRCLE_XMARK
 
         self.creds_label = ctk.CTkLabel(
             section,
-            text=f"{creds_file} ({status})",
+            text=SettingsMsg.CREDENCIAIS_ARQUIVO.format(
+                arquivo=creds_file, situacao=situacao
+            ),
             text_color=status_color,
             image=icons.get(status_icon, size=14, color=status_color),
             compound="left",
@@ -517,18 +537,19 @@ class SettingsFrame(ctk.CTkFrame):
 
         # ID da pasta no Drive — mostrado por completo (não é segredo) com
         # botões de copiar e abrir no navegador (#29).
-        ctk.CTkLabel(section, text="ID da pasta no Drive:").grid(
+        ctk.CTkLabel(section, text=SettingsMsg.LABEL_ID_PASTA).grid(
             row=2, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
         folder_id = settings.GOOGLE_DRIVE_FOLDER_ID or ""
 
         self.folder_entry = ctk.CTkEntry(
-            section, width=300, placeholder_text="ID da pasta no Google Drive"
+            section, width=300, placeholder_text=SettingsMsg.PLACEHOLDER_ID_PASTA
         )
         self.folder_entry.grid(row=2, column=1, padx=10, pady=(10, 15), sticky="w")
         if folder_id:
             self.folder_entry.insert(0, folder_id)
+        self.folder_entry.bind("<KeyRelease>", lambda _e: self._recompute_dirty())
 
         self.folder_copy_btn = ctk.CTkButton(
             section,
@@ -546,7 +567,18 @@ class SettingsFrame(ctk.CTkFrame):
             width=40,
             command=self._open_drive_folder,
         )
-        self.folder_open_btn.grid(row=2, column=3, padx=(0, 15), pady=(10, 15))
+        self.folder_open_btn.grid(row=2, column=3, padx=(0, 4), pady=(10, 15))
+
+        # Ponto laranja de alteração não salva, igual ao do diretório (#20).
+        self.folder_dot = ctk.CTkLabel(
+            section,
+            text="●",
+            text_color=Colors.WARNING,
+            font=ctk.CTkFont(size=16),
+            width=16,
+        )
+        self.folder_dot.grid(row=2, column=4, padx=(0, 15), pady=(10, 15))
+        self.folder_dot.grid_remove()
 
     def _copy_folder_id(self):
         """Copia o ID da pasta do Drive para a área de transferência."""
@@ -555,14 +587,15 @@ class SettingsFrame(ctk.CTkFrame):
             return
         self.clipboard_clear()
         self.clipboard_append(folder_id)
-        toast.show("ID da pasta copiado", kind="success")
+        toast.show(SettingsMsg.TOAST_ID_COPIADO, kind="success")
 
     def _open_drive_folder(self):
         """Abre a pasta do Drive no navegador a partir do ID."""
         folder_id = self.folder_entry.get().strip()
         if not folder_id:
             messagebox.showwarning(
-                "Pasta não configurada", "Informe o ID da pasta do Drive primeiro."
+                SettingsMsg.TITULO_PASTA_NAO_CONFIGURADA,
+                SettingsMsg.AVISO_PASTA_NAO_CONFIGURADA,
             )
             return
         webbrowser.open(f"https://drive.google.com/drive/folders/{folder_id}")
@@ -579,7 +612,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         title = ctk.CTkLabel(
             section,
-            text="  Geral",
+            text=f"  {SettingsMsg.SECAO_GERAL}",
             image=icons.get(icons.GEAR, size=18),
             compound="left",
             font=ctk.CTkFont(size=16, weight="bold"),
@@ -587,13 +620,17 @@ class SettingsFrame(ctk.CTkFrame):
         title.grid(row=0, column=0, columnspan=2, padx=15, pady=(15, 10), sticky="w")
 
         # Tema
-        ctk.CTkLabel(section, text="Tema:").grid(
+        ctk.CTkLabel(section, text=SettingsMsg.LABEL_TEMA).grid(
             row=1, column=0, padx=(15, 10), pady=(10, 15), sticky="w"
         )
 
         # Inicia com o tema salvo (padrão "dark"). Rótulos em PT-BR no menu,
         # mapeados para os valores que o CustomTkinter entende.
-        self._theme_labels = {"dark": "Escuro", "light": "Claro", "system": "Sistema"}
+        self._theme_labels = {
+            "dark": SettingsMsg.TEMA_ESCURO,
+            "light": SettingsMsg.TEMA_CLARO,
+            "system": SettingsMsg.TEMA_SISTEMA,
+        }
         self._theme_values = {v: k for k, v in self._theme_labels.items()}
         current = (
             settings.APP_THEME if settings.APP_THEME in self._theme_labels else "dark"
@@ -614,7 +651,7 @@ class SettingsFrame(ctk.CTkFrame):
         from tkinter import filedialog
 
         directory = filedialog.askdirectory(
-            title="Selecione o diretório de exportação",
+            title=SettingsMsg.TITULO_ESCOLHER_DIRETORIO,
             initialdir=self.export_dir_entry.get(),
         )
 
@@ -630,6 +667,6 @@ class SettingsFrame(ctk.CTkFrame):
         try:
             set_env_value("APP_THEME", theme)
             settings.reload()
-            toast.show(f"Tema alterado para {label}", kind="info")
+            toast.show(SettingsMsg.TOAST_TEMA_ALTERADO.format(tema=label), kind="info")
         except Exception as e:
             logger.debug(f"Erro ao salvar tema: {e}")

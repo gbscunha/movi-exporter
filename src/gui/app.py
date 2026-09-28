@@ -18,6 +18,7 @@ from src.gui.frames.export import ExportFrame
 from src.gui.frames.home import HomeFrame
 from src.gui.frames.settings import SettingsFrame
 from src.gui.frames.sidebar import SidebarFrame
+from src.gui.messages import AppMsg
 from src.gui.theme import apply_movi_theme
 from src.gui.updater import AutoUpdater
 
@@ -29,7 +30,7 @@ class MoviExporterApp(ctk.CTk):
         super().__init__()
 
         # Configuração da janela
-        self.title(f"Movi Exporter v{__version__}")
+        self.title(AppMsg.TITULO_JANELA.format(versao=__version__))
         self.geometry("1100x700")
         self.minsize(900, 600)
 
@@ -144,12 +145,7 @@ class MoviExporterApp(ctk.CTk):
 
     def _show_setup_notice(self):
         """Avisa o usuário que falta configurar o token Wialon."""
-        messagebox.showinfo(
-            "Configuração necessária",
-            "O token da API Wialon ainda não foi configurado.\n\n"
-            "Abra a tela de Configurações para colar seu token e testá-lo "
-            "antes de iniciar uma exportação.",
-        )
+        messagebox.showinfo(AppMsg.TITULO_SETUP, AppMsg.TEXTO_SETUP)
         self.show_frame("settings")
 
 

@@ -1,6 +1,64 @@
-"""Testes do localizador do manual (Onda 3 Fase 04 — #52)."""
+"""Testes do manual do usuário: localizador (Onda 3 Fase 04 — #52) e integridade.
+
+Os testes de integridade existem porque o manual já descreveu botões que tinham
+sido renomeados no app (spec `docs/specs/manual-usuario.md`): quando um rótulo
+muda na GUI, o teste falha e aponta o termo a corrigir no manual.
+"""
+
+import re
 
 from src.gui import manual
+
+# Rótulos que o manual cita como nomes de botões/opções da interface. Cada um
+# precisa existir literalmente no fonte da GUI — é o que pega a divergência.
+ROTULOS_DA_GUI = [
+    "Testar Conexões",
+    "Ver Veículos",
+    "Todos os veículos",
+    "Escolher manualmente",
+    "Limpar todos",
+    "Gerar arquivo consolidado",
+    "Upload para Google Drive",
+    "Incluir endereço (mais lento)",
+    "Iniciar Exportação",
+    "Abrir pasta",
+    "Salvar alterações",
+    # Mensagens de status do token: o manual as lista numa tabela, e foi a
+    # ausência delas aqui que deixou passar o drift de "Token salvo no .env".
+    "sem token configurado",
+    "Não testado — clique em Testar",
+    "Token salvo com sucesso",
+    "Testando conexão...",
+    "Conectado como",
+]
+
+
+def _html() -> str:
+    path = manual.manual_path()
+    assert path is not None
+    return path.read_text(encoding="utf-8")
+
+
+def _rotulos_da_gui() -> set[str]:
+    """Todo texto que a GUI exibe, vindo das duas fontes possíveis.
+
+    Olhar o texto exibido (e não o arquivo inteiro) é o que faz o teste pegar
+    uma renomeação: o nome antigo costuma sobreviver em comentários e
+    docstrings, e uma busca no texto bruto passaria batido.
+
+    Com a migração para `messages.py` concluída (spec `mensagens-centralizadas`),
+    `messages.py` é a fonte única — `tests/test_messages.py` garante que nenhum
+    módulo da GUI tem texto embutido.
+    """
+    from src.gui import messages
+
+    return {
+        valor.strip()
+        for classe in vars(messages).values()
+        if isinstance(classe, type)
+        for nome, valor in vars(classe).items()
+        if not nome.startswith("_") and isinstance(valor, str)
+    }
 
 
 def test_manual_path_encontra_html_no_projeto():
@@ -15,3 +73,52 @@ def test_candidate_paths_inclui_projeto_e_bundle():
     candidates = manual._candidate_paths()
     # Sempre há ao menos o caminho do projeto (dev).
     assert any(c.name == "manual.html" for c in candidates)
+
+
+def test_indice_nao_tem_ancora_quebrada():
+    """Todo link interno do manual aponta para uma seção que existe."""
+    html = _html()
+    ancoras = set(re.findall(r'href="#([^"]+)"', html))
+    ids = set(re.findall(r'id="([^"]+)"', html))
+
+    assert ancoras, "o manual deveria ter índice com links internos"
+    assert ancoras <= ids, f"âncoras sem seção correspondente: {sorted(ancoras - ids)}"
+
+
+def test_figuras_usam_images_e_degradam_sem_arquivo():
+    """Imagens ficam em `images/`, têm alt curto e somem enquanto não existem.
+
+    Os prints são tirados pelo humano depois; até lá o `onerror` esconde a
+    figura para o manual não exibir ícone de imagem quebrada.
+    """
+    html = _html()
+    imgs = re.findall(r"<img\b[^>]*>", html)
+
+    assert imgs, "o manual deveria ter figuras (mesmo que os prints ainda faltem)"
+    for img in imgs:
+        src = re.search(r'src="([^"]*)"', img)
+        assert src and src.group(1).startswith("images/"), (
+            f"imagem fora de images/: {img}"
+        )
+        alt = re.search(r'alt="([^"]*)"', img)
+        assert alt and alt.group(1).strip(), f"imagem sem alt descritivo: {img}"
+        assert "onerror" in img, f"imagem sem fallback onerror: {img}"
+
+
+def test_rotulos_citados_existem_na_gui():
+    """Rótulos que o manual cita precisam existir como texto de widget na GUI."""
+    html = _html()
+    rotulos_da_gui = _rotulos_da_gui()
+
+    for rotulo in ROTULOS_DA_GUI:
+        assert any(rotulo in texto for texto in rotulos_da_gui), (
+            f"rótulo não existe mais na GUI: {rotulo!r}"
+        )
+        assert rotulo in html, f"rótulo da GUI não citado no manual: {rotulo!r}"
+
+
+def test_versao_do_manual_bate_com_a_do_app():
+    """O manual mostra a versão do app — evita o drift histórico de rótulo."""
+    from src.gui import __version__
+
+    assert f"Versão {__version__}" in _html()

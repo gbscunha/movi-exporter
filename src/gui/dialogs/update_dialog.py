@@ -7,6 +7,7 @@ import threading
 from typing import Optional
 
 from src.gui.design import Colors
+from src.gui.messages import UpdateMsg
 from src.gui.updater import AutoUpdater
 
 
@@ -23,7 +24,7 @@ class UpdateDialog(ctk.CTkToplevel):
         self.updater.download_url = download_url
 
         # Configuração da janela
-        self.title("Atualização Disponível")
+        self.title(UpdateMsg.TITULO_JANELA)
         self.geometry("450x300")
         self.resizable(False, False)
 
@@ -44,7 +45,7 @@ class UpdateDialog(ctk.CTkToplevel):
 
         title_label = ctk.CTkLabel(
             self,
-            text="Nova Versão Disponível!",
+            text=UpdateMsg.TITULO,
             font=ctk.CTkFont(size=20, weight="bold"),
         )
         title_label.grid(row=1, column=0, pady=(0, 10))
@@ -53,7 +54,9 @@ class UpdateDialog(ctk.CTkToplevel):
 
         version_label = ctk.CTkLabel(
             self,
-            text=f"Versão atual: {__version__}  →  Nova versão: {self.version}",
+            text=UpdateMsg.COMPARACAO_VERSOES.format(
+                atual=__version__, nova=self.version
+            ),
             font=ctk.CTkFont(size=13),
         )
         version_label.grid(row=2, column=0, pady=(0, 20))
@@ -75,7 +78,7 @@ class UpdateDialog(ctk.CTkToplevel):
 
         self.update_btn = ctk.CTkButton(
             buttons_frame,
-            text="📥  Baixar e Instalar",
+            text=f"📥  {UpdateMsg.BTN_BAIXAR}",
             width=150,
             height=40,
             command=self._start_download,
@@ -84,7 +87,7 @@ class UpdateDialog(ctk.CTkToplevel):
 
         self.later_btn = ctk.CTkButton(
             buttons_frame,
-            text="Depois",
+            text=UpdateMsg.BTN_DEPOIS,
             width=100,
             height=40,
             fg_color="transparent",
@@ -96,14 +99,14 @@ class UpdateDialog(ctk.CTkToplevel):
     def _start_download(self):
         """Inicia o download da atualização."""
         if not self.download_url:
-            self._show_error("URL de download não disponível")
+            self._show_error(UpdateMsg.ERRO_SEM_URL)
             return
 
         # Mostrar progresso
         self.progress_label.grid(row=0, column=0, pady=(0, 5))
         self.progress_bar.grid(row=1, column=0, sticky="ew")
 
-        self.update_btn.configure(state="disabled", text="Baixando...")
+        self.update_btn.configure(state="disabled", text=UpdateMsg.BTN_BAIXANDO)
         self.later_btn.configure(state="disabled")
 
         def download():
@@ -116,7 +119,7 @@ class UpdateDialog(ctk.CTkToplevel):
             if installer_path:
                 self.after(0, lambda: self._install(installer_path))
             else:
-                self.after(0, lambda: self._show_error("Falha no download"))
+                self.after(0, lambda: self._show_error(UpdateMsg.ERRO_DOWNLOAD))
 
         thread = threading.Thread(target=download, daemon=True)
         thread.start()
@@ -129,13 +132,15 @@ class UpdateDialog(ctk.CTkToplevel):
         mb_total = total / (1024 * 1024)
 
         self.progress_label.configure(
-            text=f"Baixando... {mb_downloaded:.1f} MB / {mb_total:.1f} MB"
+            text=UpdateMsg.PROGRESSO_DOWNLOAD.format(
+                baixado=mb_downloaded, total=mb_total
+            )
         )
 
     def _install(self, installer_path: str):
         """Inicia a instalação."""
-        self.progress_label.configure(text="Iniciando instalação...")
-        self.update_btn.configure(text="Instalando...")
+        self.progress_label.configure(text=UpdateMsg.INICIANDO_INSTALACAO)
+        self.update_btn.configure(text=UpdateMsg.BTN_INSTALANDO)
 
         self.updater.install_update(installer_path)
 
@@ -144,5 +149,7 @@ class UpdateDialog(ctk.CTkToplevel):
         self.progress_label.configure(text=f"❌ {message}", text_color=Colors.ERROR)
         self.progress_label.grid(row=0, column=0, pady=(0, 5))
 
-        self.update_btn.configure(state="normal", text="📥  Tentar Novamente")
+        self.update_btn.configure(
+            state="normal", text=f"📥  {UpdateMsg.BTN_TENTAR_NOVAMENTE}"
+        )
         self.later_btn.configure(state="normal")
