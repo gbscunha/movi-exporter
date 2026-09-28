@@ -88,15 +88,20 @@ class SettingsFrame(ctk.CTkFrame):
         bar.grid(row=2, column=0, sticky="ew", pady=(4, 0))
         bar.grid_columnconfigure(0, weight=1)
 
+        # Texto e ícone fixos: o aviso aparece e some pela grid, não por
+        # `configure`. O CustomTkinter não tira uma imagem já posta — passar
+        # `image=None` não limpa nada (ctk_label.py::_update_image), e era por
+        # isso que o ⚠ ficava na tela mesmo sem alteração pendente.
         self.unsaved_label = ctk.CTkLabel(
             bar,
-            text="",
+            text=SettingsMsg.AVISO_NAO_SALVO,
             font=ctk.CTkFont(size=12),
             text_color=Colors.WARNING,
             image=icons.get(icons.TRIANGLE_WARNING, size=14, color=Colors.WARNING),
             compound="left",
         )
         self.unsaved_label.grid(row=0, column=0, sticky="e", padx=(0, 12))
+        self.unsaved_label.grid_remove()  # escondido até haver alteração
 
         self.save_changes_btn = ctk.CTkButton(
             bar,
@@ -466,17 +471,15 @@ class SettingsFrame(ctk.CTkFrame):
 
         any_changed = dir_changed or size_changed or folder_changed
         self.save_changes_btn.configure(state="normal" if any_changed else "disabled")
-        self.unsaved_label.configure(
-            text=SettingsMsg.AVISO_NAO_SALVO if any_changed else ""
-        )
+        self._toggle_dot(self.unsaved_label, any_changed)
 
     @staticmethod
-    def _toggle_dot(dot, show: bool):
-        """Mostra/esconde um ponto-indicador de alteração."""
+    def _toggle_dot(widget, show: bool):
+        """Mostra/esconde um indicador de alteração (ponto ou aviso do rodapé)."""
         if show:
-            dot.grid()
+            widget.grid()
         else:
-            dot.grid_remove()
+            widget.grid_remove()
 
     def _save_changes(self):
         """Valida e persiste diretório de exportação e registros por página (#20/#21)."""
