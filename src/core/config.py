@@ -25,6 +25,8 @@ class Settings:
     # Anotações de tipo — valores são preenchidos por reload().
     WIALON_TOKEN: str
     WIALON_TOKEN_2: str
+    WIALON_USER: str
+    WIALON_USER_2: str
     WIALON_BASE_URL: str
     EXPORT_DIR: str
     WIALON_PAGE_SIZE: int
@@ -40,6 +42,11 @@ class Settings:
         load_dotenv(find_dotenv(usecwd=True), override=True)
         self.WIALON_TOKEN = os.getenv("WIALON_TOKEN", "")
         self.WIALON_TOKEN_2 = os.getenv("WIALON_TOKEN_2", "")
+        # Nome do usuário autenticado em cada conta. É cache de exibição do
+        # seletor (não é segredo, não é usado para autenticar): sem ele o app
+        # só volta a mostrar "Conta N" até a próxima autenticação.
+        self.WIALON_USER = os.getenv("WIALON_USER", "")
+        self.WIALON_USER_2 = os.getenv("WIALON_USER_2", "")
         self.WIALON_BASE_URL = os.getenv(
             "WIALON_BASE_URL", "https://hst-api.wialon.com/wialon/ajax.html"
         )

@@ -42,3 +42,26 @@ def test_reload_carrega_wialon_token_2(tmp_path, monkeypatch):
 
     s = Settings()
     assert s.WIALON_TOKEN_2 == "segundoabc"
+
+
+def test_wialon_user_existe_como_string():
+    """WIALON_USER/WIALON_USER_2 são cache de exibição — sempre string."""
+    from src.core.config import settings
+
+    assert isinstance(settings.WIALON_USER, str)
+    assert isinstance(settings.WIALON_USER_2, str)
+
+
+def test_reload_carrega_nomes_de_usuario(tmp_path, monkeypatch):
+    """reload() deve refletir o nome gravado após autenticar (spec nome-usuario-no-seletor)."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("WIALON_USER=lcmovi_mgr\nWIALON_USER_2=lcmovi_adm\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("WIALON_USER", raising=False)
+    monkeypatch.delenv("WIALON_USER_2", raising=False)
+
+    from src.core.config import Settings
+
+    s = Settings()
+    assert s.WIALON_USER == "lcmovi_mgr"
+    assert s.WIALON_USER_2 == "lcmovi_adm"
