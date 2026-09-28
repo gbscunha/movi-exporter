@@ -90,7 +90,6 @@ class SettingsMsg:
     LABEL_DIRETORIO = "Diretório:"
     LABEL_REGISTROS_POR_PAGINA = "Registros por página:"
     TITULO_ESCOLHER_DIRETORIO = "Selecione o diretório de exportação"
-    ERRO_DIRETORIO_VAZIO = "Informe um diretório de exportação."
 
     # Seção Google Drive
     SECAO_DRIVE = "Google Drive"
@@ -281,6 +280,9 @@ class HomeMsg:
     ESTATISTICAS_ANO = "Em {ano}: {exportacoes} exportação(ões), {arquivos} arquivo(s)."
 
     TITULO_LISTA_VEICULOS = "Veículos Disponíveis"
+    LISTA_COLUNA_ID = "ID"
+    LISTA_COLUNA_NOME = "Nome"
+    LISTA_COLUNA_PLACA = "Placa"
     LISTA_TOTAL = "\nTotal: {quantidade} veículos"
     ERRO_LISTAR_VEICULOS = "Erro ao listar veículos: {erro}"
     AVISO_CONEXAO_INICIALIZANDO = (

@@ -6,7 +6,6 @@ muda na GUI, o teste falha e aponta o termo a corrigir no manual.
 """
 
 import re
-from pathlib import Path
 
 from src.gui import manual
 
@@ -24,6 +23,13 @@ ROTULOS_DA_GUI = [
     "Iniciar Exportação",
     "Abrir pasta",
     "Salvar alterações",
+    # Mensagens de status do token: o manual as lista numa tabela, e foi a
+    # ausência delas aqui que deixou passar o drift de "Token salvo no .env".
+    "sem token configurado",
+    "Não testado — clique em Testar",
+    "Token salvo com sucesso",
+    "Testando conexão...",
+    "Conectado como",
 ]
 
 
@@ -40,26 +46,19 @@ def _rotulos_da_gui() -> set[str]:
     uma renomeação: o nome antigo costuma sobreviver em comentários e
     docstrings, e uma busca no texto bruto passaria batido.
 
-    Durante a migração para `messages.py` (spec `mensagens-centralizadas`) as
-    duas fontes coexistem: as constantes do módulo e os literais `text="..."`
-    dos módulos que ainda não migraram. Quando a migração terminar, sobra só a
-    primeira.
+    Com a migração para `messages.py` concluída (spec `mensagens-centralizadas`),
+    `messages.py` é a fonte única — `tests/test_messages.py` garante que nenhum
+    módulo da GUI tem texto embutido.
     """
     from src.gui import messages
 
-    rotulos = {
+    return {
         valor.strip()
         for classe in vars(messages).values()
         if isinstance(classe, type)
         for nome, valor in vars(classe).items()
         if not nome.startswith("_") and isinstance(valor, str)
     }
-
-    raiz = Path(__file__).resolve().parent.parent / "src" / "gui"
-    fontes = "\n".join(p.read_text(encoding="utf-8") for p in raiz.rglob("*.py"))
-    rotulos |= {t.strip() for t in re.findall(r'text=f?"([^"]*)"', fontes)}
-
-    return rotulos
 
 
 def test_manual_path_encontra_html_no_projeto():

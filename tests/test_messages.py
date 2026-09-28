@@ -17,14 +17,22 @@ GUI_DIR = Path(__file__).resolve().parent.parent / "src" / "gui"
 # cada fatia fecha verde e o que já migrou fica protegido.
 NAO_MIGRADOS: set[str] = set()
 
-# Chamadas cujo primeiro argumento é texto para o usuário.
-FUNCOES_DE_TEXTO = {
-    "show",  # toast.show
-    "showerror",
-    "showwarning",
-    "showinfo",
-    "askyesno",
-    "_log",  # log de progresso da exportação
+# Chamadas que recebem texto do usuário, e em QUAIS posições. Inspecionar só
+# o primeiro argumento deixava passar o corpo de `showerror(titulo, texto)` e
+# os helpers que recebem a mensagem numa posição diferente.
+ARGUMENTOS_DE_TEXTO = {
+    "show": [0],  # toast.show(mensagem, kind=...)
+    "showerror": [0, 1],
+    "showwarning": [0, 1],
+    "showinfo": [0, 1],
+    "askyesno": [0, 1],
+    "_log": [0],  # log de progresso da exportação
+    "_set_token_status": [1],  # (conta, mensagem, cor, ícone)
+    "_show_error": [0],
+    "_show_warning": [0],
+    "set_status": [0],  # barra de status
+    "insert": [1],  # textbox.insert(indice, texto)
+    "title": [0],  # título de janela
 }
 
 
@@ -63,8 +71,9 @@ def _textos_embutidos(caminho: Path) -> list[str]:
                 achados += _literais_de_texto(keyword.value)
 
         nome = no.func.attr if isinstance(no.func, ast.Attribute) else None
-        if nome in FUNCOES_DE_TEXTO and no.args:
-            achados += _literais_de_texto(no.args[0])
+        for posicao in ARGUMENTOS_DE_TEXTO.get(nome, []):
+            if posicao < len(no.args):
+                achados += _literais_de_texto(no.args[posicao])
 
     return [t for t in achados if _tem_letra(t)]
 

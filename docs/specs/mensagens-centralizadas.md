@@ -1,7 +1,7 @@
 # Spec — Mensagens da interface em arquivo único
 
-> **Status:** rascunho
-> **Branch:** `refactor/mensagens-centralizadas`
+> **Status:** implementada
+> **Branch:** `docs/manual-usuario` (entrou junto com a entrega do manual)
 > **Fatia no CHECKLIST:** Backlog → "Mensagens da interface em arquivo único"
 > **ADR relacionado:** —
 
@@ -87,7 +87,7 @@ Nenhum.
 
 | Onde | Antes | Depois |
 |---|---|---|
-| Configurações → status do token | `Status: Token salvo no .env` | `Status: Token salvo com sucesso` |
+| Configurações → status do token | `Status: Token salvo no .env` | `Status: Token salvo com sucesso!` |
 
 Qualquer outra mudança de texto precisa ser listada aqui antes de entrar.
 
@@ -97,6 +97,19 @@ Abrir o app e percorrer as cinco telas (Início, Exportar, Configurações, Sobr
 diálogo de atualização), conferindo que nada virou texto vazio, chave crua ou
 `{placeholder}` não substituído. Rodar uma exportação pequena para ver o log de
 progresso completo (início, progresso, conclusão) e um cancelamento.
+
+## O que a entrega revelou
+
+- O manual citava a mensagem antiga numa tabela (`manual.html`) e num print;
+  exatamente o drift que esta spec queria evitar. Corrigido, e as mensagens de
+  status entraram em `ROTULOS_DA_GUI` (`tests/test_manual.py`) para o teste
+  pegar da próxima vez.
+- A primeira versão da varredura só olhava o primeiro argumento posicional:
+  deixava passar o corpo de `messagebox.showerror(titulo, texto)` e helpers
+  como `_set_token_status(conta, texto, ...)`. Agora o mapa
+  `ARGUMENTOS_DE_TEXTO` diz quais posições de cada chamada são texto.
+- O cabeçalho da lista de veículos (`home.py`) era texto embutido que a
+  varredura não via, por entrar em `textbox.insert(...)`.
 
 ## Riscos e perguntas abertas
 

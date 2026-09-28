@@ -384,7 +384,11 @@ class HomeFrame(ctk.CTkFrame):
             textbox.pack(padx=20, pady=20, fill="both", expand=True)
 
             # Header
-            header = f"{'ID':>12} | {'Nome':<30} | {'Placa':<15}\n"
+            header = (
+                f"{HomeMsg.LISTA_COLUNA_ID:>12} | "
+                f"{HomeMsg.LISTA_COLUNA_NOME:<30} | "
+                f"{HomeMsg.LISTA_COLUNA_PLACA:<15}\n"
+            )
             header += "=" * 60 + "\n"
             textbox.insert("end", header)
 
