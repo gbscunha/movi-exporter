@@ -26,7 +26,7 @@ Salve cada print com exatamente o nome da tabela abaixo, em PNG.
 | `token-wialon-login.png` | Conectar sua conta Wialon | Página de login da Wialon aberta pelo botão **Gerar** |
 | `token-wialon-url.png` | Conectar sua conta Wialon | Barra de endereços do navegador depois do login, com `access_token=` visível e **o token tarjado** |
 | `token-config-conectado.png` | Conectar sua conta Wialon | Recorte da seção **Wialon API — Conta 1** com o status "Conectado como…" (token escondido pelo campo) |
-| `conta2-seletor.png` | Adicionar uma segunda conta | Recorte do menu lateral com o seletor **Conta** aberto |
+| `conta2-seletor.png` | Adicionar uma segunda conta | Recorte do menu lateral com o seletor **Conta** aberto, mostrando o **nome de usuário** de cada conta (tarjar se o nome identificar alguém) |
 | `drive-id-pasta.png` | Enviar para o Google Drive | Barra de endereços do Drive com o trecho depois de `/folders/` destacado (**ID tarjado**) |
 | `drive-config.png` | Enviar para o Google Drive | Recorte da seção **Google Drive** com "Encontrado" em verde e o ID preenchido (**tarjado**) |
 | `drive-google-autorizar.png` | Enviar para o Google Drive | Tela do Google pedindo autorização de acesso, no primeiro envio |

@@ -1,6 +1,6 @@
 # Spec — Nome do usuário no seletor de conta
 
-> **Status:** em andamento
+> **Status:** implementada
 > **Branch:** `feat/nome-usuario-no-seletor`
 > **Fatia no CHECKLIST:** Backlog → "Nome do usuário no seletor de conta"
 > **ADR relacionado:** —
@@ -103,6 +103,23 @@ Abrir o app com duas contas: conferir que o seletor mostra os nomes (ou "Conta
 N" na primeira vez), que trocar de conta continua refletindo em Início e
 Exportar, e que uma exportação de teste cai em `exports/AAAA-MM/Conta N/`.
 Conferir também com a internet desligada.
+
+## O que a entrega revelou
+
+- O rótulo do dropdown deixou de ser previsível (era a string literal
+  `"Conta 2"`), então a tradução rótulo → número virou
+  `AccountState.account_for_label`, que devolve a conta **atual** se o rótulo
+  não existir mais — um item defasado entre o rebuild e o clique não pode
+  trocar para a conta errada.
+- `WialonClient.logout()` limpa só o `sid`, não o `username` — por isso o nome
+  continua disponível depois de `test_connection()`, que faz logout no
+  `finally`.
+- A tela de Configurações não recebia o `AccountState` (só Home e Export
+  recebiam); passou a receber, para o botão **Testar** da Conta 2 ser o caminho
+  curto de ensinar o nome dela ao seletor.
+- O caminho Home → `after` → `remember_username` → sidebar não é coberto por
+  teste automatizado (regra do projeto: sem testes de tela). Foi verificado por
+  um smoke com `build_vehicle_service` falso, sem rede.
 
 ## Riscos e perguntas abertas
 
