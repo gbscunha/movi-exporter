@@ -57,3 +57,35 @@ def test_apos_salvar_nao_ha_alteracao_pendente(frame_sem_efeitos):
 
     assert frame.save_changes_btn.cget("state") == "disabled"
     assert frame.unsaved_label.cget("text") == ""
+
+
+def test_testar_token_com_sucesso_guarda_o_nome_do_usuario(ctk_root, monkeypatch):
+    """O nome de quem autenticou alimenta o seletor de conta e o cache do .env."""
+    from src.gui import account_state as account_state_module
+    from src.gui.account_state import AccountState
+
+    gravados: dict[str, str] = {}
+    monkeypatch.setattr(
+        account_state_module,
+        "set_env_value",
+        lambda key, value: gravados.__setitem__(key, value),
+    )
+    monkeypatch.setattr(settings_module, "set_env_value", lambda key, value: None)
+    monkeypatch.setattr(settings_module.settings, "reload", lambda: None)
+    monkeypatch.setattr(settings_module.toast, "show", lambda *a, **k: None)
+
+    state = AccountState()
+    frame = SettingsFrame(ctk_root, account_state=state)
+    frame._on_token_test_ok(2, "lcmovi_adm")
+
+    assert state.username(2) == "lcmovi_adm"
+    assert gravados == {"WIALON_USER_2": "lcmovi_adm"}
+
+
+def test_testar_token_sem_nome_nao_quebra(frame_sem_efeitos):
+    """Autenticação que não devolveu nome só mostra 'Conectado'."""
+    frame, _ = frame_sem_efeitos
+
+    frame._on_token_test_ok(1, "")
+
+    assert frame._token_widgets[1]["status_label"].cget("text") == "Status: Conectado"

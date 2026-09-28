@@ -13,7 +13,7 @@ from src.core.config import settings
 from src.core.logger import logger
 from src.core.service_factory import build_vehicle_service
 from src.gui import icons
-from src.gui.account_state import AccountState
+from src.gui.account_state import AccountState, remember_username
 from src.gui.design import Border, Colors, Font, Space
 from src.gui.messages import Common, HomeMsg
 from src.gui.frames.export import MESES  # nomes dos meses (fonte única)
@@ -272,10 +272,18 @@ class HomeFrame(ctk.CTkFrame):
         except Exception as e:
             logger.debug(f"Erro ao abrir pasta: {e}")
 
+    def _current_account(self) -> int:
+        """Número da conta selecionada (1 quando não há seletor)."""
+        return self.account_state.account if self.account_state is not None else 1
+
     def _build_service(self) -> VehicleService:
         """Cria um VehicleService usando o token da conta selecionada."""
-        account = self.account_state.account if self.account_state is not None else 1
-        return build_vehicle_service(account=account)
+        return build_vehicle_service(account=self._current_account())
+
+    def _remember_username(self, account: int, username: str):
+        """Guarda o nome autenticado — roda na thread da GUI via `after`."""
+        if self.account_state is not None:
+            remember_username(self.account_state, account, username)
 
     def _check_status_async(self):
         """Verifica status das conexões em background."""
@@ -303,6 +311,14 @@ class HomeFrame(ctk.CTkFrame):
 
                 # Veículos (se conectou)
                 if wialon_ok:
+                    # A autenticação que acabou de acontecer já sabe quem é o
+                    # usuário — é daqui que o seletor de conta tira o nome.
+                    self.after(
+                        0,
+                        self._remember_username,
+                        self._current_account(),
+                        self.service.username,
+                    )
                     vehicles = self.service.list_vehicles()
                     self.after(
                         0,

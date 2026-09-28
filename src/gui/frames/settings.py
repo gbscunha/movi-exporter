@@ -6,6 +6,7 @@ import os
 import threading
 import webbrowser
 from tkinter import messagebox
+from typing import Optional
 
 import customtkinter as ctk
 
@@ -14,6 +15,7 @@ from src.core.env_writer import set_env_value
 from src.core.logger import logger
 from src.core.service_factory import WialonError, authenticate_token
 from src.gui import icons
+from src.gui.account_state import AccountState, remember_username
 from src.gui.components import toast
 from src.gui.design import Colors
 from src.gui.messages import Common, SettingsMsg
@@ -28,8 +30,17 @@ URL_AUTORIZACAO_WIALON = "https://hosting.wialon.com/login.html"
 class SettingsFrame(ctk.CTkFrame):
     """Tela de configurações do aplicativo."""
 
-    def __init__(self, master, **kwargs):
+    def __init__(
+        self,
+        master,
+        account_state: Optional[AccountState] = None,
+        **kwargs,
+    ):
         super().__init__(master, fg_color="transparent", **kwargs)
+
+        # Só para registrar quem autenticou no teste de token — a tela não
+        # troca de conta.
+        self.account_state = account_state
 
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
@@ -304,6 +315,10 @@ class SettingsFrame(ctk.CTkFrame):
         """Callback executado na thread da GUI após teste bem-sucedido."""
         if username:
             text = SettingsMsg.STATUS_CONECTADO_COMO.format(usuario=username)
+            # Testar a Conta 2 aqui é o caminho mais curto para o seletor
+            # aprender o nome dela — o boot só autentica a conta ativa.
+            if self.account_state is not None:
+                remember_username(self.account_state, account, username)
         else:
             text = SettingsMsg.STATUS_CONECTADO
         self._set_token_status(account, text, Colors.SUCCESS, icons.CIRCLE_CHECK)

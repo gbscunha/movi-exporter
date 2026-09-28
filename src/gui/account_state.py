@@ -12,7 +12,14 @@ Uso:
 
 from typing import Callable, Dict, List
 
+from src.core.config import settings
+from src.core.env_writer import set_env_value
+from src.core.logger import logger
 from src.gui.messages import SidebarMsg
+
+# Onde o nome de cada conta fica cacheado entre sessões. É só exibição: se a
+# chave sumir, o seletor volta a "Conta N" até a próxima autenticação.
+USERNAME_ENV_KEYS: Dict[int, str] = {1: "WIALON_USER", 2: "WIALON_USER_2"}
 
 # Tipo do callback de mudança de conta: recebe o número da conta (1 ou 2).
 AccountListener = Callable[[int], None]
@@ -85,6 +92,21 @@ class AccountState:
             return SidebarMsg.CONTA_DESEMPATE.format(nome=nome, numero=account)
         return nome
 
+    def labels(self) -> Dict[int, str]:
+        """Rótulos das duas contas, na ordem em que aparecem no seletor."""
+        return {numero: self.display_label(numero) for numero in (1, 2)}
+
+    def account_for_label(self, label: str) -> int:
+        """Número da conta cujo rótulo de exibição é `label`.
+
+        Rótulo desconhecido (item defasado entre o rebuild e o clique) devolve
+        a conta atual: melhor não fazer nada do que trocar para a errada.
+        """
+        for numero, texto in self.labels().items():
+            if texto == label:
+                return numero
+        return self._account
+
     def register_username_listener(self, listener: UsernameListener) -> None:
         """Inscreve um callback para quando o username de alguma conta mudar."""
         if listener not in self._username_listeners:
@@ -114,3 +136,30 @@ class AccountState:
         self._account = account
         for listener in list(self._listeners):
             listener(account)
+
+
+def load_usernames(state: AccountState) -> None:
+    """Preenche o estado com os nomes cacheados no `.env` (sessão anterior).
+
+    Deixa o seletor mostrar quem é cada conta já na abertura, mesmo offline.
+    """
+    for account, env_key in USERNAME_ENV_KEYS.items():
+        state.set_username(account, getattr(settings, env_key, ""))
+
+
+def remember_username(state: AccountState, account: int, username: str) -> None:
+    """Registra o nome autenticado no estado e o cacheia no `.env`.
+
+    Só grava quando o nome muda: toda abertura autentica a conta ativa, e
+    reescrever o `.env` a cada boot não traria nada. Falha de escrita não
+    interrompe a GUI — o nome continua valendo nesta sessão.
+    """
+    username = (username or "").strip()
+    if not username or state.username(account) == username:
+        return
+
+    state.set_username(account, username)
+    try:
+        set_env_value(USERNAME_ENV_KEYS[account], username)
+    except Exception as e:  # noqa: BLE001 — cache de exibição, não bloqueia o app
+        logger.debug(f"Erro ao cachear o nome da conta {account}: {e}")

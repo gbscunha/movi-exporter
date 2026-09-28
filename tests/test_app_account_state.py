@@ -165,3 +165,81 @@ def test_set_username_ignora_vazio():
     state.set_username(1, "")
 
     assert state.display_label(1) == "lcmovi_mgr"
+
+
+def test_labels_traz_as_duas_contas_na_ordem_do_seletor():
+    state = AccountState(1)
+    state.set_username(1, "lcmovi_mgr")
+
+    assert state.labels() == {1: "lcmovi_mgr", 2: "Conta 2"}
+
+
+def test_account_for_label_mapeia_rotulo_para_numero():
+    """O dropdown devolve texto; a sidebar precisa do número da conta."""
+    state = AccountState(1)
+    state.set_username(2, "lcmovi_adm")
+
+    assert state.account_for_label("Conta 1") == 1
+    assert state.account_for_label("lcmovi_adm") == 2
+
+
+def test_account_for_label_desconhecido_mantem_a_conta_atual():
+    """Rótulo defasado não pode trocar a conta por engano."""
+    state = AccountState(2)
+
+    assert state.account_for_label("qualquer outra coisa") == 2
+
+
+def test_load_usernames_le_os_nomes_do_env(monkeypatch):
+    """Ao abrir, o seletor já mostra os nomes da última sessão."""
+    from src.gui import account_state as modulo
+
+    monkeypatch.setattr(modulo.settings, "WIALON_USER", "lcmovi_mgr", raising=False)
+    monkeypatch.setattr(modulo.settings, "WIALON_USER_2", "lcmovi_adm", raising=False)
+
+    state = AccountState(1)
+    modulo.load_usernames(state)
+
+    assert state.labels() == {1: "lcmovi_mgr", 2: "lcmovi_adm"}
+
+
+def test_remember_username_grava_no_env(monkeypatch):
+    from src.gui import account_state as modulo
+
+    gravados: dict = {}
+    monkeypatch.setattr(
+        modulo, "set_env_value", lambda k, v: gravados.__setitem__(k, v)
+    )
+
+    state = AccountState(1)
+    modulo.remember_username(state, 2, "lcmovi_adm")
+
+    assert state.username(2) == "lcmovi_adm"
+    assert gravados == {"WIALON_USER_2": "lcmovi_adm"}
+
+
+def test_remember_username_nao_regrava_nome_repetido(monkeypatch):
+    """Toda abertura autentica a conta 1 — não reescrever o .env à toa."""
+    from src.gui import account_state as modulo
+
+    gravacoes = []
+    monkeypatch.setattr(modulo, "set_env_value", lambda k, v: gravacoes.append(k))
+
+    state = AccountState(1)
+    modulo.remember_username(state, 1, "lcmovi_mgr")
+    modulo.remember_username(state, 1, "lcmovi_mgr")
+
+    assert gravacoes == ["WIALON_USER"]
+
+
+def test_remember_username_ignora_vazio(monkeypatch):
+    from src.gui import account_state as modulo
+
+    gravacoes = []
+    monkeypatch.setattr(modulo, "set_env_value", lambda k, v: gravacoes.append(k))
+
+    state = AccountState(1)
+    modulo.remember_username(state, 1, "")
+
+    assert gravacoes == []
+    assert state.username(1) == ""

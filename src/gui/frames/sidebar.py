@@ -133,24 +133,35 @@ class SidebarFrame(ctk.CTkFrame):
             anchor="w",
         ).grid(row=0, column=0, padx=6, pady=(0, 2), sticky="w")
 
-        self.account_var = ctk.StringVar(value=self.account_state.label)
+        self.account_var = ctk.StringVar()
         self.account_menu = ctk.CTkOptionMenu(
             container,
-            values=[
-                SidebarMsg.CONTA.format(numero=1),
-                SidebarMsg.CONTA.format(numero=2),
-            ],
             variable=self.account_var,
             command=self._on_account_selected,
         )
         self.account_menu.grid(row=1, column=0, padx=6, sticky="ew")
         container.grid_columnconfigure(0, weight=1)
 
+        self._refresh_account_labels()
+        # O nome só é conhecido depois que a conta autentica (boot da Home ou
+        # botão Testar), então os itens são remontados quando ele chega.
+        self.account_state.register_username_listener(self._refresh_account_labels)
+
+    def _refresh_account_labels(self):
+        """(Re)monta os itens do seletor com o nome de quem está autenticado.
+
+        Chamado sempre na thread da GUI — quem descobre o nome volta com
+        `after(0, ...)` antes de avisar o estado.
+        """
+        labels = self.account_state.labels()
+        self.account_menu.configure(values=list(labels.values()))
+        self.account_var.set(labels[self.account_state.account])
+
     def _on_account_selected(self, value: str):
         """Traduz a seleção do dropdown e propaga ao estado global."""
-        account = 2 if value == SidebarMsg.CONTA.format(numero=2) else 1
-        if self.account_state is not None:
-            self.account_state.set_account(account)
+        if self.account_state is None:
+            return
+        self.account_state.set_account(self.account_state.account_for_label(value))
 
     def _create_nav_button(self, name: str, text: str, icon: str, row: int):
         """Cria um botão de navegação com ícone FontAwesome."""
