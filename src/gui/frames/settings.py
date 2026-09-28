@@ -316,13 +316,20 @@ class SettingsFrame(ctk.CTkFrame):
         if username:
             text = SettingsMsg.STATUS_CONECTADO_COMO.format(usuario=username)
             # Testar a Conta 2 aqui é o caminho mais curto para o seletor
-            # aprender o nome dela — o boot só autentica a conta ativa.
-            if self.account_state is not None:
+            # aprender o nome dela — o boot só autentica a conta ativa. Só que
+            # um token colado e ainda não salvo mostraria no seletor um usuário
+            # que não é o da conta: nesse caso, não guarda.
+            if self.account_state is not None and self._token_is_saved(account):
                 remember_username(self.account_state, account, username)
         else:
             text = SettingsMsg.STATUS_CONECTADO
         self._set_token_status(account, text, Colors.SUCCESS, icons.CIRCLE_CHECK)
         self._token_widgets[account]["test_btn"].configure(state="normal")
+
+    def _token_is_saved(self, account: int) -> bool:
+        """True se o token no campo é o mesmo que está gravado para a conta."""
+        digitado = self._token_widgets[account]["entry"].get().strip()
+        return bool(digitado) and digitado == self._token_for_account(account)
 
     def _on_token_test_fail(self, account: int, error: str):
         """Callback executado na thread da GUI após teste falhar."""

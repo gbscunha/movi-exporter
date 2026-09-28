@@ -74,12 +74,40 @@ def test_testar_token_com_sucesso_guarda_o_nome_do_usuario(ctk_root, monkeypatch
     monkeypatch.setattr(settings_module.settings, "reload", lambda: None)
     monkeypatch.setattr(settings_module.toast, "show", lambda *a, **k: None)
 
+    monkeypatch.setattr(settings_module.settings, "WIALON_TOKEN_2", "token-salvo")
+
     state = AccountState()
     frame = SettingsFrame(ctk_root, account_state=state)
     frame._on_token_test_ok(2, "lcmovi_adm")
 
     assert state.username(2) == "lcmovi_adm"
     assert gravados == {"WIALON_USER_2": "lcmovi_adm"}
+
+
+def test_testar_token_ainda_nao_salvo_nao_guarda_o_nome(ctk_root, monkeypatch):
+    """Testar um token colado mas não salvo mostraria no seletor outro usuário."""
+    from src.gui import account_state as account_state_module
+    from src.gui.account_state import AccountState
+
+    gravados: dict[str, str] = {}
+    monkeypatch.setattr(
+        account_state_module,
+        "set_env_value",
+        lambda key, value: gravados.__setitem__(key, value),
+    )
+    monkeypatch.setattr(settings_module, "set_env_value", lambda key, value: None)
+    monkeypatch.setattr(settings_module.settings, "reload", lambda: None)
+    monkeypatch.setattr(settings_module.toast, "show", lambda *a, **k: None)
+    monkeypatch.setattr(settings_module.settings, "WIALON_TOKEN_2", "token-salvo")
+
+    state = AccountState()
+    frame = SettingsFrame(ctk_root, account_state=state)
+    frame._token_widgets[2]["entry"].delete(0, "end")
+    frame._token_widgets[2]["entry"].insert(0, "token-novo-ainda-nao-salvo")
+    frame._on_token_test_ok(2, "outro_usuario")
+
+    assert state.username(2) == ""
+    assert gravados == {}
 
 
 def test_testar_token_sem_nome_nao_quebra(frame_sem_efeitos):

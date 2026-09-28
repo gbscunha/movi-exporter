@@ -120,6 +120,12 @@ Conferir também com a internet desligada.
 - O caminho Home → `after` → `remember_username` → sidebar não é coberto por
   teste automatizado (regra do projeto: sem testes de tela). Foi verificado por
   um smoke com `build_vehicle_service` falso, sem rede.
+- **Testar** aceita um token colado que ainda não foi salvo. Guardar o nome
+  nesse caso poria no seletor um usuário que não é o da conta salva, então o
+  cache só acontece quando o campo bate com o token gravado.
+- `SidebarMsg.CONTA` passou a ser a fonte do `label` (contrato de disco), então
+  `messages.py` ganhou um aviso: editar essa constante renomeia as pastas de
+  exportação do cliente.
 
 ## Riscos e perguntas abertas
 
