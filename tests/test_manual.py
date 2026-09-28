@@ -34,15 +34,32 @@ def _html() -> str:
 
 
 def _rotulos_da_gui() -> set[str]:
-    """Textos literais de `text="..."` no fonte da GUI.
+    """Todo texto que a GUI exibe, vindo das duas fontes possíveis.
 
-    Olhar só os literais (e não o arquivo inteiro) é o que faz o teste pegar
+    Olhar o texto exibido (e não o arquivo inteiro) é o que faz o teste pegar
     uma renomeação: o nome antigo costuma sobreviver em comentários e
     docstrings, e uma busca no texto bruto passaria batido.
+
+    Durante a migração para `messages.py` (spec `mensagens-centralizadas`) as
+    duas fontes coexistem: as constantes do módulo e os literais `text="..."`
+    dos módulos que ainda não migraram. Quando a migração terminar, sobra só a
+    primeira.
     """
+    from src.gui import messages
+
+    rotulos = {
+        valor.strip()
+        for classe in vars(messages).values()
+        if isinstance(classe, type)
+        for nome, valor in vars(classe).items()
+        if not nome.startswith("_") and isinstance(valor, str)
+    }
+
     raiz = Path(__file__).resolve().parent.parent / "src" / "gui"
     fontes = "\n".join(p.read_text(encoding="utf-8") for p in raiz.rglob("*.py"))
-    return {t.strip() for t in re.findall(r'text=f?"([^"]*)"', fontes)}
+    rotulos |= {t.strip() for t in re.findall(r'text=f?"([^"]*)"', fontes)}
+
+    return rotulos
 
 
 def test_manual_path_encontra_html_no_projeto():

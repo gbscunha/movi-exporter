@@ -15,6 +15,7 @@ from src.core.service_factory import build_vehicle_service
 from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.design import Border, Colors, Font, Space
+from src.gui.messages import Common, HomeMsg
 from src.gui.frames.export import MESES  # nomes dos meses (fonte única)
 from src.gui.system_utils import open_system_folder
 from src.services import export_history
@@ -36,7 +37,7 @@ class HomeFrame(ctk.CTkFrame):
 
         self.title = ctk.CTkLabel(
             self,
-            text="Bem-vindo ao Movi Exporter",
+            text=HomeMsg.TITULO,
             font=ctk.CTkFont(size=28, weight="bold"),
         )
         self.title.grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky="w")
@@ -44,7 +45,7 @@ class HomeFrame(ctk.CTkFrame):
         # Subtítulo
         self.subtitle = ctk.CTkLabel(
             self,
-            text="Exportação automatizada de dados de veículos Wialon",
+            text=HomeMsg.SUBTITULO,
             font=ctk.CTkFont(size=14),
             text_color="gray",
         )
@@ -97,31 +98,31 @@ class HomeFrame(ctk.CTkFrame):
         # Card: Conexão Wialon
         self.wialon_card = StatusCard(
             cards_frame,
-            title="Wialon API",
-            value="Verificando...",
+            title=HomeMsg.CARD_WIALON,
+            value=HomeMsg.CARD_VERIFICANDO,
         )
         self.wialon_card.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 
         # Card: Google Drive
         self.drive_card = StatusCard(
             cards_frame,
-            title="Google Drive",
-            value="Verificando...",
+            title=HomeMsg.CARD_DRIVE,
+            value=HomeMsg.CARD_VERIFICANDO,
         )
         self.drive_card.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         # Card: Veículos
         self.vehicles_card = StatusCard(
             cards_frame,
-            title="Veículos",
-            value="--",
+            title=HomeMsg.CARD_VEICULOS,
+            value=HomeMsg.CARD_SEM_VALOR,
         )
         self.vehicles_card.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
     def _create_quick_actions(self):
         """Cria botões de ações rápidas."""
         actions_label = ctk.CTkLabel(
-            self, text="Ações Rápidas", font=ctk.CTkFont(size=18, weight="bold")
+            self, text=HomeMsg.GRUPO_ACOES, font=ctk.CTkFont(size=18, weight="bold")
         )
         actions_label.grid(row=3, column=0, columnspan=2, pady=(20, 10), sticky="w")
 
@@ -131,7 +132,7 @@ class HomeFrame(ctk.CTkFrame):
         # Botão: Testar Conexão
         self.btn_test = ctk.CTkButton(
             actions_frame,
-            text="  Testar Conexões",
+            text=f"  {HomeMsg.BTN_TESTAR_CONEXOES}",
             image=icons.get(icons.REFRESH, size=18, on_accent=True),
             width=200,
             height=45,
@@ -144,7 +145,7 @@ class HomeFrame(ctk.CTkFrame):
         # quando o usuário clica antes do boot terminar (#05).
         self.btn_list = ctk.CTkButton(
             actions_frame,
-            text="  Ver Veículos",
+            text=f"  {HomeMsg.BTN_VER_VEICULOS}",
             image=icons.get(icons.LIST, size=18, on_accent=True),
             width=200,
             height=45,
@@ -158,7 +159,7 @@ class HomeFrame(ctk.CTkFrame):
         """Cria a seção 'Resumo de Exportações' e a popula."""
         label = ctk.CTkLabel(
             self,
-            text="Resumo de Exportações",
+            text=HomeMsg.GRUPO_RESUMO,
             font=ctk.CTkFont(size=Font.SIZE_LG, weight=Font.WEIGHT_BOLD),
         )
         label.grid(row=5, column=0, columnspan=2, pady=(Space.XL, Space.SM), sticky="w")
@@ -182,7 +183,7 @@ class HomeFrame(ctk.CTkFrame):
         if last is None:
             ctk.CTkLabel(
                 self.summary_frame,
-                text="Nenhuma exportação realizada ainda.",
+                text=HomeMsg.SEM_EXPORTACOES,
                 text_color=Colors.MUTED,
             ).grid(row=row, column=0, padx=Space.LG, pady=Space.LG, sticky="w")
         else:
@@ -193,14 +194,19 @@ class HomeFrame(ctk.CTkFrame):
 
             ctk.CTkLabel(
                 info,
-                text="ÚLTIMA EXPORTAÇÃO",
+                text=HomeMsg.ULTIMA_EXPORTACAO,
                 font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
                 text_color=Colors.MUTED,
             ).grid(row=0, column=0, sticky="w")
 
-            periodo = f"{MESES[last.month - 1]}/{last.year}"
             if last.account:
-                periodo += f"  ·  {last.account}"
+                periodo = HomeMsg.PERIODO_COM_CONTA.format(
+                    mes=MESES[last.month - 1], ano=last.year, conta=last.account
+                )
+            else:
+                periodo = HomeMsg.PERIODO.format(
+                    mes=MESES[last.month - 1], ano=last.year
+                )
             ctk.CTkLabel(
                 info,
                 text=periodo,
@@ -210,14 +216,16 @@ class HomeFrame(ctk.CTkFrame):
             quando = last.last_modified.strftime("%d/%m/%Y %H:%M")
             ctk.CTkLabel(
                 info,
-                text=f"{last.file_count} arquivo(s)  ·  {quando}",
+                text=HomeMsg.ARQUIVOS_E_DATA.format(
+                    quantidade=last.file_count, quando=quando
+                ),
                 font=ctk.CTkFont(size=Font.SIZE_BASE),
                 text_color=Colors.MUTED,
             ).grid(row=2, column=0, sticky="w")
 
             ctk.CTkButton(
                 info,
-                text="  Abrir pasta",
+                text=f"  {Common.BTN_ABRIR_PASTA}",
                 image=icons.get(icons.FOLDER_OPEN, size=16, on_accent=True),
                 width=130,
                 command=lambda p=last.folder: self._open_folder(p),
@@ -232,7 +240,7 @@ class HomeFrame(ctk.CTkFrame):
             sy, sm = suggestion
             ctk.CTkLabel(
                 self.summary_frame,
-                text=f"Você ainda não exportou {MESES[sm - 1]}/{sy}.",
+                text=HomeMsg.MES_NAO_EXPORTADO.format(mes=MESES[sm - 1], ano=sy),
                 image=icons.get(icons.TRIANGLE_WARNING, size=14, color=Colors.WARNING),
                 compound="left",
                 text_color=Colors.WARNING,
@@ -244,7 +252,9 @@ class HomeFrame(ctk.CTkFrame):
         ano = datetime.now().year
         n_exports, n_files = export_history.year_stats(base, ano, account)
         if n_exports:
-            stats = f"Em {ano}: {n_exports} exportação(ões), {n_files} arquivo(s)."
+            stats = HomeMsg.ESTATISTICAS_ANO.format(
+                ano=ano, exportacoes=n_exports, arquivos=n_files
+            )
             ctk.CTkLabel(
                 self.summary_frame,
                 text=stats,
@@ -284,7 +294,9 @@ class HomeFrame(ctk.CTkFrame):
                 self.after(
                     0,
                     lambda: self.wialon_card.set_value(
-                        "Conectado" if wialon_ok else "Desconectado",
+                        HomeMsg.CARD_CONECTADO
+                        if wialon_ok
+                        else HomeMsg.CARD_DESCONECTADO,
                         "success" if wialon_ok else "error",
                     ),
                 )
@@ -299,11 +311,23 @@ class HomeFrame(ctk.CTkFrame):
                         ),
                     )
                 else:
-                    self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
+                    self.after(
+                        0,
+                        lambda: self.vehicles_card.set_value(
+                            HomeMsg.CARD_SEM_VALOR, "error"
+                        ),
+                    )
 
             except Exception:
-                self.after(0, lambda: self.wialon_card.set_value("Erro", "error"))
-                self.after(0, lambda: self.vehicles_card.set_value("--", "error"))
+                self.after(
+                    0, lambda: self.wialon_card.set_value(HomeMsg.CARD_ERRO, "error")
+                )
+                self.after(
+                    0,
+                    lambda: self.vehicles_card.set_value(
+                        HomeMsg.CARD_SEM_VALOR, "error"
+                    ),
+                )
 
             # Google Drive
             try:
@@ -315,13 +339,18 @@ class HomeFrame(ctk.CTkFrame):
                 self.after(
                     0,
                     lambda: self.drive_card.set_value(
-                        "Conectado" if drive_ok else "Não configurado",
+                        HomeMsg.CARD_CONECTADO
+                        if drive_ok
+                        else HomeMsg.CARD_NAO_CONFIGURADO,
                         "success" if drive_ok else "warning",
                     ),
                 )
             except Exception:
                 self.after(
-                    0, lambda: self.drive_card.set_value("Não configurado", "warning")
+                    0,
+                    lambda: self.drive_card.set_value(
+                        HomeMsg.CARD_NAO_CONFIGURADO, "warning"
+                    ),
                 )
 
             # Habilita "Ver Veículos" só se a conexão Wialon foi bem sucedida.
@@ -338,9 +367,7 @@ class HomeFrame(ctk.CTkFrame):
         # após _check_status_async — mas algum estado inconsistente ainda pode
         # cair aqui, então tratamos explicitamente.
         if not self.service:
-            self._show_warning(
-                "Conexão ainda inicializando. Aguarde alguns segundos e tente novamente."
-            )
+            self._show_warning(HomeMsg.AVISO_CONEXAO_INICIALIZANDO)
             return
 
         try:
@@ -348,7 +375,7 @@ class HomeFrame(ctk.CTkFrame):
 
             # Criar janela de listagem
             window = ctk.CTkToplevel(self)
-            window.title("Veículos Disponíveis")
+            window.title(HomeMsg.TITULO_LISTA_VEICULOS)
             window.geometry("600x400")
             window.transient(self.winfo_toplevel())
 
@@ -366,23 +393,23 @@ class HomeFrame(ctk.CTkFrame):
                 line = f"{vehicle['id']:>12} | {vehicle['name']:<30} | {vehicle.get('plate', ''):<15}\n"
                 textbox.insert("end", line)
 
-            textbox.insert("end", f"\nTotal: {len(vehicles)} veículos")
+            textbox.insert("end", HomeMsg.LISTA_TOTAL.format(quantidade=len(vehicles)))
             textbox.configure(state="disabled")
 
         except Exception as e:
-            self._show_error(f"Erro ao listar veículos: {e}")
+            self._show_error(HomeMsg.ERRO_LISTAR_VEICULOS.format(erro=e))
 
     def _show_error(self, message: str):
         """Mostra mensagem de erro."""
         import tkinter.messagebox as mb
 
-        mb.showerror("Erro", message)
+        mb.showerror(Common.TITULO_ERRO, message)
 
     def _show_warning(self, message: str):
         """Mostra aviso (warning, não erro)."""
         import tkinter.messagebox as mb
 
-        mb.showwarning("Aviso", message)
+        mb.showwarning(Common.TITULO_AVISO, message)
 
 
 class StatusCard(ctk.CTkFrame):

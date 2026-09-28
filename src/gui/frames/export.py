@@ -21,24 +21,17 @@ from src.gui import icons
 from src.gui.account_state import AccountState
 from src.gui.components import toast
 from src.gui.design import Colors, Font, Space
+from src.gui.messages import Common, ExportLog, ExportMsg
 from src.gui.system_utils import open_system_folder
 from src.services.vehicle_service import VehicleService
 
 # Nomes dos meses em português brasileiro — usados no dropdown.
-MESES = [
-    "Janeiro",
-    "Fevereiro",
-    "Março",
-    "Abril",
-    "Maio",
-    "Junho",
-    "Julho",
-    "Agosto",
-    "Setembro",
-    "Outubro",
-    "Novembro",
-    "Dezembro",
-]
+# Reexportado de `messages` para não quebrar quem importa MESES daqui.
+MESES = Common.MESES
+
+# Formatos de arquivo aceitos — valores técnicos passados ao service, não
+# mensagem: por isso ficam aqui e não em `messages`.
+FORMATOS = ["csv", "xlsx", "both"]
 
 # Parâmetros de exportação lidos dos widgets (na thread da GUI) e repassados
 # ao worker em background.
@@ -87,7 +80,7 @@ class ExportFrame(ctk.CTkFrame):
         self.grid_rowconfigure(3, weight=1)
 
         self.title = ctk.CTkLabel(
-            self, text="Exportar Dados", font=ctk.CTkFont(size=28, weight="bold")
+            self, text=ExportMsg.TITULO, font=ctk.CTkFont(size=28, weight="bold")
         )
         self.title.grid(row=0, column=0, pady=(0, 20), sticky="w")
 
@@ -118,7 +111,7 @@ class ExportFrame(ctk.CTkFrame):
         now = datetime.now()
 
         # --- Linha 0: Mês | Ano ---
-        ctk.CTkLabel(config_frame, text="Mês:").grid(
+        ctk.CTkLabel(config_frame, text=ExportMsg.LABEL_MES).grid(
             row=0, column=0, padx=(10, 6), pady=10, sticky="w"
         )
         # Default: mês anterior (relatórios geralmente são do mês fechado).
@@ -132,7 +125,7 @@ class ExportFrame(ctk.CTkFrame):
         )
         self.month_menu.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="w")
 
-        ctk.CTkLabel(config_frame, text="Ano:").grid(
+        ctk.CTkLabel(config_frame, text=ExportMsg.LABEL_ANO).grid(
             row=0, column=2, padx=(10, 6), pady=10, sticky="w"
         )
         # Ano como dropdown dos últimos 5 anos — evita digitação inválida (#12).
@@ -148,13 +141,13 @@ class ExportFrame(ctk.CTkFrame):
         self.year_menu.grid(row=0, column=3, padx=(0, 10), pady=10, sticky="w")
 
         # --- Linha 1: Formato | Conta ---
-        ctk.CTkLabel(config_frame, text="Formato:").grid(
+        ctk.CTkLabel(config_frame, text=ExportMsg.LABEL_FORMATO).grid(
             row=1, column=0, padx=(10, 6), pady=10, sticky="w"
         )
         self.format_var = ctk.StringVar(value="xlsx")
         self.format_menu = ctk.CTkOptionMenu(
             config_frame,
-            values=["csv", "xlsx", "both"],
+            values=FORMATOS,
             variable=self.format_var,
             width=140,
         )
@@ -168,7 +161,7 @@ class ExportFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(
             options_card,
-            text="OPÇÕES",
+            text=ExportMsg.GRUPO_OPCOES,
             font=ctk.CTkFont(size=Font.SIZE_SM, weight=Font.WEIGHT_BOLD),
             text_color=Colors.MUTED,
         ).grid(
@@ -178,7 +171,7 @@ class ExportFrame(ctk.CTkFrame):
         self.consolidated_var = ctk.BooleanVar(value=True)
         self.consolidated_check = ctk.CTkCheckBox(
             options_card,
-            text="Gerar arquivo consolidado",
+            text=ExportMsg.OPCAO_CONSOLIDADO,
             variable=self.consolidated_var,
         )
         self.consolidated_check.grid(
@@ -188,7 +181,7 @@ class ExportFrame(ctk.CTkFrame):
         self.upload_var = ctk.BooleanVar(value=False)
         self.upload_check = ctk.CTkCheckBox(
             options_card,
-            text="Upload para Google Drive",
+            text=ExportMsg.OPCAO_UPLOAD,
             variable=self.upload_var,
         )
         self.upload_check.grid(
@@ -199,7 +192,7 @@ class ExportFrame(ctk.CTkFrame):
         self.include_addresses_var = ctk.BooleanVar(value=False)
         self.include_addresses_check = ctk.CTkCheckBox(
             options_card,
-            text="Incluir endereço (mais lento)",
+            text=ExportMsg.OPCAO_ENDERECO,
             variable=self.include_addresses_var,
         )
         self.include_addresses_check.grid(
@@ -222,7 +215,7 @@ class ExportFrame(ctk.CTkFrame):
         self.vehicle_checkboxes.clear()
         # Limpa o log para não misturar mensagens de contas diferentes (#25).
         self._clear_log()
-        self._log(f"Conta alterada para {self._account_label()}.", "INFO")
+        self._log(ExportLog.CONTA_ALTERADA.format(conta=self._account_label()), "INFO")
 
         # Auto-load se o usuário está escolhendo veículos manualmente (#04).
         if not self.all_vehicles_var.get():
@@ -246,10 +239,10 @@ class ExportFrame(ctk.CTkFrame):
         As duas vistas dividem a mesma célula do grid (row 3); só uma aparece
         por vez. Ao iniciar um export, trocamos para 'Progresso' e ficamos lá.
         """
-        self.view_var = ctk.StringVar(value="Veículos")
+        self.view_var = ctk.StringVar(value=ExportMsg.ABA_VEICULOS)
         self.view_toggle = ctk.CTkSegmentedButton(
             self,
-            values=["Veículos", "Progresso"],
+            values=[ExportMsg.ABA_VEICULOS, ExportMsg.ABA_PROGRESSO],
             variable=self.view_var,
             command=self._switch_view,
         )
@@ -262,7 +255,7 @@ class ExportFrame(ctk.CTkFrame):
 
     def _switch_view(self, value: str) -> None:
         """Mostra a vista pedida ('Veículos' ou 'Progresso') e esconde a outra."""
-        if value == "Progresso":
+        if value == ExportMsg.ABA_PROGRESSO:
             self.vehicles_frame.grid_remove()
             self.progress_frame.grid()
         else:
@@ -293,7 +286,7 @@ class ExportFrame(ctk.CTkFrame):
         self.all_vehicles_var = ctk.BooleanVar(value=True)
         self.all_radio = ctk.CTkRadioButton(
             mode_row,
-            text="Todos os veículos",
+            text=ExportMsg.MODO_TODOS,
             variable=self.all_vehicles_var,
             value=True,
             command=self._toggle_vehicle_selection,
@@ -302,7 +295,7 @@ class ExportFrame(ctk.CTkFrame):
 
         self.specific_radio = ctk.CTkRadioButton(
             mode_row,
-            text="Escolher manualmente",
+            text=ExportMsg.MODO_MANUAL,
             variable=self.all_vehicles_var,
             value=False,
             command=self._toggle_vehicle_selection,
@@ -311,7 +304,7 @@ class ExportFrame(ctk.CTkFrame):
 
         self.load_btn = ctk.CTkButton(
             mode_row,
-            text=" Carregar",
+            text=f" {ExportMsg.BTN_CARREGAR}",
             image=icons.get(icons.REFRESH, size=16, on_accent=True),
             width=110,
             command=self._load_vehicles,
@@ -331,14 +324,14 @@ class ExportFrame(ctk.CTkFrame):
         self.search_entry = ctk.CTkEntry(
             self.vehicles_toolbar,
             textvariable=self.search_var,
-            placeholder_text="🔍  Buscar por nome, placa ou ID",
+            placeholder_text=ExportMsg.PLACEHOLDER_BUSCA,
         )
         self.search_entry.grid(row=0, column=0, padx=(0, 10), sticky="ew")
 
         # Ações em massa como texto discreto (não competem com a lista).
         self.mark_all_btn = ctk.CTkButton(
             self.vehicles_toolbar,
-            text="Marcar todos",
+            text=ExportMsg.BTN_MARCAR_TODOS,
             width=120,
             fg_color="transparent",
             hover=False,
@@ -349,7 +342,7 @@ class ExportFrame(ctk.CTkFrame):
 
         self.unmark_all_btn = ctk.CTkButton(
             self.vehicles_toolbar,
-            text="Limpar todos",
+            text=ExportMsg.BTN_LIMPAR_TODOS,
             width=120,
             fg_color="transparent",
             hover=False,
@@ -415,7 +408,9 @@ class ExportFrame(ctk.CTkFrame):
         header_frame.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(
-            header_frame, text="Progresso:", font=ctk.CTkFont(weight="bold")
+            header_frame,
+            text=ExportMsg.LABEL_PROGRESSO,
+            font=ctk.CTkFont(weight="bold"),
         ).grid(row=0, column=0, sticky="w")
 
         self.progress_label = ctk.CTkLabel(
@@ -483,7 +478,7 @@ class ExportFrame(ctk.CTkFrame):
 
         self.open_folder_btn = ctk.CTkButton(
             actions_frame,
-            text="  Abrir pasta",
+            text=f"  {Common.BTN_ABRIR_PASTA}",
             image=icons.get(icons.FOLDER_OPEN, size=18, on_accent=True),
             width=140,
             height=45,
@@ -493,7 +488,7 @@ class ExportFrame(ctk.CTkFrame):
 
         self.export_btn = ctk.CTkButton(
             actions_frame,
-            text="  Iniciar Exportação",
+            text=f"  {ExportMsg.BTN_INICIAR}",
             image=icons.get(icons.PLAY, size=18, on_accent=True),
             width=200,
             height=45,
@@ -514,7 +509,7 @@ class ExportFrame(ctk.CTkFrame):
             month = MESES.index(self.month_var.get()) + 1
             year = int(self.year_var.get())
         except (ValueError, IndexError):
-            messagebox.showerror("Erro", "Mês/ano inválidos.")
+            messagebox.showerror(Common.TITULO_ERRO, ExportMsg.ERRO_MES_ANO)
             return
 
         base = Path(settings.EXPORT_DIR or "./exports")
@@ -526,7 +521,9 @@ class ExportFrame(ctk.CTkFrame):
             open_system_folder(path)
         except Exception as e:
             logger.debug(f"Erro ao abrir pasta: {e}")
-            messagebox.showerror("Erro", f"Não foi possível abrir a pasta: {e}")
+            messagebox.showerror(
+                Common.TITULO_ERRO, ExportMsg.ERRO_ABRIR_PASTA.format(erro=e)
+            )
 
     def _toggle_vehicle_selection(self):
         """Alterna visibilidade da barra de seleção de veículos."""
@@ -543,25 +540,28 @@ class ExportFrame(ctk.CTkFrame):
 
     def _load_vehicles(self):
         """Carrega lista de veículos."""
-        self.load_btn.configure(state="disabled", text="Carregando...")
+        self.load_btn.configure(state="disabled", text=ExportMsg.BTN_CARREGANDO)
         # Limpa o log para não acumular mensagens de carregamentos anteriores (#25).
         self._clear_log()
-        self._log("🔌 Conectando ao Wialon...", "INFO")
+        self._log(ExportLog.CONECTANDO, "INFO")
 
         def load():
             try:
                 if not self.service:
                     self.service = self._build_service()
 
-                self._log("📡 Buscando lista de veículos...", "INFO")
+                self._log(ExportLog.BUSCANDO_VEICULOS, "INFO")
                 self.vehicles = self.service.list_vehicles()
                 self.after(0, self._populate_vehicle_list)
 
             except Exception as e:
-                self._log(f"Erro ao carregar veículos: {e}", "ERROR")
+                self._log(ExportLog.ERRO_CARREGAR_VEICULOS.format(erro=e), "ERROR")
             finally:
                 self.after(
-                    0, lambda: self.load_btn.configure(state="normal", text=" Carregar")
+                    0,
+                    lambda: self.load_btn.configure(
+                        state="normal", text=f" {ExportMsg.BTN_CARREGAR}"
+                    ),
                 )
 
         thread = threading.Thread(target=load, daemon=True)
@@ -574,7 +574,10 @@ class ExportFrame(ctk.CTkFrame):
         veículos". O usuário marca só os que precisa, podendo buscar antes.
         """
         self._selection = {vehicle["id"]: False for vehicle in self.vehicles}
-        self._log(f"{len(self.vehicles)} veículos carregados", "SUCCESS")
+        self._log(
+            ExportLog.VEICULOS_CARREGADOS.format(quantidade=len(self.vehicles)),
+            "SUCCESS",
+        )
         self._render_vehicle_list()
 
     def _vehicle_label(self, vehicle: dict) -> str:
@@ -586,7 +589,7 @@ class ExportFrame(ctk.CTkFrame):
         name = str(vehicle.get("name") or "").strip()
         plate = (vehicle.get("plate") or "").strip()
         if plate and plate != name:
-            return f"{name}  ·  {plate}"
+            return ExportMsg.VEICULO_COM_PLACA.format(nome=name, placa=plate)
         return name
 
     def _matches_search(self, vehicle: dict, query: str) -> bool:
@@ -692,11 +695,13 @@ class ExportFrame(ctk.CTkFrame):
                 1 for vehicle in self.vehicles if self._matches_search(vehicle, query)
             )
             self.selection_count_label.configure(
-                text=f"{marcados} de {total} selecionados · {filtrados} no filtro"
+                text=ExportMsg.CONTADOR_SELECAO_FILTRO.format(
+                    marcados=marcados, total=total, filtrados=filtrados
+                )
             )
         else:
             self.selection_count_label.configure(
-                text=f"{marcados} de {total} selecionados"
+                text=ExportMsg.CONTADOR_SELECAO.format(marcados=marcados, total=total)
             )
 
     def _update_bulk_button_labels(self):
@@ -706,11 +711,11 @@ class ExportFrame(ctk.CTkFrame):
         que diferencia do modo 'Todos os veículos' (radio) e remove a ambiguidade.
         """
         if self.search_var.get().strip():
-            self.mark_all_btn.configure(text="Marcar filtrados")
-            self.unmark_all_btn.configure(text="Limpar filtrados")
+            self.mark_all_btn.configure(text=ExportMsg.BTN_MARCAR_FILTRADOS)
+            self.unmark_all_btn.configure(text=ExportMsg.BTN_LIMPAR_FILTRADOS)
         else:
-            self.mark_all_btn.configure(text="Marcar todos")
-            self.unmark_all_btn.configure(text="Limpar todos")
+            self.mark_all_btn.configure(text=ExportMsg.BTN_MARCAR_TODOS)
+            self.unmark_all_btn.configure(text=ExportMsg.BTN_LIMPAR_TODOS)
 
     def _get_selected_vehicle_ids(self) -> Optional[List[int]]:
         """Retorna IDs dos veículos selecionados ou None para todos."""
@@ -745,19 +750,25 @@ class ExportFrame(ctk.CTkFrame):
         toca no serviço, só confirma a intenção.
         """
         if params.vehicle_ids:
-            alvo = f"{len(params.vehicle_ids)} veículo(s) selecionado(s)"
+            alvo = ExportMsg.ALVO_SELECIONADOS.format(
+                quantidade=len(params.vehicle_ids)
+            )
         else:
-            alvo = "Todos os veículos"
-        resumo = (
-            f"Mês/Ano:  {MESES[params.month - 1]} / {params.year}\n"
-            f"Formato:  {params.format_type}\n"
-            f"Veículos:  {alvo}\n"
-            f"Consolidado:  {'sim' if params.consolidated else 'não'}\n"
-            f"Incluir endereço:  {'sim' if params.include_addresses else 'não'}\n"
-            f"Upload Google Drive:  {'sim' if params.upload else 'não'}\n\n"
-            "Iniciar a exportação?"
+            alvo = ExportMsg.MODO_TODOS
+
+        def sim_ou_nao(valor: bool) -> str:
+            return ExportMsg.SIM if valor else ExportMsg.NAO
+
+        resumo = ExportMsg.RESUMO_CONFIRMACAO.format(
+            mes=MESES[params.month - 1],
+            ano=params.year,
+            formato=params.format_type,
+            alvo=alvo,
+            consolidado=sim_ou_nao(params.consolidated),
+            endereco=sim_ou_nao(params.include_addresses),
+            upload=sim_ou_nao(params.upload),
         )
-        return messagebox.askyesno("Confirmar exportação", resumo)
+        return messagebox.askyesno(ExportMsg.TITULO_CONFIRMAR, resumo)
 
     def _has_valid_selection(self) -> bool:
         """No modo 'Selecionar veículos', exige ao menos um marcado (#15e).
@@ -766,8 +777,8 @@ class ExportFrame(ctk.CTkFrame):
         """
         if not self.all_vehicles_var.get() and not any(self._selection.values()):
             messagebox.showwarning(
-                "Nenhum veículo selecionado",
-                "Marque ao menos um veículo ou escolha 'Todos os veículos'.",
+                ExportMsg.TITULO_SEM_SELECAO,
+                ExportMsg.AVISO_SEM_SELECAO,
             )
             return False
         return True
@@ -777,10 +788,10 @@ class ExportFrame(ctk.CTkFrame):
         por 'Parar' (#3) e mostra a barra de progresso (#27)."""
         self.is_exporting = True
         self._cancel_event.clear()
-        self._show_view("Progresso")
+        self._show_view(ExportMsg.ABA_PROGRESSO)
         # O botão de ação vira 'Parar' (cinza) e passa a cancelar o export.
         self.export_btn.configure(
-            text="  Parar",
+            text=f"  {ExportMsg.BTN_PARAR}",
             image=icons.get(icons.CIRCLE_XMARK, size=18, on_accent=True),
             fg_color=Colors.MUTED,
             hover_color="#6d6d6d",
@@ -791,15 +802,15 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_bar.configure(mode="indeterminate")
         self.progress_bar.start()
         self._clear_log()
-        self.progress_label.configure(text="Iniciando...")
+        self.progress_label.configure(text=ExportMsg.ESTADO_INICIANDO)
 
     def _request_cancel(self) -> None:
         """Pede o cancelamento do export em andamento (botão 'Parar')."""
         self._cancel_event.set()
-        self.export_btn.configure(text="  Parando...", state="disabled")
-        self.progress_label.configure(text="Cancelando...")
+        self.export_btn.configure(text=f"  {ExportMsg.BTN_PARANDO}", state="disabled")
+        self.progress_label.configure(text=ExportMsg.ESTADO_CANCELANDO)
         self._log(
-            "⏹️  Cancelamento solicitado — encerrando após o veículo atual...",
+            ExportLog.CANCELAMENTO_SOLICITADO,
             "WARNING",
         )
 
@@ -817,14 +828,19 @@ class ExportFrame(ctk.CTkFrame):
 
     def _log_export_params(self, params: "_ExportParams") -> None:
         """Loga o cabeçalho do export (período, formato, veículos)."""
-        self._log(f"📅 Exportando: {params.month:02d}/{params.year}", "INFO")
-        self._log(f"📁 Formato: {params.format_type}", "INFO")
+        self._log(ExportLog.PERIODO.format(mes=params.month, ano=params.year), "INFO")
+        self._log(ExportLog.FORMATO.format(formato=params.format_type), "INFO")
         if params.include_addresses:
-            self._log("📍 Endereço: incluído (geocodificação ativada)", "INFO")
+            self._log(ExportLog.ENDERECO_INCLUIDO, "INFO")
         if params.vehicle_ids:
-            self._log(f"🚗 Veículos selecionados: {len(params.vehicle_ids)}", "INFO")
+            self._log(
+                ExportLog.VEICULOS_SELECIONADOS.format(
+                    quantidade=len(params.vehicle_ids)
+                ),
+                "INFO",
+            )
         else:
-            self._log("🚗 Todos os veículos", "INFO")
+            self._log(ExportLog.TODOS_OS_VEICULOS, "INFO")
         self._log("", "INFO")
 
     def _run_export(self, params: "_ExportParams") -> None:
@@ -859,9 +875,9 @@ class ExportFrame(ctk.CTkFrame):
                     self._handle_export_success(result)
 
         except Exception as e:
-            self._log(f"\n❌ Erro na exportação: {e}", "ERROR")
+            self._log(ExportLog.ERRO_EXPORTACAO.format(erro=e), "ERROR")
             if self.status_callback:
-                self.status_callback(f"Erro: {e}", "error")
+                self.status_callback(ExportMsg.STATUS_ERRO.format(erro=e), "error")
         finally:
             self._teardown_log_handler()
             self.after(0, self._reset_export_button)
@@ -873,87 +889,104 @@ class ExportFrame(ctk.CTkFrame):
         não-entrega e sugerimos a causa provável.
         """
         self._log("", "WARNING")
-        self._log("═" * 50, "WARNING")
-        self._log("⚠️  NENHUM DADO DISPONÍVEL PARA O PERÍODO", "WARNING")
-        self._log("═" * 50, "WARNING")
+        self._log(ExportLog.SEPARADOR, "WARNING")
+        self._log(ExportLog.TITULO_SEM_DADOS, "WARNING")
+        self._log(ExportLog.SEPARADOR, "WARNING")
         self._log(
-            f"Veículos processados: {result.processed_vehicles}/{result.total_vehicles}",
+            ExportLog.VEICULOS_PROCESSADOS.format(
+                processados=result.processed_vehicles, total=result.total_vehicles
+            ),
             "INFO",
         )
-        self._log("Possíveis causas:", "INFO")
-        self._log("  • Veículos inativos no período selecionado", "INFO")
-        self._log("  • Limite de retenção de histórico da conta Wialon", "INFO")
-        self._log("  • Mês/ano muito antigos", "INFO")
-        self.after(0, lambda: self.progress_label.configure(text="Sem dados"))
+        self._log(ExportLog.POSSIVEIS_CAUSAS, "INFO")
+        self._log(ExportLog.CAUSA_INATIVOS, "INFO")
+        self._log(ExportLog.CAUSA_RETENCAO, "INFO")
+        self._log(ExportLog.CAUSA_PERIODO_ANTIGO, "INFO")
+        self.after(
+            0, lambda: self.progress_label.configure(text=ExportMsg.ESTADO_SEM_DADOS)
+        )
         if self.status_callback:
-            self.status_callback("Exportação sem dados para o período", "warning")
+            self.status_callback(ExportMsg.STATUS_SEM_DADOS, "warning")
         self.after(
             0,
-            lambda: toast.show("Nenhum dado disponível para o período", kind="warning"),
+            lambda: toast.show(ExportMsg.TOAST_SEM_DADOS, kind="warning"),
         )
 
     def _handle_export_success(self, result) -> None:
         """Loga o resultado final (arquivos, upload, erros) e notifica sucesso."""
         self._log("", "INFO")
-        self._log("═" * 50, "SUCCESS")
-        self._log("EXPORTAÇÃO CONCLUÍDA", "SUCCESS")
-        self._log("═" * 50, "SUCCESS")
+        self._log(ExportLog.SEPARADOR, "SUCCESS")
+        self._log(ExportLog.TITULO_CONCLUIDA, "SUCCESS")
+        self._log(ExportLog.SEPARADOR, "SUCCESS")
         self._log(
-            f"Veículos: {result.processed_vehicles}/{result.total_vehicles}", "INFO"
+            ExportLog.VEICULOS.format(
+                processados=result.processed_vehicles, total=result.total_vehicles
+            ),
+            "INFO",
         )
-        self._log(f"Registros: {result.total_records}", "INFO")
-        self._log(f"Taxa de sucesso: {result.success_rate:.1f}%", "INFO")
+        self._log(ExportLog.REGISTROS.format(registros=result.total_records), "INFO")
+        self._log(ExportLog.TAXA_SUCESSO.format(taxa=result.success_rate), "INFO")
 
         if result.exported_files:
             self._log("", "INFO")
-            self._log("Arquivos gerados:", "INFO")
+            self._log(ExportLog.ARQUIVOS_GERADOS, "INFO")
             for f in result.exported_files:
-                self._log(f"  📄 {f}", "SUCCESS")
+                self._log(ExportLog.ARQUIVO.format(arquivo=f), "SUCCESS")
 
         if result.upload_result:
             ur = result.upload_result
             self._log("", "INFO")
-            self._log(f"Upload: {ur.uploaded_files}/{ur.total_files} arquivos", "INFO")
+            self._log(
+                ExportLog.UPLOAD.format(
+                    enviados=ur.uploaded_files, total=ur.total_files
+                ),
+                "INFO",
+            )
 
         if result.errors:
             self._log("", "WARNING")
-            self._log("Erros:", "WARNING")
+            self._log(ExportLog.ERROS, "WARNING")
             for e in result.errors:
-                self._log(f"  {e}", "ERROR")
+                self._log(ExportLog.ERRO_ITEM.format(erro=e), "ERROR")
 
         if self.status_callback:
             self.status_callback(
-                f"Exportação concluída: {result.processed_vehicles} veículos", "success"
+                ExportMsg.STATUS_CONCLUIDA.format(veiculos=result.processed_vehicles),
+                "success",
             )
         self.after(
             0,
             lambda: toast.show(
-                f"Exportação concluída — {result.total_records} registros",
+                ExportMsg.TOAST_CONCLUIDA.format(registros=result.total_records),
                 kind="success",
             ),
         )
 
     def _handle_export_cancelled(self, result) -> None:
         """Export interrompido pelo usuário — informa o parcial já gerado."""
-        self.after(0, lambda: self.progress_label.configure(text="Cancelado"))
+        self.after(
+            0, lambda: self.progress_label.configure(text=ExportMsg.ESTADO_CANCELADO)
+        )
         self._log("", "WARNING")
-        self._log("═" * 50, "WARNING")
-        self._log("⏹️  EXPORTAÇÃO CANCELADA", "WARNING")
-        self._log("═" * 50, "WARNING")
+        self._log(ExportLog.SEPARADOR, "WARNING")
+        self._log(ExportLog.TITULO_CANCELADA, "WARNING")
+        self._log(ExportLog.SEPARADOR, "WARNING")
         self._log(
-            f"Processados antes de parar: "
-            f"{result.processed_vehicles}/{result.total_vehicles}",
+            ExportLog.PROCESSADOS_ANTES_DE_PARAR.format(
+                processados=result.processed_vehicles, total=result.total_vehicles
+            ),
             "INFO",
         )
         if result.exported_files:
             self._log(
-                f"Arquivos parciais gerados: {len(result.exported_files)} "
-                "(consolidado e upload não foram executados)",
+                ExportLog.ARQUIVOS_PARCIAIS.format(
+                    quantidade=len(result.exported_files)
+                ),
                 "INFO",
             )
         if self.status_callback:
-            self.status_callback("Exportação cancelada", "warning")
-        self.after(0, lambda: toast.show("Exportação cancelada", kind="warning"))
+            self.status_callback(ExportMsg.STATUS_CANCELADA, "warning")
+        self.after(0, lambda: toast.show(ExportMsg.TOAST_CANCELADA, kind="warning"))
 
     def _on_export_progress(self, current: int, total: int, vehicle_name: str):
         """Callback chamado pelo serviço a cada veículo (thread de trabalho).
@@ -970,7 +1003,9 @@ class ExportFrame(ctk.CTkFrame):
             fraction = current / total if total else 0
             self.progress_bar.set(fraction)
             self.progress_label.configure(
-                text=f"Processando {current}/{total} — {vehicle_name}"
+                text=ExportMsg.ESTADO_PROCESSANDO.format(
+                    atual=current, total=total, veiculo=vehicle_name
+                )
             )
 
         self.after(0, update)
@@ -980,14 +1015,14 @@ class ExportFrame(ctk.CTkFrame):
         self.progress_bar.stop()
         self.progress_bar.configure(mode="determinate")
         self.progress_bar.set(1)
-        self.progress_label.configure(text="Concluído")
+        self.progress_label.configure(text=ExportMsg.ESTADO_CONCLUIDO)
 
     def _reset_export_button(self):
         """Restaura o botão para 'Iniciar Exportação' (a vista fica em Progresso)."""
         self.is_exporting = False
         self.export_btn.configure(
             state="normal",
-            text="  Iniciar Exportação",
+            text=f"  {ExportMsg.BTN_INICIAR}",
             image=icons.get(icons.PLAY, size=18, on_accent=True),
             fg_color=self._export_btn_fg,
             hover_color=self._export_btn_hover,
@@ -1021,7 +1056,7 @@ class ExportFrame(ctk.CTkFrame):
             return
         self.clipboard_clear()
         self.clipboard_append(conteudo)
-        toast.show("Log copiado", kind="success")
+        toast.show(ExportMsg.TOAST_LOG_COPIADO, kind="success")
 
     def _save_log(self):
         """Salva o log num arquivo .txt escolhido pelo usuário."""
@@ -1029,23 +1064,25 @@ class ExportFrame(ctk.CTkFrame):
 
         conteudo = self.log_text.get("1.0", "end").strip()
         if not conteudo:
-            toast.show("Log vazio — nada para salvar", kind="warning")
+            toast.show(ExportMsg.TOAST_LOG_VAZIO, kind="warning")
             return
         path = filedialog.asksaveasfilename(
-            title="Salvar log",
+            title=ExportMsg.TITULO_SALVAR_LOG,
             defaultextension=".txt",
-            filetypes=[("Arquivo de texto", "*.txt")],
-            initialfile="movi-exporter-log.txt",
+            filetypes=[(ExportMsg.ARQUIVO_TEXTO, "*.txt")],
+            initialfile=ExportMsg.NOME_PADRAO_LOG,
         )
         if not path:
             return
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(conteudo)
-            toast.show("Log salvo", kind="success")
+            toast.show(ExportMsg.TOAST_LOG_SALVO, kind="success")
         except Exception as e:
             logger.debug(f"Erro ao salvar log: {e}")
-            messagebox.showerror("Erro", f"Não foi possível salvar o log: {e}")
+            messagebox.showerror(
+                Common.TITULO_ERRO, ExportMsg.ERRO_SALVAR_LOG.format(erro=e)
+            )
 
     def _log(self, message: str, level: str = "INFO"):
         """

@@ -7,6 +7,8 @@ PT-BR (string) ou `None` quando o valor é válido.
 
 from typing import Optional
 
+from src.gui.messages import ValidationMsg
+
 
 def validate_export_dir(value: str) -> Optional[str]:
     """Valida o diretório de exportação.
@@ -15,12 +17,12 @@ def validate_export_dir(value: str) -> Optional[str]:
     exista — o app a cria na hora de exportar.
     """
     if not value or not value.strip():
-        return "Informe um diretório de exportação."
+        return ValidationMsg.DIRETORIO_OBRIGATORIO
     return None
 
 
 def validate_token(value: str) -> Optional[str]:
     """Valida o token Wialon (apenas presença — formato é checado no Testar)."""
     if not value or not value.strip():
-        return "Cole um token antes de continuar."
+        return ValidationMsg.TOKEN_OBRIGATORIO
     return None

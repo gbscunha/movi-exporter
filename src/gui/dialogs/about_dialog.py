@@ -11,6 +11,7 @@ from src.core.logger import logger
 from src.gui import __version__, icons
 from src.gui.components import toast
 from src.gui.design import Colors, Font, Space
+from src.gui.messages import AboutMsg
 from src.gui.updater import GITHUB_OWNER, GITHUB_REPO, AutoUpdater
 
 _REPO_URL = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}"
@@ -23,7 +24,7 @@ class AboutDialog(ctk.CTkToplevel):
     def __init__(self, master):
         super().__init__(master)
 
-        self.title("Sobre o Movi Exporter")
+        self.title(AboutMsg.TITULO_JANELA)
         self.geometry("420x320")
         self.resizable(False, False)
         self.transient(master)
@@ -33,41 +34,41 @@ class AboutDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             container,
-            text="Movi Exporter",
+            text=AboutMsg.TITULO,
             font=ctk.CTkFont(size=Font.SIZE_2XL, weight=Font.WEIGHT_BOLD),
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             container,
-            text=f"Versão {__version__}",
+            text=AboutMsg.VERSAO.format(versao=__version__),
             font=ctk.CTkFont(size=Font.SIZE_BASE),
             text_color=Colors.MUTED,
         ).pack(anchor="w", pady=(0, Space.MD))
 
         ctk.CTkLabel(
             container,
-            text="Exportação mensal de dados de rastreamento\nveicular da Wialon para CSV/Excel.",
+            text=AboutMsg.DESCRICAO,
             font=ctk.CTkFont(size=Font.SIZE_BASE),
             justify="left",
         ).pack(anchor="w", pady=(0, Space.LG))
 
         ctk.CTkButton(
             container,
-            text="  Repositório no GitHub",
+            text=f"  {AboutMsg.BTN_REPOSITORIO}",
             image=icons.get(icons.LINK, size=16, on_accent=True),
             command=lambda: webbrowser.open(_REPO_URL),
         ).pack(fill="x", pady=Space.XS)
 
         ctk.CTkButton(
             container,
-            text="  Notas de versão",
+            text=f"  {AboutMsg.BTN_NOTAS_VERSAO}",
             image=icons.get(icons.LIST, size=16, on_accent=True),
             command=lambda: webbrowser.open(_RELEASES_URL),
         ).pack(fill="x", pady=Space.XS)
 
         self.update_btn = ctk.CTkButton(
             container,
-            text="  Verificar atualizações",
+            text=f"  {AboutMsg.BTN_VERIFICAR}",
             image=icons.get(icons.REFRESH, size=16, on_accent=True),
             command=self._check_updates,
         )
@@ -75,7 +76,7 @@ class AboutDialog(ctk.CTkToplevel):
 
         ctk.CTkLabel(
             container,
-            text="Licença de uso interno · Movi Solutions",
+            text=AboutMsg.LICENCA,
             font=ctk.CTkFont(size=Font.SIZE_SM),
             text_color=Colors.MUTED,
         ).pack(anchor="w", pady=(Space.LG, 0))
@@ -92,7 +93,9 @@ class AboutDialog(ctk.CTkToplevel):
 
     def _check_updates(self):
         """Verifica atualização em background e dá feedback via toast."""
-        self.update_btn.configure(state="disabled", text="  Verificando...")
+        self.update_btn.configure(
+            state="disabled", text=f"  {AboutMsg.BTN_VERIFICANDO}"
+        )
 
         def worker():
             try:
@@ -106,11 +109,11 @@ class AboutDialog(ctk.CTkToplevel):
 
     def _on_update_result(self, has_update, version, url):
         """Callback na thread da GUI com o resultado da verificação."""
-        self.update_btn.configure(state="normal", text="  Verificar atualizações")
+        self.update_btn.configure(state="normal", text=f"  {AboutMsg.BTN_VERIFICAR}")
         if has_update is None:
-            toast.show("Não foi possível verificar atualizações", kind="warning")
+            toast.show(AboutMsg.TOAST_FALHA_VERIFICAR, kind="warning")
         elif has_update:
-            toast.show(f"Nova versão disponível: {version}", kind="info")
+            toast.show(AboutMsg.TOAST_NOVA_VERSAO.format(versao=version), kind="info")
             webbrowser.open(_RELEASES_URL)
         else:
-            toast.show("Você já está na versão mais recente", kind="success")
+            toast.show(AboutMsg.TOAST_ATUALIZADO, kind="success")
