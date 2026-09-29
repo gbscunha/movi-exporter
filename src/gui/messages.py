@@ -303,7 +303,14 @@ class SidebarMsg:
     ACAO_SOBRE = "Sobre"
 
     LABEL_CONTA = "Conta"
+    # CUIDADO: além do seletor, CONTA nomeia a subpasta de exportação
+    # (exports/AAAA-MM/Conta 1/) e filtra o histórico. Mudar aqui renomeia
+    # pastas e esconde os exports antigos do cliente — por isso
+    # tests/test_app_account_state.py fixa "Conta 1"/"Conta 2".
     CONTA = "Conta {numero}"
+    # Só quando os dois tokens são do mesmo usuário: dois itens idênticos
+    # quebrariam a seleção do dropdown.
+    CONTA_DESEMPATE = "{nome} (Conta {numero})"
     TOAST_MANUAL_NAO_ENCONTRADO = "Manual não encontrado"
 
 

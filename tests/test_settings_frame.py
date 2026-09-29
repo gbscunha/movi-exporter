@@ -4,6 +4,7 @@ import pytest
 
 from src.gui.frames import settings as settings_module
 from src.gui.frames.settings import SettingsFrame
+from src.gui.messages import SettingsMsg
 
 
 @pytest.fixture
@@ -47,7 +48,12 @@ def test_salvar_persiste_id_da_pasta_do_drive(frame_sem_efeitos):
 
 
 def test_apos_salvar_nao_ha_alteracao_pendente(frame_sem_efeitos):
-    """Salvo o ID, o rodapé volta ao estado limpo (sem pendência)."""
+    """Salvo o ID, o rodapé volta ao estado limpo (sem pendência).
+
+    A asserção é a visibilidade, não o texto: o label continuava na tela com o
+    ⚠ mesmo de texto vazio, e a asserção antiga (`cget("text") == ""`) não
+    pegava isso.
+    """
     frame, _ = frame_sem_efeitos
 
     frame.folder_entry.delete(0, "end")
@@ -56,4 +62,88 @@ def test_apos_salvar_nao_ha_alteracao_pendente(frame_sem_efeitos):
     frame._save_changes()
 
     assert frame.save_changes_btn.cget("state") == "disabled"
-    assert frame.unsaved_label.cget("text") == ""
+    assert frame.unsaved_label.grid_info() == {}
+
+
+def test_rodape_sem_alteracao_esconde_o_aviso(frame_sem_efeitos):
+    """Tela recém-aberta não pode mostrar o ⚠ de "alterações não salvas".
+
+    `grid_info()` vazio é o sinal confiável — `winfo_ismapped()` é 0 para
+    qualquer widget enquanto a janela do fixture está escondida.
+    """
+    frame, _ = frame_sem_efeitos
+
+    assert frame.save_changes_btn.cget("state") == "disabled"
+    assert frame.unsaved_label.grid_info() == {}
+
+
+def test_rodape_mostra_o_aviso_quando_ha_alteracao(frame_sem_efeitos):
+    """Com campo alterado, o aviso aparece junto do botão habilitado."""
+    frame, _ = frame_sem_efeitos
+
+    frame.folder_entry.delete(0, "end")
+    frame.folder_entry.insert(0, "1AbCdEfGhIjK")
+    frame._recompute_dirty()
+
+    assert frame.unsaved_label.grid_info() != {}
+    assert frame.unsaved_label.cget("text") == SettingsMsg.AVISO_NAO_SALVO
+
+
+def test_testar_token_com_sucesso_guarda_o_nome_do_usuario(ctk_root, monkeypatch):
+    """O nome de quem autenticou alimenta o seletor de conta e o cache do .env."""
+    from src.gui import account_state as account_state_module
+    from src.gui.account_state import AccountState
+
+    gravados: dict[str, str] = {}
+    monkeypatch.setattr(
+        account_state_module,
+        "set_env_value",
+        lambda key, value: gravados.__setitem__(key, value),
+    )
+    monkeypatch.setattr(settings_module, "set_env_value", lambda key, value: None)
+    monkeypatch.setattr(settings_module.settings, "reload", lambda: None)
+    monkeypatch.setattr(settings_module.toast, "show", lambda *a, **k: None)
+
+    monkeypatch.setattr(settings_module.settings, "WIALON_TOKEN_2", "token-salvo")
+
+    state = AccountState()
+    frame = SettingsFrame(ctk_root, account_state=state)
+    frame._on_token_test_ok(2, "lcmovi_adm")
+
+    assert state.username(2) == "lcmovi_adm"
+    assert gravados == {"WIALON_USER_2": "lcmovi_adm"}
+
+
+def test_testar_token_ainda_nao_salvo_nao_guarda_o_nome(ctk_root, monkeypatch):
+    """Testar um token colado mas não salvo mostraria no seletor outro usuário."""
+    from src.gui import account_state as account_state_module
+    from src.gui.account_state import AccountState
+
+    gravados: dict[str, str] = {}
+    monkeypatch.setattr(
+        account_state_module,
+        "set_env_value",
+        lambda key, value: gravados.__setitem__(key, value),
+    )
+    monkeypatch.setattr(settings_module, "set_env_value", lambda key, value: None)
+    monkeypatch.setattr(settings_module.settings, "reload", lambda: None)
+    monkeypatch.setattr(settings_module.toast, "show", lambda *a, **k: None)
+    monkeypatch.setattr(settings_module.settings, "WIALON_TOKEN_2", "token-salvo")
+
+    state = AccountState()
+    frame = SettingsFrame(ctk_root, account_state=state)
+    frame._token_widgets[2]["entry"].delete(0, "end")
+    frame._token_widgets[2]["entry"].insert(0, "token-novo-ainda-nao-salvo")
+    frame._on_token_test_ok(2, "outro_usuario")
+
+    assert state.username(2) == ""
+    assert gravados == {}
+
+
+def test_testar_token_sem_nome_nao_quebra(frame_sem_efeitos):
+    """Autenticação que não devolveu nome só mostra 'Conectado'."""
+    frame, _ = frame_sem_efeitos
+
+    frame._on_token_test_ok(1, "")
+
+    assert frame._token_widgets[1]["status_label"].cget("text") == "Status: Conectado"

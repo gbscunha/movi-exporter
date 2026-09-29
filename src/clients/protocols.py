@@ -21,6 +21,9 @@ class TrackingClient(Protocol):
     para ser usado pelos serviços da aplicação.
     """
 
+    # Nome do usuário autenticado; vazio antes de `authenticate()`.
+    username: str
+
     def authenticate(self) -> Dict[str, Any]:
         """
         Realiza autenticação no sistema de rastreamento.

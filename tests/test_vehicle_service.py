@@ -492,3 +492,23 @@ def test_geocode_endereco_none_vira_nd_no_export(tmp_path):
     ind = [f for f in result.exported_files if "Consolidado" not in f]
     df = pd.read_csv(ind[0])
     assert df["Localização"][0] == "N/D"
+
+
+def test_username_vem_do_client():
+    """A GUI lê o nome autenticado pelo service — nunca importando src.clients."""
+    from src.services.vehicle_service import VehicleService
+
+    mock_client = MagicMock()
+    mock_client.username = "lcmovi_mgr"
+
+    assert VehicleService(client=mock_client).username == "lcmovi_mgr"
+
+
+def test_username_vazio_quando_o_client_nao_tem_nome():
+    """Client sem autenticação (ou de outro sistema) não quebra o seletor."""
+    from src.services.vehicle_service import VehicleService
+
+    class ClientSemNome:
+        pass
+
+    assert VehicleService(client=ClientSemNome()).username == ""

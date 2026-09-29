@@ -10,7 +10,7 @@ import customtkinter as ctk
 
 from src.core.config import settings
 from src.gui import __version__
-from src.gui.account_state import AccountState
+from src.gui.account_state import AccountState, load_usernames
 from src.gui.components import toast
 from src.gui.components.status_bar import StatusBar
 from src.gui.components.toast import ToastManager
@@ -52,6 +52,9 @@ class MoviExporterApp(ctk.CTk):
         # Estado global da conta Wialon selecionada (compartilhado entre
         # sidebar, Home e Export). A sidebar muda; os frames reagem.
         self.account_state = AccountState()
+        # Nomes da sessão anterior: o seletor já abre identificado, inclusive
+        # sem internet. A autenticação do boot atualiza depois, se mudou.
+        load_usernames(self.account_state)
 
         # Gerenciador de toasts (avisos no canto da janela). Registrado como
         # singleton para os frames usarem via toast.show() sem plumbing.
@@ -101,7 +104,9 @@ class MoviExporterApp(ctk.CTk):
             status_callback=self.update_status,
             account_state=self.account_state,
         )
-        self.frames["settings"] = SettingsFrame(self.main_container)
+        self.frames["settings"] = SettingsFrame(
+            self.main_container, account_state=self.account_state
+        )
 
         # Posicionar todos os frames (só um visível por vez)
         for frame in self.frames.values():

@@ -135,6 +135,16 @@ class VehicleService:
 
         logger.info("VehicleService inicializado")
 
+    @property
+    def username(self) -> str:
+        """Nome do usuário autenticado no client, ou vazio.
+
+        Existe para a GUI mostrar quem está conectado sem importar
+        `src.clients` (regra de camadas). Vazio enquanto não houve
+        autenticação — ou se o client não expõe nome.
+        """
+        return getattr(self.client, "username", "") or ""
+
     def get_month_timestamps(self, month: int, year: int) -> tuple[int, int]:
         """
         Retorna timestamps Unix de início e fim do mês.

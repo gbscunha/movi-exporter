@@ -6,6 +6,7 @@ import os
 import threading
 import webbrowser
 from tkinter import messagebox
+from typing import Optional
 
 import customtkinter as ctk
 
@@ -14,6 +15,7 @@ from src.core.env_writer import set_env_value
 from src.core.logger import logger
 from src.core.service_factory import WialonError, authenticate_token
 from src.gui import icons
+from src.gui.account_state import AccountState, remember_username
 from src.gui.components import toast
 from src.gui.design import Colors
 from src.gui.messages import Common, SettingsMsg
@@ -28,8 +30,17 @@ URL_AUTORIZACAO_WIALON = "https://hosting.wialon.com/login.html"
 class SettingsFrame(ctk.CTkFrame):
     """Tela de configurações do aplicativo."""
 
-    def __init__(self, master, **kwargs):
+    def __init__(
+        self,
+        master,
+        account_state: Optional[AccountState] = None,
+        **kwargs,
+    ):
         super().__init__(master, fg_color="transparent", **kwargs)
+
+        # Só para registrar quem autenticou no teste de token — a tela não
+        # troca de conta.
+        self.account_state = account_state
 
         # Configurar grid
         self.grid_columnconfigure(0, weight=1)
@@ -77,15 +88,20 @@ class SettingsFrame(ctk.CTkFrame):
         bar.grid(row=2, column=0, sticky="ew", pady=(4, 0))
         bar.grid_columnconfigure(0, weight=1)
 
+        # Texto e ícone fixos: o aviso aparece e some pela grid, não por
+        # `configure`. O CustomTkinter não tira uma imagem já posta — passar
+        # `image=None` não limpa nada (ctk_label.py::_update_image), e era por
+        # isso que o ⚠ ficava na tela mesmo sem alteração pendente.
         self.unsaved_label = ctk.CTkLabel(
             bar,
-            text="",
+            text=SettingsMsg.AVISO_NAO_SALVO,
             font=ctk.CTkFont(size=12),
             text_color=Colors.WARNING,
             image=icons.get(icons.TRIANGLE_WARNING, size=14, color=Colors.WARNING),
             compound="left",
         )
         self.unsaved_label.grid(row=0, column=0, sticky="e", padx=(0, 12))
+        self.unsaved_label.grid_remove()  # escondido até haver alteração
 
         self.save_changes_btn = ctk.CTkButton(
             bar,
@@ -304,10 +320,21 @@ class SettingsFrame(ctk.CTkFrame):
         """Callback executado na thread da GUI após teste bem-sucedido."""
         if username:
             text = SettingsMsg.STATUS_CONECTADO_COMO.format(usuario=username)
+            # Testar a Conta 2 aqui é o caminho mais curto para o seletor
+            # aprender o nome dela — o boot só autentica a conta ativa. Só que
+            # um token colado e ainda não salvo mostraria no seletor um usuário
+            # que não é o da conta: nesse caso, não guarda.
+            if self.account_state is not None and self._token_is_saved(account):
+                remember_username(self.account_state, account, username)
         else:
             text = SettingsMsg.STATUS_CONECTADO
         self._set_token_status(account, text, Colors.SUCCESS, icons.CIRCLE_CHECK)
         self._token_widgets[account]["test_btn"].configure(state="normal")
+
+    def _token_is_saved(self, account: int) -> bool:
+        """True se o token no campo é o mesmo que está gravado para a conta."""
+        digitado = self._token_widgets[account]["entry"].get().strip()
+        return bool(digitado) and digitado == self._token_for_account(account)
 
     def _on_token_test_fail(self, account: int, error: str):
         """Callback executado na thread da GUI após teste falhar."""
@@ -433,9 +460,9 @@ class SettingsFrame(ctk.CTkFrame):
         size_changed = int(self.page_size_var.get()) != self._saved_page_size
         folder_changed = self.folder_entry.get().strip() != self._saved_folder_id
 
-        self._toggle_dot(self.export_dir_dot, dir_changed)
-        self._toggle_dot(self.page_size_dot, size_changed)
-        self._toggle_dot(self.folder_dot, folder_changed)
+        self._toggle_visible(self.export_dir_dot, dir_changed)
+        self._toggle_visible(self.page_size_dot, size_changed)
+        self._toggle_visible(self.folder_dot, folder_changed)
 
         # Some que o campo voltou a ser válido enquanto o usuário digita.
         if self.export_dir_entry.get().strip():
@@ -444,17 +471,15 @@ class SettingsFrame(ctk.CTkFrame):
 
         any_changed = dir_changed or size_changed or folder_changed
         self.save_changes_btn.configure(state="normal" if any_changed else "disabled")
-        self.unsaved_label.configure(
-            text=SettingsMsg.AVISO_NAO_SALVO if any_changed else ""
-        )
+        self._toggle_visible(self.unsaved_label, any_changed)
 
     @staticmethod
-    def _toggle_dot(dot, show: bool):
-        """Mostra/esconde um ponto-indicador de alteração."""
+    def _toggle_visible(widget, show: bool):
+        """Mostra/esconde um indicador de alteração (ponto ou aviso do rodapé)."""
         if show:
-            dot.grid()
+            widget.grid()
         else:
-            dot.grid_remove()
+            widget.grid_remove()
 
     def _save_changes(self):
         """Valida e persiste diretório de exportação e registros por página (#20/#21)."""
