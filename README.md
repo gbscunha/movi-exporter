@@ -6,7 +6,7 @@ O **Movi Exporter App** é um aplicativo desktop (Python + CustomTkinter) criado
 
 Ele se conecta à **API Wialon Hosting**, extrai a telemetria do mês (posição, velocidade, odômetro, sensores, motorista), normaliza e exporta em CSV/Excel — com upload opcional para o Google Drive. Também tem uma CLI para uso técnico/automatizado.
 
-**Status:** ✅ **v1.5.0 em produção** (1 cliente, Windows). Manual do usuário final embarcado no app: [`docs/manual/manual.html`](docs/manual/manual.html).
+**Status:** ✅ **v1.6.0 em produção** (1 cliente, Windows). Manual do usuário final embarcado no app: [`docs/manual/manual.html`](docs/manual/manual.html).
 
 ---
 
@@ -242,6 +242,7 @@ pyinstaller                 # Build do executável
 | Perfis de tracker (Suntech, Jimi, Default)   | ✅ Completo  |
 | Normalização e exportação CSV/Excel (`N/D`)  | ✅ Completo  |
 | Export em lotes de 100 veículos              | ✅ v1.5.0    |
+| Nome do usuário no seletor de conta          | ✅ v1.6.0    |
 | Motorista via RFID                           | ✅ v1.4.0    |
 | Localização (geocodificação)                 | ✅ v1.4.0    |
 | Duas contas Wialon (`WIALON_TOKEN_2`)        | ✅ Completo  |
@@ -269,8 +270,8 @@ python scripts/build.py
 1. Atualize `__version__` em `src/gui/__init__.py` e crie a tag correspondente (o workflow **falha** se tag ≠ `__version__`):
 
 ```bash
-git tag v1.5.0
-git push origin v1.5.0
+git tag v1.6.0
+git push origin v1.6.0
 ```
 
 2. O workflow `build.yml` compila para Windows (.exe) e macOS (.app), cria a Release e anexa os executáveis.
